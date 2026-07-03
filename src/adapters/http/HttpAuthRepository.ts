@@ -2,6 +2,8 @@ import type { User } from '@/src/core/domain/user';
 import type { IAuthRepository } from '@/src/core/ports/IAuthRepository';
 
 import { createFetcher, type FetcherCtx } from './fetcher';
+import { mapRawUser } from './mappers';
+import type { RawUser } from './types';
 
 export class HttpAuthRepository implements IAuthRepository {
   private fetch: ReturnType<typeof createFetcher>;
@@ -11,11 +13,12 @@ export class HttpAuthRepository implements IAuthRepository {
   }
 
   async getMe(): Promise<User> {
-    return this.fetch<User>('/api/auth/me');
+    const raw = await this.fetch<RawUser>('/api/auth/me');
+    return mapRawUser(raw);
   }
 
   async login(email: string, password: string): Promise<void> {
-    return this.fetch<void>('/api/auth/login', {
+    await this.fetch<RawUser>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -35,7 +38,7 @@ export class HttpAuthRepository implements IAuthRepository {
   async resetPassword(token: string, password: string): Promise<void> {
     return this.fetch<void>('/api/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ token, password }),
+      body: JSON.stringify({ token, new_password: password }),
     });
   }
 }

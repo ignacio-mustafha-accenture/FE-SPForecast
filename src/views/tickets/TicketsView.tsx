@@ -9,8 +9,6 @@ import { DataTable } from '@/src/components/ui/DataTable';
 import { Badge } from '@/src/components/ui/Badge';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { Button } from '@/src/components/ui/Button';
-import { formatDate } from '@/src/lib/formatters';
-
 import { TicketPanel } from './TicketPanel';
 
 const typeLabel: Record<string, string> = {
@@ -44,10 +42,11 @@ const columns: ColumnDef<Ticket, unknown>[] = [
       </Badge>
     ),
   },
-  { id: 'hours', accessorKey: 'hours', header: 'Horas', cell: ({ row }) => `${row.original.hours}h` },
-  { id: 'startDate', accessorKey: 'startDate', header: 'Inicio', cell: ({ row }) => formatDate(row.original.startDate) },
-  { id: 'endDate', accessorKey: 'endDate', header: 'Fin', cell: ({ row }) => formatDate(row.original.endDate) },
-  { id: 'notes', accessorKey: 'notes', header: 'Notas', cell: ({ row }) => row.original.notes || <span className="text-[var(--G4)]">—</span> },
+  { id: 'status', accessorKey: 'status', header: 'Estado' },
+  { id: 'date', accessorKey: 'date', header: 'Fecha' },
+  { id: 'clientName', accessorKey: 'clientName', header: 'Cliente', cell: ({ row }) => row.original.clientName ?? <span className="text-[var(--G4)]">—</span> },
+  { id: 'hoursToMove', accessorKey: 'hoursToMove', header: 'Horas', cell: ({ row }) => row.original.hoursToMove != null ? `${row.original.hoursToMove}h` : <span className="text-[var(--G4)]">—</span> },
+  { id: 'comments', accessorKey: 'comments', header: 'Comentarios', cell: ({ row }) => row.original.comments ?? <span className="text-[var(--G4)]">—</span> },
 ];
 
 export function TicketsView() {

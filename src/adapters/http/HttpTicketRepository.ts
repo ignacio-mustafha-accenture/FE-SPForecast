@@ -23,8 +23,4 @@ export class HttpTicketRepository implements ITicketRepository {
       body: JSON.stringify(payload),
     });
   }
-
-  async remove(id: string): Promise<void> {
-    return this.fetch<void>(`/api/tickets/${id}`, { method: 'DELETE' });
-  }
 }

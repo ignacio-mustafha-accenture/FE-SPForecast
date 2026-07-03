@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -15,12 +15,15 @@ import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
 
 const schema = z.object({
-  employeeId: z.string().min(1, 'Requerido'),
+  eid: z.string().min(1, 'Requerido'),
   type: z.enum(['newproj', 'ongoing', 'pto', 'sick', 'nj', 'baja']),
-  hours: z.number().positive('Debe ser > 0'),
-  startDate: z.string().min(1, 'Requerido'),
-  endDate: z.string().min(1, 'Requerido'),
-  notes: z.string().optional(),
+  detail: z.string().optional(),
+  client_name: z.string().optional(),
+  chargeability_pct: z.string().optional(),
+  hours_to_move: z.string().optional(),
+  from_period: z.string().optional(),
+  to_period: z.string().optional(),
+  comments: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -50,15 +53,18 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
     formState: { errors },
     reset,
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<FormData>,
     values: ticket
       ? {
-          employeeId: ticket.employeeId,
+          eid: ticket.employeeId,
           type: ticket.type,
-          hours: ticket.hours,
-          startDate: ticket.startDate,
-          endDate: ticket.endDate,
-          notes: ticket.notes,
+          detail: ticket.detail ?? '',
+          client_name: ticket.clientName ?? '',
+          chargeability_pct: ticket.chargeabilityPct != null ? String(ticket.chargeabilityPct) : '',
+          hours_to_move: ticket.hoursToMove != null ? String(ticket.hoursToMove) : '',
+          from_period: ticket.fromPeriod ?? '',
+          to_period: ticket.toPeriod ?? '',
+          comments: ticket.comments ?? '',
         }
       : undefined,
   });
@@ -66,16 +72,16 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
   async function onSubmit(data: FormData) {
     setSaving(true);
     try {
+      const payload = {
+        ...data,
+        chargeability_pct: data.chargeability_pct === '' ? undefined : Number(data.chargeability_pct),
+        hours_to_move: data.hours_to_move === '' ? undefined : Number(data.hours_to_move),
+      };
       if (ticket) {
-        await getClientContainer().updateTicket.execute(ticket.id, {
-          hours: data.hours,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          notes: data.notes,
-        });
+        await getClientContainer().updateTicket.execute(ticket.id, payload);
         toast.success('Ticket actualizado');
       } else {
-        await getClientContainer().createTicket.execute(data);
+        await getClientContainer().createTicket.execute(payload);
         toast.success('Ticket creado');
       }
       reset();
@@ -91,10 +97,10 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
     <Drawer open={open} onClose={onClose} title={ticket ? 'Editar ticket' : 'Nuevo ticket'}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
-          label="ID de empleado"
-          placeholder="emp-123"
-          error={errors.employeeId?.message}
-          {...register('employeeId')}
+          label="EID del empleado"
+          placeholder="ramos.lucas"
+          error={errors.eid?.message}
+          {...register('eid')}
           disabled={!!ticket}
         />
         <Select
@@ -103,26 +109,13 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
           error={errors.type?.message}
           {...register('type')}
         />
-        <Input
-          label="Horas"
-          type="number"
-          min={1}
-          error={errors.hours?.message}
-          {...register('hours', { valueAsNumber: true })}
-        />
-        <Input
-          label="Fecha inicio"
-          type="date"
-          error={errors.startDate?.message}
-          {...register('startDate')}
-        />
-        <Input
-          label="Fecha fin"
-          type="date"
-          error={errors.endDate?.message}
-          {...register('endDate')}
-        />
-        <Textarea label="Notas" placeholder="Comentarios..." {...register('notes')} />
+        <Input label="Cliente" placeholder="Google" {...register('client_name')} />
+        <Input label="Chargeability %" type="number" min={0} max={100} {...register('chargeability_pct')} />
+        <Input label="Horas a mover" type="number" min={0} {...register('hours_to_move')} />
+        <Input label="Desde período" placeholder="Jun-P1" {...register('from_period')} />
+        <Input label="Hasta período" placeholder="Jun-P2" {...register('to_period')} />
+        <Textarea label="Detalle" placeholder="Descripción..." {...register('detail')} />
+        <Textarea label="Comentarios" placeholder="Notas adicionales..." {...register('comments')} />
         <div className="flex gap-2 pt-2">
           <Button type="submit" loading={saving} className="flex-1">
             {ticket ? 'Guardar cambios' : 'Crear ticket'}

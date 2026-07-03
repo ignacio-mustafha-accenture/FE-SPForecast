@@ -6,22 +6,15 @@ import type { PPALog } from '@/src/core/domain/ppa';
 import { useForecastStore } from '@/src/store/StoreProvider';
 import { DataTable } from '@/src/components/ui/DataTable';
 import { Skeleton } from '@/src/components/ui/Skeleton';
-import { formatDate, formatPercent } from '@/src/lib/formatters';
 
 const columns: ColumnDef<PPALog, unknown>[] = [
   { id: 'employeeName', accessorKey: 'employeeName', header: 'Empleado' },
   { id: 'country', accessorKey: 'country', header: 'País' },
-  { id: 'periodLabel', accessorKey: 'periodLabel', header: 'Período' },
-  {
-    id: 'ppaPercent',
-    accessorKey: 'ppaPercent',
-    header: 'PPA %',
-    cell: ({ row }) => formatPercent(row.original.ppaPercent),
-  },
-  { id: 'chargeableHours', accessorKey: 'chargeableHours', header: 'Hs. cargables', cell: ({ row }) => `${row.original.chargeableHours}h` },
-  { id: 'totalHours', accessorKey: 'totalHours', header: 'Hs. totales', cell: ({ row }) => `${row.original.totalHours}h` },
-  { id: 'appliedAt', accessorKey: 'appliedAt', header: 'Aplicado el', cell: ({ row }) => formatDate(row.original.appliedAt) },
-  { id: 'appliedBy', accessorKey: 'appliedBy', header: 'Por' },
+  { id: 'fromPeriod', accessorKey: 'fromPeriod', header: 'Desde' },
+  { id: 'toPeriod', accessorKey: 'toPeriod', header: 'Hasta' },
+  { id: 'hours', accessorKey: 'hours', header: 'Horas', cell: ({ row }) => `${row.original.hours}h` },
+  { id: 'reason', accessorKey: 'reason', header: 'Motivo' },
+  { id: 'appliedAt', accessorKey: 'appliedAt', header: 'Fecha' },
 ];
 
 export function PPAView() {

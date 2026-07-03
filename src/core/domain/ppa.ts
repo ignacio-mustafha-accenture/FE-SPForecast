@@ -3,10 +3,9 @@ export interface PPALog {
   employeeId: string;
   employeeName: string;
   country: string;
-  periodLabel: string;
-  ppaPercent: number;
-  chargeableHours: number;
-  totalHours: number;
+  fromPeriod: string;
+  toPeriod: string;
+  hours: number;
+  reason: string;
   appliedAt: string;
-  appliedBy: string;
 }

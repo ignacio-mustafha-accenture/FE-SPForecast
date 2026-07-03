@@ -6,16 +6,22 @@ import { getClientContainer } from '@/src/application/container';
 import { Button } from '@/src/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
 import { useToast } from '@/src/hooks/useToast';
+import { useForecastStore } from '@/src/store/StoreProvider';
 
 export function AdminView() {
   const toast = useToast();
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
+  const periodLabel = useForecastStore((s) => s.appState?.period.label ?? '');
 
   async function handleRecalculate() {
+    if (!periodLabel) {
+      toast.error('No hay período cargado');
+      return;
+    }
     setRecalcLoading(true);
     try {
-      await getClientContainer().recalculate.execute();
+      await getClientContainer().recalculate.execute(periodLabel);
       toast.success('Recálculo ejecutado correctamente');
     } catch {
       toast.error('Error al ejecutar recálculo');

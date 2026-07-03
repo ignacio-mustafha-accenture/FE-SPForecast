@@ -1,4 +1,4 @@
 export interface IAdminRepository {
-  recalculate(): Promise<void>;
+  recalculate(periodName: string): Promise<void>;
   sync(): Promise<void>;
 }

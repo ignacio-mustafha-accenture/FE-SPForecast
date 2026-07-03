@@ -9,11 +9,11 @@ export class HttpAdminRepository implements IAdminRepository {
     this.fetch = createFetcher(ctx);
   }
 
-  async recalculate(): Promise<void> {
-    return this.fetch<void>('/api/admin/recalculate', { method: 'POST' });
+  async recalculate(periodName: string): Promise<void> {
+    return this.fetch<void>(`/api/recalculate/${encodeURIComponent(periodName)}`, { method: 'POST' });
   }
 
   async sync(): Promise<void> {
-    return this.fetch<void>('/api/admin/sync', { method: 'POST' });
+    return this.fetch<void>('/api/sync', { method: 'POST' });
   }
 }

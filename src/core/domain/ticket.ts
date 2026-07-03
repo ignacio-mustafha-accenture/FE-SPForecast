@@ -2,30 +2,41 @@ export type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
 
 export interface Ticket {
   id: string;
+  type: TicketType;
   employeeId: string;
   employeeName: string;
   country: string;
-  type: TicketType;
-  hours: number;
-  startDate: string;
-  endDate: string;
-  notes: string;
-  createdAt: string;
-  updatedAt: string;
+  detail: string | null;
+  status: string;
+  date: string;
+  by: string;
+  clientName: string | null;
+  offeringType: string | null;
+  chargeabilityPct: number | null;
+  hoursToMove: number | null;
+  fromPeriod: string | null;
+  toPeriod: string | null;
+  comments: string | null;
 }
 
 export interface CreateTicketPayload {
-  employeeId: string;
+  eid: string;
   type: TicketType;
-  hours: number;
-  startDate: string;
-  endDate: string;
-  notes?: string;
+  detail?: string;
+  client_name?: string;
+  chargeability_pct?: number;
+  hours_to_move?: number;
+  from_period?: string;
+  to_period?: string;
+  comments?: string;
 }
 
 export interface UpdateTicketPayload {
-  hours?: number;
-  startDate?: string;
-  endDate?: string;
-  notes?: string;
+  detail?: string;
+  client_name?: string;
+  chargeability_pct?: number;
+  hours_to_move?: number;
+  from_period?: string;
+  to_period?: string;
+  comments?: string;
 }
