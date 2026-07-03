@@ -1,26 +1,88 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Accenture Purple */
+  --P:   #A100FF;
+  --PD:  #6900AA;
+  --PL:  #D580FF;
+  --PBG: #F5E6FF;
+  --PB:  rgba(161, 0, 255, 0.15);
+
+  /* Neutrals */
+  --BK:  #111111;
+  --G1:  #333333;
+  --G2:  #555555;
+  --G3:  #888888;
+  --G4:  #BBBBBB;
+  --G5:  #E2E2E2;
+  --G6:  #F4F4F4;
+  --WH:  #FFFFFF;
+
+  /* Semantic */
+  --GR:  #007A5E;
+  --GRB: #E5F4F0;
+  --YL:  #B05A00;
+  --YLB: #FFF3E0;
+  --RD:  #C0001A;
+  --RDB: #FFEBEE;
+  --BL:  #0050A0;
+  --BLB: #E3EEFF;
+
+  /* Layout */
+  --topbar-h:  48px;
+  --sidebar-w: 228px;
+
+  /* Typography */
+  --font-base:      var(--font-barlow), system-ui, sans-serif;
+  --font-condensed: var(--font-barlow-condensed), system-ui, sans-serif;
+  --font-mono:      var(--font-jetbrains-mono), monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-P:   var(--P);
+  --color-PD:  var(--PD);
+  --color-PL:  var(--PL);
+  --color-PBG: var(--PBG);
+  --color-BK:  var(--BK);
+  --color-G1:  var(--G1);
+  --color-G2:  var(--G2);
+  --color-G3:  var(--G3);
+  --color-G4:  var(--G4);
+  --color-G5:  var(--G5);
+  --color-G6:  var(--G6);
+  --color-WH:  var(--WH);
+  --color-GR:  var(--GR);
+  --color-GRB: var(--GRB);
+  --color-YL:  var(--YL);
+  --color-YLB: var(--YLB);
+  --color-RD:  var(--RD);
+  --color-RDB: var(--RDB);
+  --color-BL:  var(--BL);
+  --color-BLB: var(--BLB);
+  --font-sans:      var(--font-base);
+  --font-condensed: var(--font-condensed);
+  --font-mono:      var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--WH);
+  color: var(--G1);
+  font-family: var(--font-base);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
