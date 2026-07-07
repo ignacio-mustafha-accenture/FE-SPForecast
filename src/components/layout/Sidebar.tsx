@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { LayoutDashboard, Users, Ticket, ArrowLeftRight, Bot, Settings } from 'lucide-react';
 
 import { useWindowOffset } from '@/src/hooks/useWindowOffset';
 import { useForecastStore } from '@/src/store/StoreProvider';
@@ -14,14 +15,14 @@ export function Sidebar() {
   const isLoading = useForecastStore((s) => s.isLoading);
 
   const NAV_ITEMS = [
-    { href: '/', label: t('navDashboard'), icon: '◻' },
-    { href: '/ar', label: t('navArgentina'), icon: '🇦🇷' },
-    { href: '/mx', label: t('navMexico'), icon: '🇲🇽' },
-    { href: '/cr', label: t('navCostaRica'), icon: '🇨🇷' },
-    { href: '/tickets', label: t('navTickets'), icon: '🎫' },
-    { href: '/ppa', label: t('navPPA'), icon: '📊' },
-    { href: '/agent', label: t('navAgent'), icon: '🤖' },
-    { href: '/admin', label: t('navAdmin'), icon: '⚙' },
+    { href: '/', label: t('navDashboard'), icon: LayoutDashboard },
+    { href: '/ar', label: t('navArgentina'), icon: Users },
+    { href: '/mx', label: t('navMexico'), icon: Users },
+    { href: '/cr', label: t('navCostaRica'), icon: Users },
+    { href: '/tickets', label: t('navTickets'), icon: Ticket },
+    { href: '/ppa', label: t('navPPA'), icon: ArrowLeftRight },
+    { href: '/agent', label: t('navAgent'), icon: Bot },
+    { href: '/admin', label: t('navAdmin'), icon: Settings },
   ];
 
   return (
