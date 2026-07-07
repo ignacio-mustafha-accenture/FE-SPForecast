@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 
 import type { Ticket } from '@/src/core/domain/ticket';
 import { getClientContainer } from '@/src/application/container';
@@ -14,28 +15,17 @@ import { Textarea } from '@/src/components/ui/Textarea';
 import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
 
-const schema = z.object({
-  eid: z.string().min(1, 'Requerido'),
-  type: z.enum(['newproj', 'ongoing', 'pto', 'sick', 'nj', 'baja']),
-  detail: z.string().optional(),
-  client_name: z.string().optional(),
-  chargeability_pct: z.string().optional(),
-  hours_to_move: z.string().optional(),
-  from_period: z.string().optional(),
-  to_period: z.string().optional(),
-  comments: z.string().optional(),
-});
-
-type FormData = z.infer<typeof schema>;
-
-const TYPE_OPTIONS = [
-  { value: 'newproj', label: 'Nuevo proyecto' },
-  { value: 'ongoing', label: 'En curso' },
-  { value: 'pto', label: 'Vacaciones' },
-  { value: 'sick', label: 'Enfermedad' },
-  { value: 'nj', label: 'No justificado' },
-  { value: 'baja', label: 'Baja' },
-];
+type FormData = {
+  eid: string;
+  type: 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
+  detail?: string;
+  client_name?: string;
+  chargeability_pct?: string;
+  hours_to_move?: string;
+  from_period?: string;
+  to_period?: string;
+  comments?: string;
+};
 
 interface TicketPanelProps {
   open: boolean;
@@ -44,8 +34,31 @@ interface TicketPanelProps {
 }
 
 export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
+  const t = useTranslations('ticketPanel');
+  const tTickets = useTranslations('tickets');
   const toast = useToast();
   const [saving, setSaving] = useState(false);
+
+  const schema = z.object({
+    eid: z.string().min(1, t('required')),
+    type: z.enum(['newproj', 'ongoing', 'pto', 'sick', 'nj', 'baja']),
+    detail: z.string().optional(),
+    client_name: z.string().optional(),
+    chargeability_pct: z.string().optional(),
+    hours_to_move: z.string().optional(),
+    from_period: z.string().optional(),
+    to_period: z.string().optional(),
+    comments: z.string().optional(),
+  });
+
+  const TYPE_OPTIONS = [
+    { value: 'newproj', label: tTickets('typeNewproj') },
+    { value: 'ongoing', label: tTickets('typeOngoing') },
+    { value: 'pto', label: tTickets('typePTO') },
+    { value: 'sick', label: tTickets('typeSick') },
+    { value: 'nj', label: tTickets('typeNJ') },
+    { value: 'baja', label: tTickets('typeBaja') },
+  ];
 
   const {
     register,
@@ -79,49 +92,49 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
       };
       if (ticket) {
         await getClientContainer().updateTicket.execute(ticket.id, payload);
-        toast.success('Ticket actualizado');
+        toast.success(t('toastUpdated'));
       } else {
         await getClientContainer().createTicket.execute(payload);
-        toast.success('Ticket creado');
+        toast.success(t('toastCreated'));
       }
       reset();
       onClose();
     } catch {
-      toast.error('Error al guardar ticket');
+      toast.error(t('toastError'));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Drawer open={open} onClose={onClose} title={ticket ? 'Editar ticket' : 'Nuevo ticket'}>
+    <Drawer open={open} onClose={onClose} title={ticket ? t('editTitle') : t('createTitle')}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
-          label="EID del empleado"
-          placeholder="ramos.lucas"
+          label={t('eidLabel')}
+          placeholder={t('eidPlaceholder')}
           error={errors.eid?.message}
           {...register('eid')}
           disabled={!!ticket}
         />
         <Select
-          label="Tipo"
+          label={t('typeLabel')}
           options={TYPE_OPTIONS}
           error={errors.type?.message}
           {...register('type')}
         />
-        <Input label="Cliente" placeholder="Google" {...register('client_name')} />
-        <Input label="Chargeability %" type="number" min={0} max={100} {...register('chargeability_pct')} />
-        <Input label="Horas a mover" type="number" min={0} {...register('hours_to_move')} />
-        <Input label="Desde período" placeholder="Jun-P1" {...register('from_period')} />
-        <Input label="Hasta período" placeholder="Jun-P2" {...register('to_period')} />
-        <Textarea label="Detalle" placeholder="Descripción..." {...register('detail')} />
-        <Textarea label="Comentarios" placeholder="Notas adicionales..." {...register('comments')} />
+        <Input label={t('clientLabel')} placeholder={t('clientPlaceholder')} {...register('client_name')} />
+        <Input label={t('chargeabilityLabel')} type="number" min={0} max={100} {...register('chargeability_pct')} />
+        <Input label={t('hoursLabel')} type="number" min={0} {...register('hours_to_move')} />
+        <Input label={t('fromPeriodLabel')} placeholder={t('fromPeriodPlaceholder')} {...register('from_period')} />
+        <Input label={t('toPeriodLabel')} placeholder={t('toPeriodPlaceholder')} {...register('to_period')} />
+        <Textarea label={t('detailLabel')} placeholder={t('detailPlaceholder')} {...register('detail')} />
+        <Textarea label={t('commentsLabel')} placeholder={t('commentsPlaceholder')} {...register('comments')} />
         <div className="flex gap-2 pt-2">
           <Button type="submit" loading={saving} className="flex-1">
-            {ticket ? 'Guardar cambios' : 'Crear ticket'}
+            {ticket ? t('submitEdit') : t('submitCreate')}
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancelar
+            {t('cancel')}
           </Button>
         </div>
       </form>

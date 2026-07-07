@@ -1,5 +1,10 @@
+import { Suspense } from 'react';
 import { CountryView } from '@/src/views/country/CountryView';
 
 export default function Page() {
-  return <CountryView country="CR" />;
+  return (
+    <Suspense>
+      <CountryView country="CR" />
+    </Suspense>
+  );
 }

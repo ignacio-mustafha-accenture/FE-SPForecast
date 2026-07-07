@@ -30,6 +30,7 @@ export interface RawEmployee {
   NextPTOEnd: string | null;
   NextPTOHours: number | null;
   NextClientPTO: string | null;
+  Notes: string | null;
   NewJoiner: boolean;
   TerminationDate: string | null;
   Charge: boolean;
@@ -60,6 +61,8 @@ export interface RawTicket {
   from_period: string | null;
   to_period: string | null;
   comments: string | null;
+  eid_name?: string | null;
+  eid_country?: string | null;
 }
 
 export interface RawPPALog {
@@ -71,6 +74,15 @@ export interface RawPPALog {
   hs: number;
   reason: string;
   date: string;
+  country?: string | null;
+}
+
+export interface RawPage<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
 }
 
 export interface RawTargets {

@@ -1,25 +1,28 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { useWindowOffset } from '@/src/hooks/useWindowOffset';
 import { useForecastStore } from '@/src/store/StoreProvider';
 
 import { SidebarNavItem } from './SidebarNavItem';
 
-const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard', icon: '◻' },
-  { href: '/ar', label: 'Argentina', icon: '🇦🇷' },
-  { href: '/mx', label: 'México', icon: '🇲🇽' },
-  { href: '/cr', label: 'Costa Rica', icon: '🇨🇷' },
-  { href: '/tickets', label: 'Tickets', icon: '🎫' },
-  { href: '/ppa', label: 'PPA', icon: '📊' },
-  { href: '/agent', label: 'Agente IA', icon: '🤖' },
-  { href: '/admin', label: 'Admin', icon: '⚙' },
-];
-
 export function Sidebar() {
+  const t = useTranslations('layout');
   const { offset, decrement, increment, reset } = useWindowOffset();
   const period = useForecastStore((s) => s.appState?.period ?? null);
   const isLoading = useForecastStore((s) => s.isLoading);
+
+  const NAV_ITEMS = [
+    { href: '/', label: t('navDashboard'), icon: '◻' },
+    { href: '/ar', label: t('navArgentina'), icon: '🇦🇷' },
+    { href: '/mx', label: t('navMexico'), icon: '🇲🇽' },
+    { href: '/cr', label: t('navCostaRica'), icon: '🇨🇷' },
+    { href: '/tickets', label: t('navTickets'), icon: '🎫' },
+    { href: '/ppa', label: t('navPPA'), icon: '📊' },
+    { href: '/agent', label: t('navAgent'), icon: '🤖' },
+    { href: '/admin', label: t('navAdmin'), icon: '⚙' },
+  ];
 
   return (
     <aside
@@ -28,7 +31,7 @@ export function Sidebar() {
     >
       {/* Period widget */}
       <div className="border-b border-[var(--G5)] px-3 py-3">
-        <p className="text-[10px] font-semibold text-[var(--G3)] uppercase tracking-wide mb-1.5">Período</p>
+        <p className="text-[10px] font-semibold text-[var(--G3)] uppercase tracking-wide mb-1.5">{t('period')}</p>
         <div className="flex items-center justify-between gap-1">
           <button
             onClick={decrement}
@@ -41,7 +44,7 @@ export function Sidebar() {
             onClick={reset}
             className="flex-1 text-center text-xs font-medium text-[var(--G1)] hover:text-[var(--P)] transition-colors truncate"
           >
-            {period ? period.label : offset === 0 ? 'Actual' : `${offset > 0 ? '+' : ''}${offset}`}
+            {period ? period.label : offset === 0 ? t('current') : `${offset > 0 ? '+' : ''}${offset}`}
           </button>
           <button
             onClick={increment}

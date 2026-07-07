@@ -10,6 +10,9 @@ import { CreateTicketUseCase } from './use-cases/CreateTicketUseCase';
 import { FetchStateUseCase } from './use-cases/FetchStateUseCase';
 import { ForgotPasswordUseCase } from './use-cases/ForgotPasswordUseCase';
 import { GetAuthUserUseCase } from './use-cases/GetAuthUserUseCase';
+import { ListEmployeesUseCase } from './use-cases/ListEmployeesUseCase';
+import { ListPPAUseCase } from './use-cases/ListPPAUseCase';
+import { ListTicketsUseCase } from './use-cases/ListTicketsUseCase';
 import { LoginUseCase } from './use-cases/LoginUseCase';
 import { LogoutUseCase } from './use-cases/LogoutUseCase';
 import { RecalculateUseCase } from './use-cases/RecalculateUseCase';
@@ -25,6 +28,9 @@ export interface AppContainer {
   logout: LogoutUseCase;
   forgotPassword: ForgotPasswordUseCase;
   resetPassword: ResetPasswordUseCase;
+  listEmployees: ListEmployeesUseCase;
+  listTickets: ListTicketsUseCase;
+  listPPA: ListPPAUseCase;
   createTicket: CreateTicketUseCase;
   updateTicket: UpdateTicketUseCase;
   updateEmployee: UpdateEmployeeUseCase;
@@ -35,6 +41,9 @@ export interface AppContainer {
 
 export function createServerContainer(cookieHeader: string): AppContainer {
   const ctx = { cookieHeader };
+  const employeeRepo = new HttpEmployeeRepository(ctx);
+  const ticketRepo = new HttpTicketRepository(ctx);
+  const ppaRepo = new HttpPPARepository(ctx);
   return {
     fetchState: new FetchStateUseCase(new HttpStateRepository(ctx)),
     getAuthUser: new GetAuthUserUseCase(new HttpAuthRepository(ctx)),
@@ -42,10 +51,13 @@ export function createServerContainer(cookieHeader: string): AppContainer {
     logout: new LogoutUseCase(new HttpAuthRepository(ctx)),
     forgotPassword: new ForgotPasswordUseCase(new HttpAuthRepository(ctx)),
     resetPassword: new ResetPasswordUseCase(new HttpAuthRepository(ctx)),
-    createTicket: new CreateTicketUseCase(new HttpTicketRepository(ctx)),
-    updateTicket: new UpdateTicketUseCase(new HttpTicketRepository(ctx)),
-    updateEmployee: new UpdateEmployeeUseCase(new HttpEmployeeRepository(ctx)),
-    applyPPA: new ApplyPPAUseCase(new HttpPPARepository(ctx)),
+    listEmployees: new ListEmployeesUseCase(employeeRepo),
+    listTickets: new ListTicketsUseCase(ticketRepo),
+    listPPA: new ListPPAUseCase(ppaRepo),
+    createTicket: new CreateTicketUseCase(ticketRepo),
+    updateTicket: new UpdateTicketUseCase(ticketRepo),
+    updateEmployee: new UpdateEmployeeUseCase(employeeRepo),
+    applyPPA: new ApplyPPAUseCase(ppaRepo),
     recalculate: new RecalculateUseCase(new HttpAdminRepository(ctx)),
     sync: new SyncUseCase(new HttpAdminRepository(ctx)),
   };
@@ -56,6 +68,9 @@ let clientContainer: AppContainer | null = null;
 export function getClientContainer(): AppContainer {
   if (!clientContainer) {
     const ctx = { credentials: 'include' as const };
+    const employeeRepo = new HttpEmployeeRepository(ctx);
+    const ticketRepo = new HttpTicketRepository(ctx);
+    const ppaRepo = new HttpPPARepository(ctx);
     clientContainer = {
       fetchState: new FetchStateUseCase(new HttpStateRepository(ctx)),
       getAuthUser: new GetAuthUserUseCase(new HttpAuthRepository(ctx)),
@@ -63,10 +78,13 @@ export function getClientContainer(): AppContainer {
       logout: new LogoutUseCase(new HttpAuthRepository(ctx)),
       forgotPassword: new ForgotPasswordUseCase(new HttpAuthRepository(ctx)),
       resetPassword: new ResetPasswordUseCase(new HttpAuthRepository(ctx)),
-      createTicket: new CreateTicketUseCase(new HttpTicketRepository(ctx)),
-      updateTicket: new UpdateTicketUseCase(new HttpTicketRepository(ctx)),
-      updateEmployee: new UpdateEmployeeUseCase(new HttpEmployeeRepository(ctx)),
-      applyPPA: new ApplyPPAUseCase(new HttpPPARepository(ctx)),
+      listEmployees: new ListEmployeesUseCase(employeeRepo),
+      listTickets: new ListTicketsUseCase(ticketRepo),
+      listPPA: new ListPPAUseCase(ppaRepo),
+      createTicket: new CreateTicketUseCase(ticketRepo),
+      updateTicket: new UpdateTicketUseCase(ticketRepo),
+      updateEmployee: new UpdateEmployeeUseCase(employeeRepo),
+      applyPPA: new ApplyPPAUseCase(ppaRepo),
       recalculate: new RecalculateUseCase(new HttpAdminRepository(ctx)),
       sync: new SyncUseCase(new HttpAdminRepository(ctx)),
     };

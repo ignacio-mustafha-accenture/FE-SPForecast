@@ -5,16 +5,19 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 
 import { getClientContainer } from '@/src/application/container';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 
-const schema = z.object({ email: z.string().email('Email inválido') });
-type FormData = z.infer<typeof schema>;
+type FormData = { email: string };
 
 export function ForgotPasswordPage() {
+  const t = useTranslations('auth.forgotPassword');
   const [sent, setSent] = useState(false);
+
+  const schema = z.object({ email: z.string().email(t('emailInvalid')) });
 
   const {
     register,
@@ -30,12 +33,10 @@ export function ForgotPasswordPage() {
   if (sent) {
     return (
       <div className="rounded-xl border border-[var(--G5)] bg-white p-8 shadow-sm text-center">
-        <p className="text-[var(--GR)] font-medium mb-2">✓ Email enviado</p>
-        <p className="text-sm text-[var(--G2)]">
-          Si el email existe en el sistema, recibirás instrucciones para recuperar tu contraseña.
-        </p>
+        <p className="text-[var(--GR)] font-medium mb-2">{t('successTitle')}</p>
+        <p className="text-sm text-[var(--G2)]">{t('successBody')}</p>
         <Link href="/login" className="mt-4 inline-block text-xs text-[var(--P)] hover:underline">
-          Volver al login
+          {t('backToLoginBtn')}
         </Link>
       </div>
     );
@@ -43,23 +44,23 @@ export function ForgotPasswordPage() {
 
   return (
     <div className="rounded-xl border border-[var(--G5)] bg-white p-8 shadow-sm">
-      <h2 className="text-lg font-semibold text-[var(--G1)] mb-2">Recuperar contraseña</h2>
-      <p className="text-sm text-[var(--G2)] mb-6">Ingresá tu email y te enviaremos un enlace.</p>
+      <h2 className="text-lg font-semibold text-[var(--G1)] mb-2">{t('title')}</h2>
+      <p className="text-sm text-[var(--G2)] mb-6">{t('subtitle')}</p>
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <Input
-          label="Email"
+          label={t('emailLabel')}
           type="email"
           placeholder="nombre@accenture.com"
           error={errors.email?.message}
           {...register('email')}
         />
         <Button type="submit" loading={isSubmitting} className="w-full">
-          Enviar enlace
+          {t('submit')}
         </Button>
       </form>
       <div className="mt-4 text-center">
         <Link href="/login" className="text-xs text-[var(--G3)] hover:text-[var(--G1)]">
-          ← Volver al login
+          {t('backToLogin')}
         </Link>
       </div>
     </div>

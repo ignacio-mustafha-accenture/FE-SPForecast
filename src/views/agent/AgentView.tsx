@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
@@ -13,11 +14,13 @@ interface Message {
 }
 
 export function AgentView() {
+  const t = useTranslations('agent');
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
       role: 'assistant',
-      content: 'Hola, soy el agente de SP Forecast. ¿En qué puedo ayudarte hoy?',
+      content: t('welcomeMsg'),
       timestamp: new Date(),
     },
   ]);
@@ -56,7 +59,7 @@ export function AgentView() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-var(--topbar-h)-48px)]">
-      <h1 className="text-xl font-bold text-[var(--BK)] mb-4">Agente IA</h1>
+      <h1 className="text-xl font-bold text-[var(--BK)] mb-4">{t('title')}</h1>
       <div className="flex-1 overflow-y-auto space-y-3 pb-4">
         {messages.map((msg) => (
           <div
@@ -77,7 +80,7 @@ export function AgentView() {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-[var(--G6)] rounded-xl px-4 py-3 text-sm text-[var(--G3)]">
-              <span className="animate-pulse">Escribiendo...</span>
+              <span className="animate-pulse">{t('typing')}</span>
             </div>
           </div>
         )}
@@ -85,14 +88,14 @@ export function AgentView() {
       </div>
       <div className="flex gap-2 pt-3 border-t border-[var(--G5)]">
         <Input
-          placeholder="Escribe tu consulta..."
+          placeholder={t('placeholder')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
           className="flex-1"
         />
         <Button onClick={sendMessage} loading={loading} disabled={!input.trim()}>
-          Enviar
+          {t('send')}
         </Button>
       </div>
     </div>

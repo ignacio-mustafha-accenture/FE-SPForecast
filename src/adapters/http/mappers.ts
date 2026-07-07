@@ -4,8 +4,9 @@ import type { Period } from '@/src/core/domain/period';
 import type { PPALog } from '@/src/core/domain/ppa';
 import type { Ticket, TicketType } from '@/src/core/domain/ticket';
 import type { User, Role } from '@/src/core/domain/user';
+import { getEmployeeStatus } from '@/src/lib/status';
 
-import type { RawAppState, RawEmployee, RawPeriod, RawPPALog, RawTicket, RawUser } from './types';
+import type { RawAppState, RawEmployee, RawPeriod, RawPPALog, RawTicket, RawUser, RawTargets } from './types';
 
 const COUNTRY_MAP: Record<string, Country> = {
   argentina: 'AR',
@@ -18,30 +19,63 @@ function mapCountry(raw: string): Country {
   return COUNTRY_MAP[raw.toLowerCase()] ?? 'AR';
 }
 
-function mapChargeabilityStatus(cp0: number, charge: boolean): ChargeabilityStatus {
-  if (!charge) return 'unassigned';
-  if (cp0 >= 80) return 'green';
-  if (cp0 >= 50) return 'yellow';
-  return 'red';
+function normalizeKey(s: string): string {
+  return s.toLowerCase()
+    .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i')
+    .replace(/ó/g, 'o').replace(/ú/g, 'u');
 }
 
-export function mapRawEmployee(raw: RawEmployee): Employee {
+function buildCountryTargetMap(targets: RawTargets): Record<Country, number> {
+  const general = targets.general ?? 87;
+  const result: Record<Country, number> = { AR: general, MX: general, CR: general };
+  const lookups: Record<string, Country> = {
+    argentina: 'AR',
+    mexico: 'MX',
+    méxico: 'MX',
+    'costa rica': 'CR',
+  };
+  for (const [key, value] of Object.entries(targets)) {
+    if (key === 'general') continue;
+    const code = lookups[normalizeKey(key)];
+    if (code) result[code] = value;
+  }
+  return result;
+}
+
+export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
   const cp0 = raw.cp?.[0] ?? 0;
   const sah0 = raw.sah?.[0] ?? 0;
   const chg0 = raw.chg?.[0] ?? 0;
+  const hasClient = raw.Charge !== false;
+  const isTerminated = !!raw.TerminationDate;
 
   return {
     id: raw.EID,
     name: raw.Name,
     email: '',
     country: mapCountry(raw.Country),
-    level: raw.CL,
-    project: raw.Client || raw.ProjectType || null,
-    chargeabilityStatus: mapChargeabilityStatus(cp0, raw.Charge),
+    level: raw.CL ?? '',
+    project: raw.Client || null,
+    client: raw.Client || null,
+    projectType: raw.ProjectType || null,
+    manager: raw.Manager || null,
+    rollOn: raw.RollOn || null,
+    rollOff: raw.RollOff || null,
+    fad: raw.FAD || null,
+    daysToAvailable: raw.DaysToAvailable ?? 0,
+    hireDate: raw.HireDate || null,
+    nextPTO: raw.NextPTO || null,
+    nextPTOHours: raw.NextPTOHours ?? null,
+    newJoiner: raw.NewJoiner ?? false,
+    charge: hasClient,
+    chg: raw.chg ?? [],
+    sah: raw.sah ?? [],
+    cp: raw.cp ?? [],
+    chargeabilityStatus: getEmployeeStatus(cp0, target, hasClient, isTerminated),
     chargeabilityPercent: cp0 / 100,
     availableHours: Math.max(0, sah0 - chg0),
     totalHours: sah0,
-    notes: '',
+    notes: raw.Notes ?? '',
   };
 }
 
@@ -56,11 +90,12 @@ export function mapRawPeriod(raw: RawPeriod, windowOffset: number): Period {
 
 export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>): Ticket {
   const employee = employeeMap.get(raw.eid);
+  const eidCountry = raw.eid_country ? mapCountry(raw.eid_country) : undefined;
   return {
     id: raw.id,
     employeeId: raw.eid,
-    employeeName: employee?.name ?? raw.by ?? raw.eid,
-    country: employee?.country ?? '',
+    employeeName: raw.eid_name ?? employee?.name ?? raw.by ?? raw.eid,
+    country: eidCountry ?? employee?.country ?? '',
     type: raw.type as TicketType,
     detail: raw.detail,
     status: raw.status,
@@ -78,11 +113,12 @@ export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>)
 
 export function mapRawPPALog(raw: RawPPALog, employeeMap: Map<string, Employee>): PPALog {
   const employee = employeeMap.get(raw.eid);
+  const rawCountry = raw.country ? mapCountry(raw.country) : undefined;
   return {
     id: raw.id,
     employeeId: raw.eid,
     employeeName: raw.name,
-    country: employee?.country ?? '',
+    country: rawCountry ?? employee?.country ?? '',
     fromPeriod: raw.from,
     toPeriod: raw.to,
     hours: raw.hs,
@@ -105,6 +141,8 @@ function computeCountrySummaries(employees: Employee[]): CountrySummary[] {
     chargeableCount: emps.filter((e) => e.chargeabilityStatus === 'green').length,
     atRiskCount: emps.filter((e) => e.chargeabilityStatus === 'yellow').length,
     unchargeableCount: emps.filter((e) => e.chargeabilityStatus === 'red').length,
+    unassignedCount: emps.filter((e) => e.chargeabilityStatus === 'unassigned').length,
+    leaveCount: emps.filter((e) => e.chargeabilityStatus === 'leave').length,
     avgChargeability:
       emps.length > 0
         ? emps.reduce((acc, e) => acc + e.chargeabilityPercent, 0) / emps.length
@@ -115,16 +153,19 @@ function computeCountrySummaries(employees: Employee[]): CountrySummary[] {
 
 export function mapRawAppState(raw: RawAppState, windowOffset: number): AppState {
   const currentPeriod = raw.periods?.find((p) => p.isCurrent) ?? raw.periods?.[0];
-
-  const employees = (raw.employees ?? []).map(mapRawEmployee);
+  const allPeriods = (raw.periods ?? []).map((p) => mapRawPeriod(p, windowOffset));
+  const countryTargets = buildCountryTargetMap(raw.targets ?? { general: 87 });
+  const employees = (raw.employees ?? []).map((e) => mapRawEmployee(e, countryTargets[mapCountry(e.Country) ?? 'AR']));
   const employeeMap = new Map(employees.map((e) => [e.id, e]));
 
   return {
     period: currentPeriod ? mapRawPeriod(currentPeriod, windowOffset) : { label: '—', startDate: '', endDate: '', windowOffset },
+    periods: allPeriods,
     employees,
     tickets: (raw.tickets ?? []).map((t) => mapRawTicket(t, employeeMap)),
     ppaLogs: (raw.ppa_log ?? []).map((p) => mapRawPPALog(p, employeeMap)),
     countrySummaries: computeCountrySummaries(employees),
+    targets: raw.targets ?? { general: 87 },
     lastSyncAt: null,
     lastRecalcAt: null,
   };

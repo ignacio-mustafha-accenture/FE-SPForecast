@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { Barlow, Barlow_Condensed, JetBrains_Mono } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 
+import { LocaleProvider } from '@/src/i18n/LocaleContext';
 import './globals.css';
 
 const barlow = Barlow({
@@ -29,13 +32,22 @@ export const metadata: Metadata = {
   description: 'Staffing and chargeability forecast management',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale() as 'es' | 'en';
+  const messages = await getMessages();
+
   return (
     <html
-      lang="es"
+      lang={locale}
       className={`${barlow.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable} h-full`}
     >
-      <body className="h-full">{children}</body>
+      <body className="h-full">
+        <LocaleProvider locale={locale}>
+          <NextIntlClientProvider messages={messages}>
+            {children}
+          </NextIntlClientProvider>
+        </LocaleProvider>
+      </body>
     </html>
   );
 }

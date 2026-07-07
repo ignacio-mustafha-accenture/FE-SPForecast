@@ -6,23 +6,25 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 
 import { getClientContainer } from '@/src/application/container';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { ApiError } from '@/src/adapters/http/fetcher';
 
-const schema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(1, 'Contraseña requerida'),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = { email: string; password: string };
 
 export function LoginPage() {
+  const t = useTranslations('auth.login');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [serverError, setServerError] = useState('');
+
+  const schema = z.object({
+    email: z.string().email(t('errors.emailInvalid')),
+    password: z.string().min(1, t('errors.passwordRequired')),
+  });
 
   const {
     register,
@@ -38,28 +40,28 @@ export function LoginPage() {
       router.push(from);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        setServerError('FO-ERR-001: Credenciales inválidas');
+        setServerError(t('errors.invalidCredentials'));
       } else {
-        setServerError('Error de conexión. Intente nuevamente.');
+        setServerError(t('errors.connectionError'));
       }
     }
   }
 
   return (
     <div className="rounded-xl border border-[var(--G5)] bg-white p-8 shadow-sm">
-      <h2 className="text-lg font-semibold text-[var(--G1)] mb-6">Iniciar sesión</h2>
+      <h2 className="text-lg font-semibold text-[var(--G1)] mb-6">{t('title')}</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <Input
-          label="Email"
+          label={t('emailLabel')}
           type="email"
-          placeholder="nombre@accenture.com"
+          placeholder={t('emailPlaceholder')}
           error={errors.email?.message}
           {...register('email')}
         />
         <Input
-          label="Contraseña"
+          label={t('passwordLabel')}
           type="password"
-          placeholder="••••••••"
+          placeholder={t('passwordPlaceholder')}
           error={errors.password?.message}
           {...register('password')}
         />
@@ -69,12 +71,12 @@ export function LoginPage() {
           </p>
         )}
         <Button type="submit" loading={isSubmitting} className="w-full mt-1">
-          Ingresar
+          {t('submit')}
         </Button>
       </form>
       <div className="mt-4 text-center">
         <Link href="/forgot-password" className="text-xs text-[var(--P)] hover:underline">
-          ¿Olvidaste tu contraseña?
+          {t('forgotPassword')}
         </Link>
       </div>
     </div>

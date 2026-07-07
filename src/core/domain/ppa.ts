@@ -9,3 +9,11 @@ export interface PPALog {
   reason: string;
   appliedAt: string;
 }
+
+export interface PPACreatePayload {
+  eid: string;
+  fromPeriod: string;
+  toPeriod: string;
+  hours: number;
+  reason: string;
+}

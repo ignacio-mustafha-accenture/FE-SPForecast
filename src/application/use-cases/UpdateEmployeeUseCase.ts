@@ -1,10 +1,9 @@
-import type { Employee } from '@/src/core/domain/employee';
-import type { IEmployeeRepository } from '@/src/core/ports/IEmployeeRepository';
+import type { IEmployeeRepository, EmployeeUpdatePayload } from '@/src/core/ports/IEmployeeRepository';
 
 export class UpdateEmployeeUseCase {
   constructor(private repo: IEmployeeRepository) {}
 
-  execute(id: string, data: Partial<Pick<Employee, 'notes' | 'project'>>): Promise<Employee> {
+  execute(id: string, data: EmployeeUpdatePayload): Promise<void> {
     return this.repo.update(id, data);
   }
 }

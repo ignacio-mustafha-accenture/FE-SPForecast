@@ -1,3 +1,7 @@
+import type { PPALog, PPACreatePayload } from '../domain/ppa';
+import type { Page, PPAFilter } from '../domain/pagination';
+
 export interface IPPARepository {
-  apply(employeeId: string, periodLabel: string): Promise<void>;
+  list(filter: PPAFilter): Promise<Page<PPALog>>;
+  create(payload: PPACreatePayload): Promise<void>;
 }

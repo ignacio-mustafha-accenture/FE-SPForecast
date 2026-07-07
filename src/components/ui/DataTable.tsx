@@ -29,14 +29,25 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useTranslations } from 'next-intl';
 
 import { cn } from '@/src/lib/cn';
+
+interface PaginationProps {
+  page: number;
+  pageSize: number;
+  total: number;
+  pages: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
+}
 
 interface DataTableProps<TData> {
   data: TData[];
   columns: ColumnDef<TData, unknown>[];
   tableKey?: string;
   className?: string;
+  pagination?: PaginationProps;
 }
 
 function DraggableHeader<TData extends RowData>({ header }: { header: Header<TData, unknown> }) {
@@ -69,7 +80,8 @@ function DraggableHeader<TData extends RowData>({ header }: { header: Header<TDa
   );
 }
 
-export function DataTable<TData>({ data, columns, className }: DataTableProps<TData>) {
+export function DataTable<TData>({ data, columns, className, pagination }: DataTableProps<TData>) {
+  const t = useTranslations('common');
   const dndId = useId();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -102,41 +114,83 @@ export function DataTable<TData>({ data, columns, className }: DataTableProps<TD
     }
   }
 
+  const PAGE_SIZES = [10, 25, 50, 100];
+
   return (
-    <div className={cn('overflow-x-auto rounded-lg border border-[var(--G5)]', className)}>
-      <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <table className="min-w-full divide-y divide-[var(--G5)] text-sm">
-          <thead>
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
-                <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
-                  {hg.headers.map((header) => (
-                    <DraggableHeader key={header.id} header={header} />
+    <div className="space-y-2">
+      <div className={cn('overflow-x-auto rounded-lg border border-[var(--G5)]', className)}>
+        <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <table className="min-w-full divide-y divide-[var(--G5)] text-sm">
+            <thead>
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id}>
+                  <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
+                    {hg.headers.map((header) => (
+                      <DraggableHeader key={header.id} header={header} />
+                    ))}
+                  </SortableContext>
+                </tr>
+              ))}
+            </thead>
+            <tbody className="divide-y divide-[var(--G5)] bg-white">
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className="hover:bg-[var(--G6)] transition-colors duration-120">
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-3 py-2.5 text-[var(--G1)] whitespace-nowrap">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
                   ))}
-                </SortableContext>
-              </tr>
-            ))}
-          </thead>
-          <tbody className="divide-y divide-[var(--G5)] bg-white">
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="hover:bg-[var(--G6)] transition-colors duration-120">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-2.5 text-[var(--G1)] whitespace-nowrap">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </tr>
+              ))}
+              {table.getRowModel().rows.length === 0 && (
+                <tr>
+                  <td colSpan={columns.length} className="py-10 text-center text-[var(--G3)]">
+                    {t('noData')}
                   </td>
-                ))}
-              </tr>
-            ))}
-            {table.getRowModel().rows.length === 0 && (
-              <tr>
-                <td colSpan={columns.length} className="py-10 text-center text-[var(--G3)]">
-                  Sin datos
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </DndContext>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </DndContext>
+      </div>
+
+      {pagination && (pagination.pages > 1 || pagination.onPageSizeChange) && (
+        <div className={`flex items-center px-1 text-sm text-[var(--G2)] ${pagination.pages > 1 ? 'justify-between' : 'justify-end'}`}>
+          {pagination.pages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => pagination.onPageChange(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
+              >
+                {t('previous')}
+              </button>
+              <span className="whitespace-nowrap">
+                {t('page')} {pagination.page} {t('of')} {pagination.pages}
+                <span className="text-[var(--G3)] ml-1">({pagination.total} {t('results')})</span>
+              </span>
+              <button
+                onClick={() => pagination.onPageChange(pagination.page + 1)}
+                disabled={pagination.page >= pagination.pages}
+                className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
+              >
+                {t('next')}
+              </button>
+            </div>
+          )}
+          {pagination.onPageSizeChange && (
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => pagination.onPageSizeChange!(Number(e.target.value))}
+              className="border border-[var(--G5)] rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-[var(--P)]"
+            >
+              {PAGE_SIZES.map((s) => (
+                <option key={s} value={s}>{s} {t('perPage')}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
     </div>
   );
 }

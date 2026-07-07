@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 
 import type { Employee } from '@/src/core/domain/employee';
 import { getClientContainer } from '@/src/application/container';
@@ -19,6 +21,7 @@ const statusVariant = {
   yellow: 'yellow',
   red: 'red',
   unassigned: 'neutral',
+  leave: 'neutral',
 } as const;
 
 interface EmployeeDrawerProps {
@@ -33,11 +36,13 @@ interface EditForm {
 }
 
 export function EmployeeDrawer({ open, employee, onClose }: EmployeeDrawerProps) {
+  const t = useTranslations('employeeDrawer');
   const toast = useToast();
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
 
   const { register, handleSubmit } = useForm<EditForm>({
-    values: employee ? { project: employee.project ?? '', notes: employee.notes } : undefined,
+    values: employee ? { project: employee.client ?? '', notes: employee.notes } : undefined,
   });
 
   async function onSave(data: EditForm) {
@@ -45,28 +50,43 @@ export function EmployeeDrawer({ open, employee, onClose }: EmployeeDrawerProps)
     setSaving(true);
     try {
       await getClientContainer().updateEmployee.execute(employee.id, {
-        project: data.project || null,
+        client: data.project || null,
         notes: data.notes,
       });
-      toast.success('Empleado actualizado');
+      toast.success(t('updateSuccess'));
       onClose();
     } catch {
-      toast.error('Error al guardar cambios');
+      toast.error(t('updateError'));
     } finally {
       setSaving(false);
     }
   }
 
+  function goToDetail() {
+    if (employee) {
+      router.push(`/employees/${employee.id}`);
+      onClose();
+    }
+  }
+
   return (
-    <Drawer open={open} onClose={onClose} title={employee?.name ?? 'Empleado'}>
+    <Drawer open={open} onClose={onClose} title={employee?.name ?? t('title')}>
       {employee ? (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Badge variant={statusVariant[employee.chargeabilityStatus]}>{employee.level}</Badge>
-            <span className="text-xs text-[var(--G3)]">{employee.email}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant={statusVariant[employee.chargeabilityStatus]}>{employee.level}</Badge>
+              <span className="text-xs text-[var(--G3)]">{employee.id}</span>
+            </div>
+            <button
+              onClick={goToDetail}
+              className="text-xs text-[var(--P)] hover:underline"
+            >
+              Ver detalle →
+            </button>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-[var(--G3)] uppercase tracking-wide font-medium">Chargeability</p>
+            <p className="text-xs text-[var(--G3)] uppercase tracking-wide font-medium">{t('chargeability')}</p>
             <div className="flex items-center gap-2">
               <ProgressBar
                 value={employee.chargeabilityPercent}
@@ -85,18 +105,18 @@ export function EmployeeDrawer({ open, employee, onClose }: EmployeeDrawerProps)
               </span>
             </div>
             <p className="text-xs text-[var(--G3)]">
-              {employee.availableHours}h disponibles / {employee.totalHours}h totales
+              {t('hoursAvailable', { available: employee.availableHours, total: employee.totalHours })}
             </p>
           </div>
           <form onSubmit={handleSubmit(onSave)} className="space-y-3 pt-2 border-t border-[var(--G5)]">
-            <Input label="Proyecto" placeholder="Sin proyecto" {...register('project')} />
-            <Textarea label="Notas" placeholder="Comentarios..." {...register('notes')} />
+            <Input label={t('projectLabel')} placeholder={t('projectPlaceholder')} {...register('project')} />
+            <Textarea label={t('notesLabel')} placeholder={t('notesPlaceholder')} {...register('notes')} />
             <div className="flex gap-2 pt-2">
               <Button type="submit" loading={saving} className="flex-1">
-                Guardar
+                {t('save')}
               </Button>
               <Button type="button" variant="ghost" onClick={onClose}>
-                Cancelar
+                {t('cancel')}
               </Button>
             </div>
           </form>

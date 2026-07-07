@@ -23,8 +23,9 @@ export function createFetcher(ctx: FetcherCtx) {
     path: string,
     options: RequestInit = {},
   ): Promise<T> {
+    const method = (options.method ?? 'GET').toUpperCase();
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers as Record<string, string>),
     };
 
@@ -32,7 +33,8 @@ export function createFetcher(ctx: FetcherCtx) {
       headers['Cookie'] = ctx.cookieHeader;
     }
 
-    const res = await fetch(`${API_BASE_URL}${path}`, {
+    const baseURL = isServerCtx(ctx) ? API_BASE_URL : '';
+    const res = await fetch(`${baseURL}${path}`, {
       ...options,
       headers,
       ...(!isServerCtx(ctx) ? { credentials: ctx.credentials } : {}),
