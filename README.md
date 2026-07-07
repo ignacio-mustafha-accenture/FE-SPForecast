@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ForecastOS — Frontend
+
+Internal capacity and chargeability management app for Accenture S&P Delivery (Argentina, Mexico, Costa Rica).
+
+> **Backend repo:** [BE-SPForecast](https://github.com/ignacio-mustafha-accenture/BE-SPForecast)
+
+---
+
+## Stack
+
+| | |
+|---|---|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Language | TypeScript 5 |
+| UI Library | Hero UI (`@heroui/react`) + Tailwind CSS v4 |
+| Tables | TanStack Table v8 |
+| Forms | React Hook Form + Zod |
+| State | Zustand v5 |
+| Animations | Framer Motion |
+| Drag & Drop | dnd-kit |
+| i18n | next-intl (ES / EN) |
+| Export | xlsx |
+| Package manager | pnpm |
+
+---
+
+## Architecture
+
+Clean Architecture with strict layer separation:
+
+```
+src/
+├── core/
+│   ├── domain/          # Domain models (Employee, Ticket, PPA, …)
+│   └── ports/           # Repository interfaces
+├── adapters/
+│   └── http/            # HTTP implementations of the port interfaces
+├── application/
+│   └── use-cases/       # Business logic (List*, Apply*, Update*, …)
+├── views/               # Page-level components (one per route)
+├── components/
+│   ├── layout/          # Sidebar, TopBar, LanguageSelector
+│   ├── ui/              # DataTable, FilterBar, …
+│   └── shared/          # ErrorBoundary
+├── hooks/               # useCountryEmployees, useDebounce, …
+├── store/               # Zustand stores
+├── i18n/                # next-intl setup + locale context
+└── lib/                 # constants, status helpers
+```
+
+---
+
+## Pages
+
+| Route | Description |
+|---|---|
+| `/login` | Login with email + password |
+| `/forgot-password` | Request password reset |
+| `/reset-password` | Reset with token (from email) |
+| `/` | Dashboard — global KPIs and overview |
+| `/ar` | Argentina team — capacity grid |
+| `/mx` | Mexico team — capacity grid |
+| `/cr` | Costa Rica team — capacity grid |
+| `/tickets` | Ticket management (newproj, ongoing, PTO, sick, NJ, baja) |
+| `/ppa` | PPA transfer log + new adjustments |
+| `/employees/[eid]` | Employee detail view |
+| `/admin` | User management + role/permission editor |
+| `/agent` | AI agent view |
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- pnpm (`npm i -g pnpm`)
+- [BE-SPForecast](https://github.com/ignacio-mustafha-accenture/BE-SPForecast) running on port 8000
+
+### Install & run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App available at `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create `.env.local`:
 
-## Learn More
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
 
-To learn more about Next.js, take a look at the following resources:
+All `/api/*` requests are proxied server-side to the backend via `next.config.ts` rewrites — HttpOnly auth cookies work transparently.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Auth flow
 
-## Deploy on Vercel
+1. `/login` → `POST /api/auth/login` → backend sets `access_token` HttpOnly cookie
+2. `proxy.ts` middleware guards all non-public routes — redirects to `/login` if cookie is absent
+3. Cookie is forwarded automatically on every API call through the Next.js rewrite proxy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy (Vercel)
+
+1. Import this repo in [Vercel](https://vercel.com)
+2. Set the environment variable:
+
+```
+NEXT_PUBLIC_API_BASE_URL=https://<your-railway-backend>.up.railway.app
+```
+
+3. Deploy — no other config needed. Vercel detects Next.js automatically.
+
+> The rewrite proxy in `next.config.ts` forwards all `/api/*` calls server-side to the backend URL, so cookies and CORS work without any browser cross-origin issues.
