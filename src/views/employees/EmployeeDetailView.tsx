@@ -1,14 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 
-import type { Employee } from '@/src/core/domain/employee';
 import { useForecastStore } from '@/src/store/StoreProvider';
 import { getClientContainer } from '@/src/application/container';
-import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
 import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
@@ -19,12 +17,36 @@ import { useToast } from '@/src/hooks/useToast';
 import { formatPercent } from '@/src/lib/formatters';
 
 const statusVariant = {
-  green: 'green',
-  yellow: 'yellow',
-  red: 'red',
+  green:      'green',
+  yellow:     'yellow',
+  red:        'red',
   unassigned: 'neutral',
-  leave: 'neutral',
+  leave:      'neutral',
 } as const;
+
+const statusColor: Record<string, string> = {
+  green:      'var(--GR)',
+  yellow:     'var(--YL)',
+  red:        'var(--RD)',
+  unassigned: 'var(--G4)',
+  leave:      'var(--G4)',
+};
+
+const statusBg: Record<string, string> = {
+  green:      'rgba(34,197,94,0.07)',
+  yellow:     'rgba(245,158,11,0.07)',
+  red:        'rgba(239,68,68,0.07)',
+  unassigned: 'rgba(100,116,139,0.05)',
+  leave:      'rgba(100,116,139,0.05)',
+};
+
+const statusLabel: Record<string, string> = {
+  green:      'En objetivo',
+  yellow:     'En riesgo',
+  red:        'Bajo objetivo',
+  unassigned: 'Sin proyecto',
+  leave:      'Baja',
+};
 
 interface EditForm {
   client: string;
@@ -37,16 +59,20 @@ interface EditForm {
   notes: string;
 }
 
-interface InfoRowProps {
-  label: string;
-  value: React.ReactNode;
+function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl border border-[var(--G5)] px-4 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] mb-0.5">{label}</p>
+      <p className="text-sm font-semibold text-[var(--G1)] truncate">{value ?? <span className="font-normal text-[var(--G4)]">—</span>}</p>
+    </div>
+  );
 }
 
-function InfoRow({ label, value }: InfoRowProps) {
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex justify-between py-2 border-b border-[var(--G6)] text-sm">
-      <span className="text-[var(--G3)] font-medium">{label}</span>
-      <span className="text-[var(--G1)] text-right">{value ?? '—'}</span>
+    <div className="py-2.5 border-b border-[var(--G6)] last:border-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] mb-0.5">{label}</p>
+      <p className="text-sm text-[var(--G1)]">{value ?? <span className="text-[var(--G4)]">—</span>}</p>
     </div>
   );
 }
@@ -70,16 +96,16 @@ export function EmployeeDetailView({ eid }: Props) {
   const { register, handleSubmit } = useForm<EditForm>({
     values: employee
       ? {
-          client: employee.client ?? '',
-          offering: employee.projectType ?? '',
-          rollOn: employee.rollOn ?? '',
-          rollOff: employee.rollOff ?? '',
+          client:           employee.client ?? '',
+          offering:         employee.projectType ?? '',
+          rollOn:           employee.rollOn ?? '',
+          rollOff:          employee.rollOff ?? '',
           chargeabilityPct: employee.chargeabilityPercent > 0
             ? String(Math.round(employee.chargeabilityPercent * 100))
             : '',
-          accountManager: employee.manager ?? '',
-          nextClient: '',
-          notes: employee.notes,
+          accountManager:   employee.manager ?? '',
+          nextClient:       '',
+          notes:            employee.notes,
         }
       : undefined,
   });
@@ -89,14 +115,14 @@ export function EmployeeDetailView({ eid }: Props) {
     setSaving(true);
     try {
       await getClientContainer().updateEmployee.execute(employee.id, {
-        client: data.client || null,
-        offering: data.offering || null,
-        rollOn: data.rollOn || null,
-        rollOff: data.rollOff || null,
+        client:          data.client || null,
+        offering:        data.offering || null,
+        rollOn:          data.rollOn || null,
+        rollOff:         data.rollOff || null,
         chargeabilityPct: data.chargeabilityPct ? Number(data.chargeabilityPct) : null,
-        accountManager: data.accountManager || null,
-        nextClient: data.nextClient || null,
-        notes: data.notes || null,
+        accountManager:  data.accountManager || null,
+        nextClient:      data.nextClient || null,
+        notes:           data.notes || null,
       });
       toast.success(t('savedOk'));
     } catch {
@@ -108,10 +134,16 @@ export function EmployeeDetailView({ eid }: Props) {
 
   if (isLoading && !employee) {
     return (
-      <div className="space-y-4 max-w-4xl">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 rounded-lg" />
-        <Skeleton className="h-48 rounded-lg" />
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="h-32 rounded-2xl" />
+        <div className="grid grid-cols-4 gap-3">
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+        </div>
+        <Skeleton className="h-64 rounded-xl" />
       </div>
     );
   }
@@ -119,7 +151,10 @@ export function EmployeeDetailView({ eid }: Props) {
   if (!employee) {
     return (
       <div className="space-y-4">
-        <button onClick={() => router.back()} className="text-sm text-[var(--P)] hover:underline">
+        <button
+          onClick={() => router.back()}
+          className="text-sm text-[var(--P)] hover:underline"
+        >
           {t('back')}
         </button>
         <p className="text-[var(--G3)] text-sm">Empleado no encontrado.</p>
@@ -127,137 +162,207 @@ export function EmployeeDetailView({ eid }: Props) {
     );
   }
 
+  const st = employee.chargeabilityStatus;
+  const barColor = statusColor[st];
+
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <button onClick={() => router.back()} className="text-sm text-[var(--P)] hover:underline mb-2 block">
-            {t('back')}
-          </button>
-          <h1 className="text-xl font-bold text-[var(--BK)]">{employee.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant={statusVariant[employee.chargeabilityStatus]}>{employee.level}</Badge>
-            <span className="text-sm text-[var(--G3)]">{employee.id}</span>
-            <span className="text-sm text-[var(--G3)]">·</span>
-            <span className="text-sm text-[var(--G3)]">{employee.country}</span>
+    <div className="space-y-4">
+
+      {/* Back */}
+      <button
+        onClick={() => router.back()}
+        className="text-sm text-[var(--G3)] hover:text-[var(--P)] transition-colors"
+      >
+        {t('back')}
+      </button>
+
+      {/* Hero header */}
+      <div
+        className="rounded-2xl border border-[var(--G5)] p-6"
+        style={{
+          background: statusBg[st],
+          borderLeftWidth: 4,
+          borderLeftColor: statusColor[st],
+        }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          {/* Avatar + identity */}
+          <div className="flex items-center gap-4">
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0"
+              style={{ backgroundColor: statusColor[st] }}
+            >
+              {employee.name.charAt(0)}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h1 className="text-2xl font-bold text-[var(--BK)]">{employee.name}</h1>
+                <Badge variant={statusVariant[st]}>{statusLabel[st]}</Badge>
+                {employee.newJoiner && <Badge variant="blue">NJ</Badge>}
+              </div>
+              <div className="flex items-center gap-3 text-sm text-[var(--G3)] flex-wrap">
+                <span>{employee.id}</span>
+                <span>·</span>
+                <span>{employee.country}</span>
+                <span>·</span>
+                <span>CL {employee.level}</span>
+                {employee.client && (
+                  <>
+                    <span>·</span>
+                    <span className="font-medium text-[var(--G1)]">{employee.client}</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="text-right">
-          <div className="flex items-center gap-2 justify-end mb-1">
+
+          {/* Chargeability */}
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <span className="text-4xl font-bold tabular-nums" style={{ color: barColor }}>
+              {formatPercent(employee.chargeabilityPercent)}
+            </span>
             <ProgressBar
               value={employee.chargeabilityPercent}
               max={1}
-              color={
-                employee.chargeabilityStatus === 'green'
-                  ? 'var(--GR)'
-                  : employee.chargeabilityStatus === 'yellow'
-                    ? 'var(--YL)'
-                    : 'var(--RD)'
-              }
-              className="w-32"
+              color={barColor}
+              className="w-36"
             />
-            <span className="text-lg font-bold text-[var(--G1)]">
-              {formatPercent(employee.chargeabilityPercent)}
+            <span className="text-xs text-[var(--G3)]">
+              {employee.availableHours}h disp. / {employee.totalHours}h totales
             </span>
           </div>
-          <p className="text-xs text-[var(--G3)]">
-            {employee.availableHours}h disponibles / {employee.totalHours}h totales
-          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard label={t('fieldManager')}  value={employee.manager} />
+        <StatCard label={t('fieldRollOff')}  value={employee.rollOff} />
+        <StatCard label={t('fieldFAD')}      value={employee.fad} />
+        <StatCard
+          label={t('fieldDays')}
+          value={employee.daysToAvailable > 0 ? `${employee.daysToAvailable} días` : null}
+        />
+      </div>
+
+      {/* Info + Edit */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
         {/* Información */}
-        <Card>
-          <CardHeader>
+        <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
+          <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)]">
             <h2 className="text-sm font-semibold text-[var(--G1)]">{t('sectionInfo')}</h2>
-          </CardHeader>
-          <CardBody>
-            <div className="space-y-0">
-              <InfoRow label={t('fieldEID')} value={employee.id} />
-              <InfoRow label={t('fieldName')} value={employee.name} />
-              <InfoRow label={t('fieldCL')} value={employee.level} />
-              <InfoRow label={t('fieldCountry')} value={employee.country} />
-              <InfoRow label={t('fieldManager')} value={employee.manager} />
-              <InfoRow label={t('fieldHireDate')} value={employee.hireDate} />
-              <InfoRow label={t('fieldFAD')} value={employee.fad} />
-              <InfoRow label={t('fieldRollOff')} value={employee.rollOff} />
-              <InfoRow label={t('fieldDays')} value={employee.daysToAvailable > 0 ? `${employee.daysToAvailable} días` : null} />
-              <InfoRow label={t('fieldNextPTO')} value={employee.nextPTO} />
-              <InfoRow label={t('fieldPTOHours')} value={employee.nextPTOHours != null ? `${employee.nextPTOHours}h` : null} />
-              <InfoRow
-                label={t('fieldNJ')}
-                value={employee.newJoiner ? <Badge variant="blue">New Joiner</Badge> : 'No'}
-              />
+          </div>
+          <div className="px-5 py-1 grid grid-cols-2 gap-x-6">
+            <Field label={t('fieldEID')}      value={employee.id} />
+            <Field label={t('fieldCL')}       value={`CL ${employee.level}`} />
+            <Field label={t('fieldCountry')}  value={employee.country} />
+            <Field label={t('fieldHireDate')} value={employee.hireDate} />
+            <Field label={t('fieldRollOn')}   value={employee.rollOn} />
+            <Field label={t('fieldRollOff')}  value={employee.rollOff} />
+            <Field label={t('fieldFAD')}      value={employee.fad} />
+            <Field
+              label={t('fieldDays')}
+              value={employee.daysToAvailable > 0 ? `${employee.daysToAvailable} días` : null}
+            />
+            <Field label={t('fieldNextPTO')}  value={employee.nextPTO} />
+            <Field
+              label={t('fieldPTOHours')}
+              value={employee.nextPTOHours != null ? `${employee.nextPTOHours}h` : null}
+            />
+            <Field label={t('fieldOffering')} value={employee.projectType} />
+            <Field
+              label={t('fieldNJ')}
+              value={employee.newJoiner ? <Badge variant="blue">New Joiner</Badge> : 'No'}
+            />
+          </div>
+          {employee.notes && (
+            <div className="px-5 py-3 border-t border-[var(--G6)]">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] mb-1">{t('fieldNotes')}</p>
+              <p className="text-sm text-[var(--G1)] whitespace-pre-wrap">{employee.notes}</p>
             </div>
-          </CardBody>
-        </Card>
+          )}
+        </div>
 
         {/* Editar */}
-        <Card>
-          <CardHeader>
+        <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
+          <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)]">
             <h2 className="text-sm font-semibold text-[var(--G1)]">{t('sectionEdit')}</h2>
-          </CardHeader>
-          <CardBody>
-            <form onSubmit={handleSubmit(onSave)} className="space-y-3">
-              <Input label={t('fieldClient')} placeholder="Google" {...register('client')} />
-              <Input label={t('fieldOffering')} placeholder="CTO" {...register('offering')} />
-              <Input label={t('fieldRollOn')} placeholder="DD/MM/YY" {...register('rollOn')} />
-              <Input label={t('fieldRollOff')} placeholder="DD/MM/YY" {...register('rollOff')} />
+          </div>
+          <form onSubmit={handleSubmit(onSave)} className="px-5 py-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label={t('fieldClient')}           placeholder="Google"       {...register('client')} />
+              <Input label={t('fieldOffering')}         placeholder="CTO"          {...register('offering')} />
+              <Input label={t('fieldRollOn')}           placeholder="DD/MM/YY"     {...register('rollOn')} />
+              <Input label={t('fieldRollOff')}          placeholder="DD/MM/YY"     {...register('rollOff')} />
               <Input label={t('fieldChargeabilityPct')} type="number" min={0} max={100} {...register('chargeabilityPct')} />
-              <Input label={t('fieldAccountManager')} placeholder="smith.john" {...register('accountManager')} />
-              <Input label={t('fieldNextClient')} placeholder="Próximo cliente" {...register('nextClient')} />
-              <Textarea label={t('fieldNotes')} placeholder="Notas..." {...register('notes')} />
-              <Button type="submit" loading={saving} className="w-full">
-                {t('saveBtn')}
-              </Button>
-            </form>
-          </CardBody>
-        </Card>
+              <Input label={t('fieldAccountManager')}   placeholder="smith.john"   {...register('accountManager')} />
+            </div>
+            <Input label={t('fieldNextClient')} placeholder="Próximo cliente" {...register('nextClient')} />
+            <Textarea label={t('fieldNotes')} placeholder="Notas..." {...register('notes')} />
+            <Button type="submit" loading={saving} className="w-full">
+              {t('saveBtn')}
+            </Button>
+          </form>
+        </div>
       </div>
 
       {/* Forecast histórico */}
       {periods.length > 0 && (
-        <Card>
-          <CardHeader>
+        <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
+          <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)]">
             <h2 className="text-sm font-semibold text-[var(--G1)]">{t('sectionForecast')}</h2>
-          </CardHeader>
-          <CardBody>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--G5)]">
-                    <th className="text-left py-2 pr-4 text-xs font-semibold text-[var(--G3)] uppercase">{t('colPeriod')}</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold text-[var(--G3)] uppercase">{t('colCHG')}</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold text-[var(--G3)] uppercase">{t('colSAH')}</th>
-                    <th className="text-right py-2 text-xs font-semibold text-[var(--G3)] uppercase">{t('colCP')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {periods.map((p, i) => {
-                    const chg = employee.chg[i] ?? 0;
-                    const sah = employee.sah[i] ?? 0;
-                    const cp = employee.cp[i] ?? 0;
-                    return (
-                      <tr key={p.label} className={`border-b border-[var(--G6)] ${i === 0 ? 'bg-[var(--G6)]' : ''}`}>
-                        <td className={`py-2 pr-4 font-medium ${i === 0 ? 'text-[var(--P)]' : 'text-[var(--G1)]'}`}>
-                          {p.label}
-                          {i === 0 && <span className="ml-2 text-[10px] text-[var(--G3)]">actual</span>}
-                        </td>
-                        <td className="py-2 px-3 text-right text-[var(--G2)]">{chg}</td>
-                        <td className="py-2 px-3 text-right text-[var(--G2)]">{sah}</td>
-                        <td className={`py-2 text-right font-semibold ${cp >= 80 ? 'text-[var(--GR)]' : cp >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]'}`}>
-                          {cp}%
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardBody>
-        </Card>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--G5)]">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--G3)] uppercase tracking-wide">{t('colPeriod')}</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-[var(--G3)] uppercase tracking-wide">{t('colCHG')}</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-[var(--G3)] uppercase tracking-wide">{t('colSAH')}</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-[var(--G3)] uppercase tracking-wide w-52">{t('colCP')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--G6)]">
+                {periods.map((p, i) => {
+                  const chg = employee.chg[i] ?? 0;
+                  const sah = employee.sah[i] ?? 0;
+                  const cp  = employee.cp[i]  ?? 0;
+                  const cpColor = cp >= 80 ? 'var(--GR)' : cp >= 50 ? 'var(--YL)' : 'var(--RD)';
+                  return (
+                    <tr
+                      key={p.label}
+                      className={i === 0 ? 'bg-[var(--G6)]' : 'hover:bg-[var(--G6)] transition-colors'}
+                    >
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${i === 0 ? 'text-[var(--P)]' : 'text-[var(--G1)]'}`}>
+                            {p.label}
+                          </span>
+                          {i === 0 && (
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] bg-[var(--G5)] px-1.5 py-0.5 rounded">
+                              actual
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-right text-[var(--G2)]">{chg}</td>
+                      <td className="px-5 py-3 text-right text-[var(--G2)]">{sah}</td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <ProgressBar value={cp} max={100} color={cpColor} className="w-24" />
+                          <span className="font-semibold w-10 text-right tabular-nums" style={{ color: cpColor }}>
+                            {cp}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );

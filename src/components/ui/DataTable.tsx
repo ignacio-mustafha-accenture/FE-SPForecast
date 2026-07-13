@@ -48,6 +48,8 @@ interface DataTableProps<TData> {
   tableKey?: string;
   className?: string;
   pagination?: PaginationProps;
+  onRowClick?: (row: TData) => void;
+  getRowClassName?: (row: TData) => string;
 }
 
 function DraggableHeader<TData extends RowData>({ header }: { header: Header<TData, unknown> }) {
@@ -80,7 +82,7 @@ function DraggableHeader<TData extends RowData>({ header }: { header: Header<TDa
   );
 }
 
-export function DataTable<TData>({ data, columns, className, pagination }: DataTableProps<TData>) {
+export function DataTable<TData>({ data, columns, className, pagination, onRowClick, getRowClassName }: DataTableProps<TData>) {
   const t = useTranslations('common');
   const dndId = useId();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -134,7 +136,15 @@ export function DataTable<TData>({ data, columns, className, pagination }: DataT
             </thead>
             <tbody className="divide-y divide-[var(--G5)] bg-white">
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-[var(--G6)] transition-colors duration-120">
+                <tr
+                  key={row.id}
+                  onClick={() => onRowClick?.(row.original)}
+                  className={cn(
+                    'transition-colors duration-120',
+                    onRowClick && 'cursor-pointer',
+                    getRowClassName ? getRowClassName(row.original) : 'hover:bg-[var(--G6)]',
+                  )}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-2.5 text-[var(--G1)] whitespace-nowrap">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
