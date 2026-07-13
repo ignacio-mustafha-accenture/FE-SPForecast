@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from 'next-intl';
 
 import type { Country, Employee } from '@/src/core/domain/employee';
-import { useForecastStore, useUIStore } from '@/src/store/StoreProvider';
+import { useForecastStore } from '@/src/store/StoreProvider';
 import { useDebounce } from '@/src/hooks/useDebounce';
 import { DataTable } from '@/src/components/ui/DataTable';
 import { FilterBar } from '@/src/components/ui/FilterBar';
@@ -18,7 +18,6 @@ import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
 import { formatPercent } from '@/src/lib/formatters';
 import { exportToXlsx } from '@/src/lib/excel';
 
-import { EmployeeDrawer } from './EmployeeDrawer';
 
 const statusVariant = {
   green: 'green',
@@ -27,6 +26,14 @@ const statusVariant = {
   unassigned: 'neutral',
   leave: 'neutral',
 } as const;
+
+const rowStatusClass: Record<string, string> = {
+  green:      'bg-green-50  hover:bg-green-100',
+  yellow:     'bg-amber-50  hover:bg-amber-100',
+  red:        'bg-red-50    hover:bg-red-100',
+  unassigned: 'bg-slate-50  hover:bg-slate-100',
+  leave:      'bg-slate-50  hover:bg-slate-100',
+};
 
 const COUNTRY_LABELS: Record<Country, string> = {
   AR: 'Argentina',
@@ -42,19 +49,16 @@ export function CountryView({ country }: CountryViewProps) {
   const t = useTranslations('country');
   const searchParams = useSearchParams();
   const router = useRouter();
-  const openDrawer = useUIStore((s) => s.openEmployeeDrawer);
-  const drawerState = useUIStore((s) => s.employeeDrawer);
-  const closeDrawer = useUIStore((s) => s.closeEmployeeDrawer);
   const appState = useForecastStore((s) => s.appState);
   const isLoading = useForecastStore((s) => s.isLoading);
 
-  const q = searchParams.get('q') ?? '';
   const status = searchParams.get('status') ?? '';
   const filterOffering = searchParams.get('offering') ?? '';
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10));
 
-  const debouncedQ = useDebounce(q, 300);
+  const [localSearch, setLocalSearch] = useState('');
+  const debouncedQ = useDebounce(localSearch, 200);
 
   const statusLabel: Record<string, string> = {
     green: t('statusChargeable'),
@@ -107,14 +111,7 @@ export function CountryView({ country }: CountryViewProps) {
       id: 'name',
       accessorKey: 'name',
       header: t('headerName'),
-      cell: ({ row }) => (
-        <button
-          className="text-[var(--P)] hover:underline text-left font-medium"
-          onClick={() => openDrawer(row.original.id)}
-        >
-          {row.original.name}
-        </button>
-      ),
+      cell: ({ row }) => <span className="font-medium text-[var(--G1)]">{row.original.name}</span>,
     },
     {
       id: 'id',
@@ -128,82 +125,6 @@ export function CountryView({ country }: CountryViewProps) {
       accessorKey: 'client',
       header: t('headerClient'),
       cell: ({ row }) => row.original.client ?? <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'projectType',
-      accessorKey: 'projectType',
-      header: t('headerOffering'),
-      cell: ({ row }) => row.original.projectType ?? <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'manager',
-      accessorKey: 'manager',
-      header: t('headerManager'),
-      cell: ({ row }) => row.original.manager ?? <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'rollOn',
-      accessorKey: 'rollOn',
-      header: t('headerRollOn'),
-      cell: ({ row }) => row.original.rollOn ?? <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'rollOff',
-      accessorKey: 'rollOff',
-      header: t('headerRollOff'),
-      cell: ({ row }) => row.original.rollOff ?? <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'fad',
-      accessorKey: 'fad',
-      header: t('headerFAD'),
-      cell: ({ row }) => row.original.fad ?? <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'daysToAvailable',
-      accessorKey: 'daysToAvailable',
-      header: t('headerDays'),
-      cell: ({ row }) => row.original.daysToAvailable > 0 ? row.original.daysToAvailable : <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'hireDate',
-      accessorKey: 'hireDate',
-      header: t('headerHireDate'),
-      cell: ({ row }) => row.original.hireDate ?? <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'nextPTO',
-      accessorKey: 'nextPTO',
-      header: t('headerNextPTO'),
-      cell: ({ row }) => row.original.nextPTO ?? <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'nextPTOHours',
-      accessorKey: 'nextPTOHours',
-      header: t('headerPTOHours'),
-      cell: ({ row }) => row.original.nextPTOHours != null ? `${row.original.nextPTOHours}h` : <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'newJoiner',
-      accessorKey: 'newJoiner',
-      header: t('headerNJ'),
-      cell: ({ row }) => row.original.newJoiner ? <Badge variant="blue">NJ</Badge> : null,
-    },
-    {
-      id: 'charge',
-      accessorKey: 'charge',
-      header: t('headerCharge'),
-      cell: ({ row }) => row.original.charge ? <Badge variant="green">✓</Badge> : <Badge variant="neutral">—</Badge>,
-    },
-    {
-      id: 'status',
-      accessorKey: 'chargeabilityStatus',
-      header: t('headerStatus'),
-      cell: ({ row }) => (
-        <Badge variant={statusVariant[row.original.chargeabilityStatus]}>
-          {statusLabel[row.original.chargeabilityStatus]}
-        </Badge>
-      ),
     },
     {
       id: 'chargeability',
@@ -229,11 +150,18 @@ export function CountryView({ country }: CountryViewProps) {
         </div>
       ),
     },
+    {
+      id: 'status',
+      accessorKey: 'chargeabilityStatus',
+      header: t('headerStatus'),
+      cell: ({ row }) => (
+        <Badge variant={statusVariant[row.original.chargeabilityStatus]}>
+          {statusLabel[row.original.chargeabilityStatus]}
+        </Badge>
+      ),
+    },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [t, statusLabel]);
-
-  const selectedEmployee = paged.find((e) => e.id === drawerState.employeeId) ??
-    countryEmployees.find((e) => e.id === drawerState.employeeId) ?? null;
 
   function setParam(key: string, value: string) {
     const p = new URLSearchParams(searchParams.toString());
@@ -295,8 +223,8 @@ export function CountryView({ country }: CountryViewProps) {
       </div>
       <FilterBar
         search={{
-          value: q,
-          onChange: (v) => setParam('q', v),
+          value: localSearch,
+          onChange: setLocalSearch,
           placeholder: t('searchPlaceholder'),
         }}
         toggleGroups={[
@@ -320,6 +248,8 @@ export function CountryView({ country }: CountryViewProps) {
         data={paged}
         columns={columns}
         tableKey={`country-${country}`}
+        onRowClick={(e) => router.push(`/employees/${e.id}`)}
+        getRowClassName={(e) => rowStatusClass[e.chargeabilityStatus] ?? 'hover:bg-[var(--G6)]'}
         pagination={{
           page: safePage,
           pageSize,
@@ -360,7 +290,7 @@ export function CountryView({ country }: CountryViewProps) {
                       <td className="py-2 pr-4 sticky left-0 bg-white">
                         <button
                           className="text-[var(--P)] hover:underline text-left font-medium"
-                          onClick={() => openDrawer(e.id)}
+                          onClick={() => router.push(`/employees/${e.id}`)}
                         >
                           {e.name}
                         </button>
@@ -387,7 +317,6 @@ export function CountryView({ country }: CountryViewProps) {
         </Card>
       )}
 
-      <EmployeeDrawer open={drawerState.open} employee={selectedEmployee} onClose={closeDrawer} />
     </div>
   );
 }

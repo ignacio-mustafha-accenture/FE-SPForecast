@@ -3,6 +3,9 @@
     "appName": "SP Forecast",
     "logout": "Salir",
     "logoutError": "Error al cerrar sesión",
+    "language": "Idioma",
+    "langEs": "Español",
+    "langEn": "Inglés",
     "period": "Período",
     "current": "Actual",
     "navDashboard": "Dashboard",
@@ -12,7 +15,8 @@
     "navTickets": "Tickets",
     "navPPA": "PPA",
     "navAgent": "Agente IA",
-    "navAdmin": "Admin"
+    "navAdmin": "Admin",
+    "navMonitoring": "Monitoreo"
   },
   "common": {
     "save": "Guardar",
@@ -44,11 +48,18 @@
     "toastSyncError": "Error al sincronizar",
     "clientsTitle": "Gestión de clientes",
     "clientsDesc": "Clientes disponibles en el sistema",
-    "addClient": "+ Agregar cliente",
+    "addClient": "Agregar cliente",
     "clientPlaceholder": "Nombre del cliente",
     "clientAdded": "Cliente agregado",
     "clientAddError": "Error al agregar cliente",
-    "noClients": "Sin clientes registrados"
+    "clientDeleted": "Cliente eliminado",
+    "clientDeleteError": "Error al eliminar cliente",
+    "clientRenamed": "Cliente renombrado",
+    "clientRenameError": "Error al renombrar cliente",
+    "clientsCount": "clientes",
+    "clientFilterPlaceholder": "Filtrar clientes...",
+    "noClients": "Sin clientes registrados",
+    "noClientMatch": "Sin resultados para ese filtro"
   },
   "agent": {
     "title": "Agente IA",
@@ -215,7 +226,9 @@
     "fieldReasonPlaceholder": "Descripción...",
     "submitCreate": "Crear PPA",
     "toastCreated": "PPA creado correctamente",
-    "toastError": "Error al crear PPA"
+    "toastError": "Error al crear PPA",
+    "required": "Requerido",
+    "cancel": "Cancelar"
   },
   "tickets": {
     "title": "Tickets",
@@ -265,6 +278,23 @@
     "toastUpdated": "Ticket actualizado",
     "toastCreated": "Ticket creado",
     "toastError": "Error al guardar ticket"
+  },
+  "monitoring": {
+    "title": "Monitoreo",
+    "searchPlaceholder": "Buscar por usuario...",
+    "filterSuccess": "Éxito",
+    "filterError": "Error",
+    "filterGet": "GET",
+    "filterPost": "POST",
+    "filterPatch": "PATCH",
+    "filterDelete": "DELETE",
+    "colDate": "Fecha",
+    "colUser": "Usuario",
+    "colAction": "Acción",
+    "colRequest": "Solicitud",
+    "colStatus": "Status",
+    "colDuration": "Duración",
+    "noData": "Sin registros"
   },
   "errors": {
     "unexpected": "Error inesperado"

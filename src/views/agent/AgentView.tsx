@@ -58,16 +58,16 @@ export function AgentView() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--topbar-h)-48px)]">
-      <h1 className="text-xl font-bold text-[var(--BK)] mb-4">{t('title')}</h1>
-      <div className="flex-1 overflow-y-auto space-y-3 pb-4">
+    <div className="-mx-6 flex flex-col h-[calc(100vh-var(--topbar-h)-48px)]">
+      <h1 className="text-xl font-bold text-[var(--BK)] mb-4 px-6">{t('title')}</h1>
+      <div className="flex-1 overflow-y-auto space-y-3 pb-4 px-6">
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[70%] rounded-xl px-4 py-3 text-sm ${
+              className={`max-w-[60%] rounded-xl px-4 py-3 text-sm ${
                 msg.role === 'user'
                   ? 'bg-[var(--P)] text-white'
                   : 'bg-[var(--G6)] text-[var(--G1)]'
@@ -86,14 +86,15 @@ export function AgentView() {
         )}
         <div ref={bottomRef} />
       </div>
-      <div className="flex gap-2 pt-3 border-t border-[var(--G5)]">
-        <Input
-          placeholder={t('placeholder')}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          className="flex-1"
-        />
+      <div className="flex gap-2 pt-3 pb-2 px-4 border-t border-[var(--G5)] shrink-0">
+        <div className="flex-1">
+          <Input
+            placeholder={t('placeholder')}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          />
+        </div>
         <Button onClick={sendMessage} loading={loading} disabled={!input.trim()}>
           {t('send')}
         </Button>

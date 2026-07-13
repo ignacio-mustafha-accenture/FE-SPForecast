@@ -3,6 +3,9 @@
     "appName": "SP Forecast",
     "logout": "Sign out",
     "logoutError": "Error signing out",
+    "language": "Language",
+    "langEs": "Spanish",
+    "langEn": "English",
     "period": "Period",
     "current": "Current",
     "navDashboard": "Dashboard",
@@ -12,7 +15,8 @@
     "navTickets": "Tickets",
     "navPPA": "PPA",
     "navAgent": "AI Agent",
-    "navAdmin": "Admin"
+    "navAdmin": "Admin",
+    "navMonitoring": "Monitoring"
   },
   "common": {
     "save": "Save",
@@ -44,11 +48,18 @@
     "toastSyncError": "Error synchronizing",
     "clientsTitle": "Client management",
     "clientsDesc": "Clients available in the system",
-    "addClient": "+ Add client",
+    "addClient": "Add client",
     "clientPlaceholder": "Client name",
     "clientAdded": "Client added",
     "clientAddError": "Error adding client",
-    "noClients": "No clients registered"
+    "clientDeleted": "Client deleted",
+    "clientDeleteError": "Error deleting client",
+    "clientRenamed": "Client renamed",
+    "clientRenameError": "Error renaming client",
+    "clientsCount": "clients",
+    "clientFilterPlaceholder": "Filter clients...",
+    "noClients": "No clients registered",
+    "noClientMatch": "No results for that filter"
   },
   "agent": {
     "title": "AI Agent",
@@ -215,7 +226,9 @@
     "fieldReasonPlaceholder": "Description...",
     "submitCreate": "Create PPA",
     "toastCreated": "PPA created successfully",
-    "toastError": "Error creating PPA"
+    "toastError": "Error creating PPA",
+    "required": "Required",
+    "cancel": "Cancel"
   },
   "tickets": {
     "title": "Tickets",
@@ -265,6 +278,23 @@
     "toastUpdated": "Ticket updated",
     "toastCreated": "Ticket created",
     "toastError": "Error saving ticket"
+  },
+  "monitoring": {
+    "title": "Monitoring",
+    "searchPlaceholder": "Search by user...",
+    "filterSuccess": "Success",
+    "filterError": "Error",
+    "filterGet": "GET",
+    "filterPost": "POST",
+    "filterPatch": "PATCH",
+    "filterDelete": "DELETE",
+    "colDate": "Date",
+    "colUser": "User",
+    "colAction": "Action",
+    "colRequest": "Request",
+    "colStatus": "Status",
+    "colDuration": "Duration",
+    "noData": "No records"
   },
   "errors": {
     "unexpected": "Unexpected error"
