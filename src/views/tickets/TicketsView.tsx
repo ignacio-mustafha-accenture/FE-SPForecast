@@ -151,6 +151,20 @@ export function TicketsView() {
     },
     { id: 'date', accessorKey: 'date', header: t('columnDate') },
     {
+      id: 'dates',
+      header: t('columnDates'),
+      cell: ({ row }) => {
+        const { startDate, endDate } = row.original;
+        if (!startDate) return <span className="text-[var(--G4)]">—</span>;
+        const end = endDate ?? startDate;
+        return (
+          <span className="whitespace-nowrap">
+            {startDate === end ? startDate : `${startDate} – ${end}`}
+          </span>
+        );
+      },
+    },
+    {
       id: 'clientName',
       accessorKey: 'clientName',
       header: t('columnClient'),

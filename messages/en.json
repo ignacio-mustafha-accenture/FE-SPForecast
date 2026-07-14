@@ -248,6 +248,7 @@
     "columnType": "Type",
     "columnStatus": "Status",
     "columnDate": "Date",
+    "columnDates": "Start / End",
     "columnClient": "Client",
     "columnHours": "Hours",
     "columnComments": "Comments",
