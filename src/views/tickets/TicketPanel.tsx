@@ -7,10 +7,11 @@ import { z } from 'zod';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import type { Ticket } from '@/src/core/domain/ticket';
+import type { Ticket, CreateTicketPayload, UpdateTicketPayload } from '@/src/core/domain/ticket';
 import { getClientContainer } from '@/src/application/container';
 import { Modal } from '@/src/components/ui/Modal';
 import { Input } from '@/src/components/ui/Input';
+import { DatePicker } from '@/src/components/ui/DatePicker';
 import { Textarea } from '@/src/components/ui/Textarea';
 import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
@@ -32,6 +33,7 @@ type FormData = {
   location?: string;
   people_lead?: string;
   eid_accenture?: string;
+  hours_to_move?: string;
   comments?: string;
 };
 
@@ -39,6 +41,7 @@ interface TicketPanelProps {
   open: boolean;
   ticket: Ticket | null;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const SelectField = forwardRef<
@@ -127,7 +130,7 @@ function generateEidFromName(name: string): string {
     .replace(/\s+/g, '.'); // spaces → dots
 }
 
-export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
+export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelProps) {
   const t = useTranslations('ticketPanel');
   const tTickets = useTranslations('tickets');
   const toast = useToast();
@@ -167,6 +170,7 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
       location: z.string().optional(),
       people_lead: z.string().optional(),
       eid_accenture: z.string().optional(),
+      hours_to_move: z.string().optional(),
       comments: z.string().optional(),
     })
     .superRefine((data, ctx) => {
@@ -210,9 +214,6 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
     { value: 'baja', label: tTickets('typeBaja') },
   ];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawTicket = ticket as any;
-
   const {
     register,
     handleSubmit,
@@ -231,13 +232,13 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
           offering_type: ticket.offeringType ?? '',
           chargeability_pct:
             ticket.chargeabilityPct != null ? String(ticket.chargeabilityPct) : '',
-          start_date: rawTicket.startDate ?? '',
-          end_date: rawTicket.endDate ?? '',
-          nj_name: rawTicket.njName ?? '',
-          cl: rawTicket.cl ?? '',
-          location: rawTicket.location ?? '',
-          people_lead: rawTicket.peopleLead ?? '',
-          eid_accenture: rawTicket.eidAccenture ?? '',
+          start_date: ticket.startDate ?? '',
+          end_date: ticket.endDate ?? '',
+          nj_name: ticket.njName ?? '',
+          cl: ticket.cl ?? '',
+          location: ticket.location ?? '',
+          people_lead: ticket.peopleLead ?? '',
+          eid_accenture: '',
           comments: ticket.comments ?? '',
         }
       : undefined,
@@ -248,7 +249,7 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
   // Reset form fields when type changes (create mode only)
   useEffect(() => {
     if (!ticket) {
-      reset({ type: selectedType });
+      reset({ type: selectedType, ...(selectedType === 'sick' ? { hours_to_move: '8' } : {}) });
       setEidSearch('');
       setClientSearch('');
       setShowEidDrop(false);
@@ -280,6 +281,17 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
 
   const selectedEid = watch('eid') ?? '';
   const selectedEmployee = employees.find((e) => e.id === selectedEid);
+
+  // Auto-fill client_name from the selected employee's current client (newproj, create mode only)
+  useEffect(() => {
+    if (ticket) return;
+    if (selectedType !== 'newproj') return;
+    if (!selectedEmployee?.client) return;
+    if (getValues('client_name')) return;
+    setValue('client_name', selectedEmployee.client);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEid, selectedType]);
+
   const filteredEmployees = employees.filter(
     (e) =>
       (e.id.toLowerCase().includes(eidSearch.toLowerCase()) ||
@@ -294,53 +306,76 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
   async function onSubmit(data: FormData) {
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {
-        type: data.type,
-        comments: data.comments || undefined,
-      };
-
-      if (data.type !== 'nj') payload.eid = data.eid;
-
-      if (data.type === 'newproj') {
-        payload.client_name = data.client_name;
-        payload.offering_type = data.offering_type;
-        payload.chargeability_pct = data.chargeability_pct
-          ? Number(data.chargeability_pct)
-          : undefined;
-        payload.start_date = data.start_date;
-        payload.end_date = data.end_date;
-      } else if (data.type === 'ongoing') {
-        payload.chargeability_pct = data.chargeability_pct
-          ? Number(data.chargeability_pct)
-          : undefined;
-        payload.end_date = data.end_date;
-      } else if (data.type === 'pto' || data.type === 'sick') {
-        payload.start_date = data.start_date;
-        payload.end_date = data.end_date;
-      } else if (data.type === 'baja') {
-        payload.end_date = data.end_date;
-      } else if (data.type === 'nj') {
-        payload.nj_name = data.nj_name;
-        payload.start_date = data.start_date;
-        payload.cl = data.cl;
-        payload.location = data.location;
-        payload.people_lead = data.people_lead;
-        if (data.eid_accenture) payload.eid_accenture = data.eid_accenture;
-      }
-
       const container = getClientContainer();
       if (ticket) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await container.updateTicket.execute(ticket.id, payload as any);
+        const updatePayload: UpdateTicketPayload = {
+          comments: data.comments || undefined,
+        };
+        if (data.type === 'newproj') {
+          updatePayload.client_name = data.client_name;
+          updatePayload.offering_type = data.offering_type;
+          updatePayload.chargeability_pct = data.chargeability_pct
+            ? Number(data.chargeability_pct)
+            : undefined;
+          updatePayload.start_date = data.start_date;
+          updatePayload.end_date = data.end_date;
+        } else if (data.type === 'ongoing') {
+          updatePayload.chargeability_pct = data.chargeability_pct
+            ? Number(data.chargeability_pct)
+            : undefined;
+          updatePayload.end_date = data.end_date;
+        } else if (data.type === 'pto' || data.type === 'sick') {
+          updatePayload.start_date = data.start_date;
+          updatePayload.end_date = data.end_date;
+        } else if (data.type === 'baja') {
+          updatePayload.end_date = data.end_date;
+        }
+        await container.updateTicket.execute(ticket.id, updatePayload);
         toast.success(t('toastUpdated'));
+        onSuccess?.();
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await container.createTicket.execute(payload as any);
+        const createPayload: CreateTicketPayload = {
+          type: data.type,
+          comments: data.comments || undefined,
+        };
+        if (data.type !== 'nj') createPayload.eid = data.eid;
+        if (data.type === 'newproj') {
+          createPayload.client_name = data.client_name;
+          createPayload.offering_type = data.offering_type;
+          createPayload.chargeability_pct = data.chargeability_pct
+            ? Number(data.chargeability_pct)
+            : undefined;
+          createPayload.start_date = data.start_date;
+          createPayload.end_date = data.end_date;
+        } else if (data.type === 'ongoing') {
+          createPayload.chargeability_pct = data.chargeability_pct
+            ? Number(data.chargeability_pct)
+            : undefined;
+          createPayload.end_date = data.end_date;
+        } else if (data.type === 'pto' || data.type === 'sick') {
+          createPayload.start_date = data.start_date;
+          createPayload.end_date = data.end_date;
+          if (data.type === 'sick' && data.hours_to_move) {
+            createPayload.hours_to_move = Number(data.hours_to_move);
+          }
+        } else if (data.type === 'baja') {
+          createPayload.end_date = data.end_date;
+        } else if (data.type === 'nj') {
+          createPayload.nj_name = data.nj_name;
+          createPayload.start_date = data.start_date;
+          createPayload.cl = data.cl ? Number(data.cl) : undefined;
+          createPayload.location = data.location;
+          createPayload.people_lead = data.people_lead;
+          if (data.eid_accenture) createPayload.eid_accenture = data.eid_accenture;
+        }
+        await container.createTicket.execute(createPayload);
         toast.success(t('toastCreated'));
+        onSuccess?.();
       }
       reset();
       onClose();
-    } catch {
+    } catch (err) {
+      console.error('[TicketPanel] submit error:', err);
       toast.error(t('toastError'));
     } finally {
       setSaving(false);
@@ -503,11 +538,11 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
                   {...register('nj_name')}
                 />
                 <div className="grid grid-cols-2 gap-4">
-                  <Input
+                  <DatePicker
                     label={t('startDateLabel')}
-                    type="date"
+                    value={watch('start_date')}
+                    onChange={(v) => setValue('start_date', v)}
                     error={errors.start_date?.message}
-                    {...register('start_date')}
                   />
                   <SelectField
                     label={t('clLabel')}
@@ -652,31 +687,46 @@ export function TicketPanel({ open, ticket, onClose }: TicketPanelProps) {
               />
             )}
 
-            {/* Start date — newproj, pto, sick (nj has it inside its own block above) */}
-            {(selectedType === 'newproj' ||
-              selectedType === 'pto' ||
-              selectedType === 'sick') && (
+            {/* Hours — sick only */}
+            {selectedType === 'sick' && (
               <Input
-                label={t('startDateLabel')}
-                type="date"
-                error={errors.start_date?.message}
-                {...register('start_date')}
+                label={t('hoursLabel')}
+                type="number"
+                min={1}
+                error={errors.hours_to_move?.message}
+                {...register('hours_to_move')}
               />
             )}
 
-            {/* End date — all except nj */}
-            {selectedType !== 'nj' && selectedType !== undefined && (
-              <Input
+            {/* Start + end date in a row — newproj, pto, sick */}
+            {(selectedType === 'newproj' ||
+              selectedType === 'pto' ||
+              selectedType === 'sick') && (
+              <div className="grid grid-cols-2 gap-4">
+                <DatePicker
+                  label={t('startDateLabel')}
+                  value={watch('start_date')}
+                  onChange={(v) => setValue('start_date', v)}
+                  error={errors.start_date?.message}
+                />
+                <DatePicker
+                  label={t('endDateLabel')}
+                  value={watch('end_date')}
+                  onChange={(v) => setValue('end_date', v)}
+                  error={errors.end_date?.message}
+                />
+              </div>
+            )}
+
+            {/* End date only — ongoing, baja */}
+            {(selectedType === 'ongoing' || selectedType === 'baja') && (
+              <DatePicker
                 label={
-                  selectedType === 'baja'
-                    ? t('endDateBajaLabel')
-                    : selectedType === 'ongoing'
-                      ? t('newEndDateLabel')
-                      : t('endDateLabel')
+                  selectedType === 'baja' ? t('endDateBajaLabel') : t('newEndDateLabel')
                 }
-                type="date"
+                value={watch('end_date')}
+                onChange={(v) => setValue('end_date', v)}
                 error={errors.end_date?.message}
-                {...register('end_date')}
               />
             )}
 

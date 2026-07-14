@@ -10,11 +10,15 @@ interface SidebarNavItemProps {
   href: string;
   label: string;
   icon?: LucideIcon;
+  matchPaths?: string[];
 }
 
-export function SidebarNavItem({ href, label, icon: Icon }: SidebarNavItemProps) {
+export function SidebarNavItem({ href, label, icon: Icon, matchPaths }: SidebarNavItemProps) {
   const pathname = usePathname();
-  const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
+  const isActive =
+    pathname === href ||
+    (href !== '/' && pathname.startsWith(href)) ||
+    (matchPaths?.some((p) => pathname === p || pathname.startsWith(p)) ?? false);
 
   return (
     <Link

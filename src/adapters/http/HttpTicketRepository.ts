@@ -33,16 +33,38 @@ export class HttpTicketRepository implements ITicketRepository {
   }
 
   async create(payload: CreateTicketPayload): Promise<Ticket> {
-    return this.fetch<Ticket>('/api/tickets', {
+    const raw = await this.fetch<RawTicket>('/api/tickets', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    return mapRawTicket(raw, new Map());
   }
 
   async update(id: string, payload: UpdateTicketPayload): Promise<Ticket> {
-    return this.fetch<Ticket>(`/api/tickets/${id}`, {
+    const raw = await this.fetch<RawTicket>(`/api/tickets/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
+    });
+    return mapRawTicket(raw, new Map());
+  }
+
+  async approveTicket(id: string): Promise<Ticket> {
+    const raw = await this.fetch<RawTicket>(`/api/tickets/${id}/approve`, { method: 'PATCH' });
+    return mapRawTicket(raw, new Map());
+  }
+
+  async rejectTicket(id: string, reason: string): Promise<Ticket> {
+    const raw = await this.fetch<RawTicket>(`/api/tickets/${id}/reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason }),
+    });
+    return mapRawTicket(raw, new Map());
+  }
+
+  async assignEid(id: string, newEid: string, newName?: string): Promise<{ ok: boolean; new_eid: string }> {
+    return this.fetch<{ ok: boolean; new_eid: string }>(`/api/tickets/${id}/eid`, {
+      method: 'PATCH',
+      body: JSON.stringify({ new_eid: newEid, new_name: newName }),
     });
   }
 }

@@ -9,14 +9,11 @@
     "period": "Período",
     "current": "Actual",
     "navDashboard": "Dashboard",
-    "navArgentina": "Argentina",
-    "navMexico": "México",
-    "navCostaRica": "Costa Rica",
+    "navCountries": "Países",
     "navTickets": "Tickets",
     "navPPA": "PPA",
     "navAgent": "Agente IA",
-    "navAdmin": "Admin",
-    "navMonitoring": "Monitoreo"
+    "navAdmin": "Configuraciones"
   },
   "common": {
     "save": "Guardar",
@@ -59,7 +56,9 @@
     "clientsCount": "clientes",
     "clientFilterPlaceholder": "Filtrar clientes...",
     "noClients": "Sin clientes registrados",
-    "noClientMatch": "Sin resultados para ese filtro"
+    "noClientMatch": "Sin resultados para ese filtro",
+    "tabAdmin": "Administración",
+    "tabMonitoring": "Monitoreo"
   },
   "agent": {
     "title": "Agente IA",
@@ -106,6 +105,17 @@
       "minChars": "Mínimo 8 caracteres",
       "passwordMismatch": "Las contraseñas no coinciden"
     }
+  },
+  "countries": {
+    "title": "Países",
+    "subtitle": "Seleccioná un país para ver el detalle de empleados",
+    "employees": "empleados",
+    "avgChargeability": "Cargabilidad promedio",
+    "viewDetail": "Ver detalle",
+    "statusChargeable": "En objetivo",
+    "statusAtRisk": "En riesgo",
+    "statusNotChargeable": "Bajo objetivo",
+    "statusOther": "Otros"
   },
   "country": {
     "headerName": "Nombre",
@@ -249,9 +259,22 @@
     "typeBaja": "Baja",
     "statusOpen": "Abierto",
     "statusClosed": "Cerrado",
+    "statusApproved": "Aprobado",
+    "statusRejected": "Rechazado",
     "searchPlaceholder": "Buscar empleado o EID...",
     "statusFilter": "Estado",
-    "typeFilter": "Tipo"
+    "typeFilter": "Tipo",
+    "columnActions": "Acciones",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "rejectModalTitle": "Rechazar ticket",
+    "rejectModalReasonLabel": "Motivo del rechazo",
+    "rejectModalReasonPlaceholder": "Describe el motivo...",
+    "rejectModalConfirm": "Confirmar rechazo",
+    "toastApproved": "Ticket aprobado",
+    "toastApproveError": "Error al aprobar ticket",
+    "toastRejected": "Ticket rechazado",
+    "toastRejectError": "Error al rechazar ticket"
   },
   "ticketPanel": {
     "editTitle": "Editar ticket",
@@ -275,6 +298,7 @@
     "endDateLabel": "Fecha fin",
     "endDateBajaLabel": "Fecha de baja",
     "newEndDateLabel": "Nueva fecha fin",
+    "hoursLabel": "Horas",
     "commentsLabel": "Comentarios",
     "commentsPlaceholder": "Notas adicionales...",
     "submitEdit": "Guardar cambios",

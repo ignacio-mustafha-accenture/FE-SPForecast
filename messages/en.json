@@ -9,14 +9,11 @@
     "period": "Period",
     "current": "Current",
     "navDashboard": "Dashboard",
-    "navArgentina": "Argentina",
-    "navMexico": "Mexico",
-    "navCostaRica": "Costa Rica",
+    "navCountries": "Countries",
     "navTickets": "Tickets",
     "navPPA": "PPA",
     "navAgent": "AI Agent",
-    "navAdmin": "Admin",
-    "navMonitoring": "Monitoring"
+    "navAdmin": "Settings"
   },
   "common": {
     "save": "Save",
@@ -59,7 +56,9 @@
     "clientsCount": "clients",
     "clientFilterPlaceholder": "Filter clients...",
     "noClients": "No clients registered",
-    "noClientMatch": "No results for that filter"
+    "noClientMatch": "No results for that filter",
+    "tabAdmin": "Administration",
+    "tabMonitoring": "Monitoring"
   },
   "agent": {
     "title": "AI Agent",
@@ -106,6 +105,17 @@
       "minChars": "Minimum 8 characters",
       "passwordMismatch": "Passwords don't match"
     }
+  },
+  "countries": {
+    "title": "Countries",
+    "subtitle": "Select a country to view employee details",
+    "employees": "employees",
+    "avgChargeability": "Average chargeability",
+    "viewDetail": "View detail",
+    "statusChargeable": "On target",
+    "statusAtRisk": "At risk",
+    "statusNotChargeable": "Below target",
+    "statusOther": "Others"
   },
   "country": {
     "headerName": "Name",
@@ -249,9 +259,22 @@
     "typeBaja": "On leave",
     "statusOpen": "Open",
     "statusClosed": "Closed",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
     "searchPlaceholder": "Search employee or EID...",
     "statusFilter": "Status",
-    "typeFilter": "Type"
+    "typeFilter": "Type",
+    "columnActions": "Actions",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectModalTitle": "Reject ticket",
+    "rejectModalReasonLabel": "Rejection reason",
+    "rejectModalReasonPlaceholder": "Describe the reason...",
+    "rejectModalConfirm": "Confirm rejection",
+    "toastApproved": "Ticket approved",
+    "toastApproveError": "Error approving ticket",
+    "toastRejected": "Ticket rejected",
+    "toastRejectError": "Error rejecting ticket"
   },
   "ticketPanel": {
     "editTitle": "Edit ticket",
@@ -275,6 +298,7 @@
     "endDateLabel": "End date",
     "endDateBajaLabel": "Leave date",
     "newEndDateLabel": "New end date",
+    "hoursLabel": "Hours",
     "commentsLabel": "Comments",
     "commentsPlaceholder": "Additional notes...",
     "submitEdit": "Save changes",

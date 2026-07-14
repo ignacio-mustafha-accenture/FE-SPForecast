@@ -29,7 +29,7 @@ export function Drawer({ open, onClose, title, children, width = '420px' }: Draw
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: 0.2, ease: 'easeInOut' as const }}
             className="fixed right-0 top-0 h-full z-50 bg-white shadow-xl flex flex-col"
             style={{ width }}
           >

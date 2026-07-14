@@ -1,8 +1,18 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 
 import { cn } from '@/src/lib/cn';
+
+const chipVariants = {
+  hidden: { opacity: 0, y: -4 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.18, ease: 'easeOut' as const, delay: i * 0.05 },
+  }),
+};
 
 interface SearchProps {
   value: string;
@@ -63,17 +73,19 @@ export function FilterBar({ search, toggleGroups, className }: FilterBarProps) {
           <Chip
             label={t('all')}
             active={group.active.length === 0}
+            index={0}
             onClick={() => {
               if (group.active.length > 0) {
                 group.active.forEach((v) => group.onToggle(v));
               }
             }}
           />
-          {group.options.map((opt) => (
+          {group.options.map((opt, i) => (
             <Chip
               key={opt.value}
               label={opt.label}
               active={group.active.includes(opt.value)}
+              index={i + 1}
               onClick={() => group.onToggle(opt.value)}
             />
           ))}
@@ -83,9 +95,13 @@ export function FilterBar({ search, toggleGroups, className }: FilterBarProps) {
   );
 }
 
-function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function Chip({ label, active, index, onClick }: { label: string; active: boolean; index: number; onClick: () => void }) {
   return (
-    <button
+    <motion.button
+      custom={index}
+      variants={chipVariants}
+      initial="hidden"
+      animate="show"
       onClick={onClick}
       className={cn(
         'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors duration-120',
@@ -95,6 +111,6 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
       )}
     >
       {label}
-    </button>
+    </motion.button>
   );
 }

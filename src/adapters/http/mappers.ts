@@ -108,6 +108,13 @@ export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>)
     fromPeriod: raw.from_period,
     toPeriod: raw.to_period,
     comments: raw.comments,
+    njName: raw.nj_name,
+    startDate: raw.start_date ?? null,
+    endDate: raw.end_date ?? null,
+    cl: raw.cl,
+    location: raw.location,
+    peopleLead: raw.people_lead,
+    rejectionReason: raw.rejection_reason ?? null,
   };
 }
 
