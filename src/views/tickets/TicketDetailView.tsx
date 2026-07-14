@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { useAuthStore, useForecastStore } from '@/src/store/StoreProvider';
 import { getClientContainer } from '@/src/application/container';
@@ -13,6 +14,16 @@ import { Button } from '@/src/components/ui/Button';
 import { Card, CardHeader, CardBody } from '@/src/components/ui/Card';
 import { Modal } from '@/src/components/ui/Modal';
 import { Skeleton } from '@/src/components/ui/Skeleton';
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.03 } },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 14 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.32, ease: 'easeOut' as const } },
+};
 
 const typeVariant: Record<string, 'green' | 'blue' | 'yellow' | 'red' | 'neutral' | 'purple'> = {
   newproj: 'green',
@@ -148,10 +159,10 @@ export function TicketDetailView({ id }: Props) {
   const style = headerStyle[ticket.status] ?? { bg: 'bg-gray-50', border: 'border-gray-400' };
 
   return (
-    <div className="space-y-4">
+    <motion.div className="space-y-4" variants={page} initial="hidden" animate="show">
 
       {/* Top bar: back + admin actions */}
-      <div className="flex items-center justify-between">
+      <motion.div variants={item} className="flex items-center justify-between">
         <button
           onClick={() => router.back()}
           className="text-sm text-[var(--G3)] hover:text-[var(--P)] transition-colors"
@@ -170,10 +181,13 @@ export function TicketDetailView({ id }: Props) {
             </Button>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Hero header */}
-      <div className={`rounded-lg border-l-4 ${style.bg} ${style.border} border border-[var(--G5)] px-6 py-4`}>
+      <motion.div
+        variants={item}
+        className={`rounded-lg border-l-4 ${style.bg} ${style.border} border border-[var(--G5)] px-6 py-4`}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -192,56 +206,90 @@ export function TicketDetailView({ id }: Props) {
             {statusLabel[ticket.status] ?? ticket.status}
           </Badge>
         </div>
-      </div>
+      </motion.div>
 
       {/* Details */}
-      <Section title={t('sectionDetails')}>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6">
-          <Field label={t('fieldDetail')}       value={ticket.detail} />
-          <Field label={t('fieldClient')}        value={ticket.clientName} />
-          <Field label={t('fieldOffering')}      value={ticket.offeringType} />
-          <Field label={t('fieldChargeability')} value={ticket.chargeabilityPct != null ? `${ticket.chargeabilityPct}%` : null} />
-          <Field label={t('fieldCL')}            value={ticket.cl} />
-          <Field label={t('fieldLocation')}      value={ticket.location} />
-          <Field label={t('fieldPeopleLead')}    value={ticket.peopleLead} />
-          <Field label={t('fieldNJName')}        value={ticket.njName} />
-        </div>
-      </Section>
+      <motion.div variants={item}>
+        <Section title={t('sectionDetails')}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6">
+            <Field label={t('fieldDetail')}       value={ticket.detail} />
+            <Field label={t('fieldClient')}        value={ticket.clientName} />
+            <Field label={t('fieldOffering')}      value={ticket.offeringType} />
+            <Field label={t('fieldChargeability')} value={ticket.chargeabilityPct != null ? `${ticket.chargeabilityPct}%` : null} />
+            <Field label={t('fieldCL')}            value={ticket.cl} />
+            <Field label={t('fieldLocation')}      value={ticket.location} />
+            <Field label={t('fieldPeopleLead')}    value={ticket.peopleLead} />
+            <Field label={t('fieldNJName')}        value={ticket.njName} />
+          </div>
+        </Section>
+      </motion.div>
 
       {/* Dates */}
-      <Section title={t('sectionDates')}>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6">
-          <Field label={t('fieldStartDate')}  value={ticket.startDate} />
-          <Field label={t('fieldEndDate')}    value={ticket.endDate} />
-          <Field label={t('fieldFromPeriod')} value={ticket.fromPeriod} />
-          <Field label={t('fieldToPeriod')}   value={ticket.toPeriod} />
-        </div>
-      </Section>
-
-      {/* Hours transfer — only if hoursToMove */}
-      {ticket.hoursToMove != null && (
-        <Section title={t('sectionHours')}>
-          <div className="grid grid-cols-3 gap-x-6">
-            <Field label={t('fieldHours')}      value={`${ticket.hoursToMove}h`} />
+      <motion.div variants={item}>
+        <Section title={t('sectionDates')}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6">
+            <Field label={t('fieldStartDate')}  value={ticket.startDate} />
+            <Field label={t('fieldEndDate')}    value={ticket.endDate} />
             <Field label={t('fieldFromPeriod')} value={ticket.fromPeriod} />
             <Field label={t('fieldToPeriod')}   value={ticket.toPeriod} />
           </div>
         </Section>
-      )}
+      </motion.div>
+
+      {/* Hours transfer — only if hoursToMove */}
+      <AnimatePresence>
+        {ticket.hoursToMove != null && (
+          <motion.div
+            key="hours"
+            variants={item}
+            initial="hidden"
+            animate="show"
+            exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
+          >
+            <Section title={t('sectionHours')}>
+              <div className="grid grid-cols-3 gap-x-6">
+                <Field label={t('fieldHours')}      value={`${ticket.hoursToMove}h`} />
+                <Field label={t('fieldFromPeriod')} value={ticket.fromPeriod} />
+                <Field label={t('fieldToPeriod')}   value={ticket.toPeriod} />
+              </div>
+            </Section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Comments */}
-      {ticket.comments && (
-        <Section title={t('sectionComments')}>
-          <p className="text-sm text-[var(--G1)] whitespace-pre-wrap">{ticket.comments}</p>
-        </Section>
-      )}
+      <AnimatePresence>
+        {ticket.comments && (
+          <motion.div
+            key="comments"
+            variants={item}
+            initial="hidden"
+            animate="show"
+            exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
+          >
+            <Section title={t('sectionComments')}>
+              <p className="text-sm text-[var(--G1)] whitespace-pre-wrap">{ticket.comments}</p>
+            </Section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Rejection reason */}
-      {ticket.rejectionReason && (
-        <Section title={t('sectionRejection')}>
-          <p className="text-sm text-[var(--G1)] whitespace-pre-wrap">{ticket.rejectionReason}</p>
-        </Section>
-      )}
+      <AnimatePresence>
+        {ticket.rejectionReason && (
+          <motion.div
+            key="rejection"
+            variants={item}
+            initial="hidden"
+            animate="show"
+            exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
+          >
+            <Section title={t('sectionRejection')}>
+              <p className="text-sm text-[var(--G1)] whitespace-pre-wrap">{ticket.rejectionReason}</p>
+            </Section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Reject modal */}
       <Modal
@@ -279,6 +327,6 @@ export function TicketDetailView({ id }: Props) {
           </div>
         </div>
       </Modal>
-    </div>
+    </motion.div>
   );
 }
