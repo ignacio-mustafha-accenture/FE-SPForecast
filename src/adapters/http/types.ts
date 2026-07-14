@@ -61,8 +61,11 @@ export interface RawTicket {
   from_period: string | null;
   to_period: string | null;
   comments: string | null;
+  start_date: string | null;
+  end_date: string | null;
   eid_name?: string | null;
   eid_country?: string | null;
+  rejection_reason?: string | null;
 }
 
 export interface RawPPALog {

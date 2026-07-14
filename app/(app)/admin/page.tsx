@@ -1,5 +1,5 @@
-import { AdminView } from '@/src/views/admin/AdminView';
+import { SettingsView } from '@/src/views/admin/SettingsView';
 
 export default function Page() {
-  return <AdminView />;
+  return <SettingsView />;
 }

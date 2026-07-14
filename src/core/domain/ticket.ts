@@ -17,14 +17,30 @@ export interface Ticket {
   fromPeriod: string | null;
   toPeriod: string | null;
   comments: string | null;
+  njName: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  cl: string | null;
+  location: string | null;
+  peopleLead: string | null;
+  rejectionReason: string | null;
 }
 
 export interface CreateTicketPayload {
-  eid: string;
+  eid?: string;
   type: TicketType;
   detail?: string;
+  status?: string;
   client_name?: string;
+  offering_type?: string;
   chargeability_pct?: number;
+  start_date?: string;
+  end_date?: string;
+  nj_name?: string;
+  cl?: number;
+  location?: string;
+  people_lead?: string;
+  eid_accenture?: string;
   hours_to_move?: number;
   from_period?: string;
   to_period?: string;
@@ -33,8 +49,12 @@ export interface CreateTicketPayload {
 
 export interface UpdateTicketPayload {
   detail?: string;
+  status?: string;
   client_name?: string;
+  offering_type?: string;
   chargeability_pct?: number;
+  start_date?: string;
+  end_date?: string;
   hours_to_move?: number;
   from_period?: string;
   to_period?: string;

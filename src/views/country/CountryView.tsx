@@ -1,7 +1,18 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
+
+const rowVariants = {
+  hidden: { opacity: 0, y: 5 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.20, ease: 'easeOut' as const, delay: Math.min(i * 0.035, 0.35) },
+  }),
+  exit: { opacity: 0, transition: { duration: 0.12 } },
+};
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from 'next-intl';
 
@@ -285,31 +296,41 @@ export function CountryView({ country }: CountryViewProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {paged.map((e) => (
-                    <tr key={e.id} className="border-b border-[var(--G6)] hover:bg-[var(--G6)]">
-                      <td className="py-2 pr-4 sticky left-0 bg-white">
-                        <button
-                          className="text-[var(--P)] hover:underline text-left font-medium"
-                          onClick={() => router.push(`/employees/${e.id}`)}
-                        >
-                          {e.name}
-                        </button>
-                      </td>
-                      {e.cp.map((cp, i) => {
-                        const isA1 = cp === 50;
-                        const isA2 = cp === 0 && !e.rollOff;
-                        return (
-                          <td key={i} className={`py-2 px-3 text-center ${i === 0 ? 'font-semibold' : ''}`}>
-                            <span className={cp >= 80 ? 'text-[var(--GR)]' : cp >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]'}>
-                              {cp}%
-                            </span>
-                            {isA1 && <span className="ml-1 text-[var(--G3)] text-[10px]">A1</span>}
-                            {isA2 && <span className="ml-1 text-[var(--G3)] text-[10px]">A2</span>}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                  <AnimatePresence mode="sync">
+                    {paged.map((e, index) => (
+                      <motion.tr
+                        key={e.id}
+                        custom={index}
+                        variants={rowVariants}
+                        initial="hidden"
+                        animate="show"
+                        exit="exit"
+                        className="border-b border-[var(--G6)] hover:bg-[var(--G6)]"
+                      >
+                        <td className="py-2 pr-4 sticky left-0 bg-white">
+                          <button
+                            className="text-[var(--P)] hover:underline text-left font-medium"
+                            onClick={() => router.push(`/employees/${e.id}`)}
+                          >
+                            {e.name}
+                          </button>
+                        </td>
+                        {e.cp.map((cp, i) => {
+                          const isA1 = cp === 50;
+                          const isA2 = cp === 0 && !e.rollOff;
+                          return (
+                            <td key={i} className={`py-2 px-3 text-center ${i === 0 ? 'font-semibold' : ''}`}>
+                              <span className={cp >= 80 ? 'text-[var(--GR)]' : cp >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]'}>
+                                {cp}%
+                              </span>
+                              {isA1 && <span className="ml-1 text-[var(--G3)] text-[10px]">A1</span>}
+                              {isA2 && <span className="ml-1 text-[var(--G3)] text-[10px]">A2</span>}
+                            </td>
+                          );
+                        })}
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
                 </tbody>
               </table>
             </div>

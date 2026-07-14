@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useId } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   useReactTable,
   getCoreRowModel,
@@ -51,6 +52,16 @@ interface DataTableProps<TData> {
   onRowClick?: (row: TData) => void;
   getRowClassName?: (row: TData) => string;
 }
+
+const rowVariants = {
+  hidden: { opacity: 0, y: 5 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.20, ease: 'easeOut' as const, delay: Math.min(i * 0.035, 0.35) },
+  }),
+  exit: { opacity: 0, transition: { duration: 0.12 } },
+};
 
 function DraggableHeader<TData extends RowData>({ header }: { header: Header<TData, unknown> }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -135,23 +146,30 @@ export function DataTable<TData>({ data, columns, className, pagination, onRowCl
               ))}
             </thead>
             <tbody className="divide-y divide-[var(--G5)] bg-white">
-              {table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  onClick={() => onRowClick?.(row.original)}
-                  className={cn(
-                    'transition-colors duration-120',
-                    onRowClick && 'cursor-pointer',
-                    getRowClassName ? getRowClassName(row.original) : 'hover:bg-[var(--G6)]',
-                  )}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2.5 text-[var(--G1)] whitespace-nowrap">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              <AnimatePresence mode="sync">
+                {table.getRowModel().rows.map((row, index) => (
+                  <motion.tr
+                    key={row.id}
+                    custom={index}
+                    variants={rowVariants}
+                    initial="hidden"
+                    animate="show"
+                    exit="exit"
+                    onClick={() => onRowClick?.(row.original)}
+                    className={cn(
+                      'transition-colors duration-120',
+                      onRowClick && 'cursor-pointer',
+                      getRowClassName ? getRowClassName(row.original) : 'hover:bg-[var(--G6)]',
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-3 py-2.5 text-[var(--G1)] whitespace-nowrap">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
               {table.getRowModel().rows.length === 0 && (
                 <tr>
                   <td colSpan={columns.length} className="py-10 text-center text-[var(--G3)]">

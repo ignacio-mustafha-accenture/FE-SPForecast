@@ -2,7 +2,7 @@
 
 import { cn } from '@/src/lib/cn';
 
-type Variant = 'primary' | 'ghost' | 'approve' | 'reject' | 'link';
+type Variant = 'primary' | 'ghost' | 'approve' | 'approve-outline' | 'reject' | 'reject-outline' | 'link';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -15,7 +15,9 @@ const variantStyles: Record<Variant, string> = {
   primary: 'bg-[var(--P)] text-white hover:bg-[var(--PD)] focus-visible:ring-[var(--P)]',
   ghost: 'bg-transparent text-[var(--G1)] border border-[var(--G5)] hover:bg-[var(--G6)] focus-visible:ring-[var(--G4)]',
   approve: 'bg-[var(--GR)] text-white hover:opacity-90 focus-visible:ring-[var(--GR)]',
+  'approve-outline': 'bg-transparent border border-[var(--GR)] text-[var(--GR)] hover:bg-[var(--GRB)] focus-visible:ring-[var(--GR)]',
   reject: 'bg-[var(--RD)] text-white hover:opacity-90 focus-visible:ring-[var(--RD)]',
+  'reject-outline': 'bg-transparent border border-[var(--RD)] text-[var(--RD)] hover:bg-[var(--RDB)] focus-visible:ring-[var(--RD)]',
   link: 'bg-transparent text-[var(--P)] hover:underline p-0 h-auto',
 };
 

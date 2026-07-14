@@ -8,12 +8,16 @@ import { useTranslations } from 'next-intl';
 import type { Ticket } from '@/src/core/domain/ticket';
 import type { Page } from '@/src/core/domain/pagination';
 import { getClientContainer } from '@/src/application/container';
+import { useAuthStore, useForecastStore } from '@/src/store/StoreProvider';
 import { useDebounce } from '@/src/hooks/useDebounce';
+import { useToast } from '@/src/hooks/useToast';
 import { DataTable } from '@/src/components/ui/DataTable';
 import { FilterBar } from '@/src/components/ui/FilterBar';
 import { Badge } from '@/src/components/ui/Badge';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { Button } from '@/src/components/ui/Button';
+import { Modal } from '@/src/components/ui/Modal';
+import { Check, X } from 'lucide-react';
 import { TicketPanel } from './TicketPanel';
 
 const typeVariant: Record<string, 'green' | 'blue' | 'yellow' | 'red' | 'neutral' | 'purple'> = {
@@ -25,10 +29,22 @@ const typeVariant: Record<string, 'green' | 'blue' | 'yellow' | 'red' | 'neutral
   baja: 'red',
 };
 
+const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'neutral'> = {
+  Open: 'yellow',
+  Approved: 'green',
+  Rejected: 'red',
+};
+
 export function TicketsView() {
   const t = useTranslations('tickets');
+  const tCommon = useTranslations('common');
   const searchParams = useSearchParams();
   const router = useRouter();
+  const toast = useToast();
+
+  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const storeEmployees = useForecastStore((s) => s.appState?.employees ?? []);
+  const employeeClientMap = new Map(storeEmployees.map((e) => [e.id, e.client]));
 
   const status = searchParams.get('status') ?? '';
   const type = searchParams.get('type') ?? '';
@@ -42,6 +58,12 @@ export function TicketsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectSaving, setRejectSaving] = useState(false);
 
   const typeLabel: Record<string, string> = {
     newproj: t('typeNewproj'),
@@ -53,9 +75,16 @@ export function TicketsView() {
   };
 
   const STATUS_OPTIONS = [
-    { value: 'Abierto', label: t('statusOpen') },
-    { value: 'Cerrado', label: t('statusClosed') },
+    { value: 'Open', label: t('statusOpen') },
+    { value: 'Approved', label: t('statusApproved') },
+    { value: 'Rejected', label: t('statusRejected') },
   ];
+
+  const statusLabel: Record<string, string> = {
+    Open: t('statusOpen'),
+    Approved: t('statusApproved'),
+    Rejected: t('statusRejected'),
+  };
 
   const TYPE_OPTIONS = [
     { value: 'newproj', label: t('typeNewproj') },
@@ -66,7 +95,38 @@ export function TicketsView() {
     { value: 'baja', label: t('typeBaja') },
   ];
 
-  const columns: ColumnDef<Ticket, unknown>[] = [
+  async function handleApprove(id: string) {
+    try {
+      await getClientContainer().approveTicket.execute(id);
+      toast.success(t('toastApproved'));
+      setRefreshKey((k) => k + 1);
+    } catch {
+      toast.error(t('toastApproveError'));
+    }
+  }
+
+  function openRejectModal(id: string) {
+    setRejectTargetId(id);
+    setRejectReason('');
+    setRejectModalOpen(true);
+  }
+
+  async function handleRejectConfirm() {
+    if (!rejectTargetId || !rejectReason.trim()) return;
+    setRejectSaving(true);
+    try {
+      await getClientContainer().rejectTicket.execute(rejectTargetId, rejectReason.trim());
+      toast.success(t('toastRejected'));
+      setRefreshKey((k) => k + 1);
+      setRejectModalOpen(false);
+    } catch {
+      toast.error(t('toastRejectError'));
+    } finally {
+      setRejectSaving(false);
+    }
+  }
+
+  const baseColumns: ColumnDef<Ticket, unknown>[] = [
     { id: 'employeeName', accessorKey: 'employeeName', header: t('columnEmployee') },
     { id: 'country', accessorKey: 'country', header: t('columnCountry') },
     {
@@ -79,13 +139,25 @@ export function TicketsView() {
         </Badge>
       ),
     },
-    { id: 'status', accessorKey: 'status', header: t('columnStatus') },
+    {
+      id: 'status',
+      accessorKey: 'status',
+      header: t('columnStatus'),
+      cell: ({ row }) => (
+        <Badge variant={statusVariant[row.original.status] ?? 'neutral'}>
+          {statusLabel[row.original.status] ?? row.original.status}
+        </Badge>
+      ),
+    },
     { id: 'date', accessorKey: 'date', header: t('columnDate') },
     {
       id: 'clientName',
       accessorKey: 'clientName',
       header: t('columnClient'),
-      cell: ({ row }) => row.original.clientName ?? <span className="text-[var(--G4)]">—</span>,
+      cell: ({ row }) => {
+        const client = row.original.clientName ?? employeeClientMap.get(row.original.employeeId) ?? null;
+        return client ?? <span className="text-[var(--G4)]">—</span>;
+      },
     },
     {
       id: 'hoursToMove',
@@ -102,6 +174,34 @@ export function TicketsView() {
     },
   ];
 
+  const actionsColumn: ColumnDef<Ticket, unknown> = {
+    id: 'actions',
+    header: t('columnActions'),
+    cell: ({ row }) =>
+      row.original.status === 'Open' ? (
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="approve-outline"
+            size="sm"
+            onClick={() => handleApprove(row.original.id)}
+          >
+            <Check size={13} strokeWidth={2.5} />
+            {t('approve')}
+          </Button>
+          <Button
+            variant="reject-outline"
+            size="sm"
+            onClick={() => openRejectModal(row.original.id)}
+          >
+            <X size={13} strokeWidth={2.5} />
+            {t('reject')}
+          </Button>
+        </div>
+      ) : null,
+  };
+
+  const columns = isAdmin ? [...baseColumns, actionsColumn] : baseColumns;
+
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
@@ -117,7 +217,7 @@ export function TicketsView() {
       .catch(console.error)
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [status, type, debouncedQ, page, pageSize]);
+  }, [status, type, debouncedQ, page, pageSize, refreshKey]);
 
   function setParam(key: string, value: string) {
     const p = new URLSearchParams(searchParams.toString());
@@ -195,7 +295,43 @@ export function TicketsView() {
         open={panelOpen}
         ticket={selectedTicket}
         onClose={() => setPanelOpen(false)}
+        onSuccess={() => setRefreshKey((k) => k + 1)}
       />
+      <Modal
+        open={rejectModalOpen}
+        onClose={() => setRejectModalOpen(false)}
+        title={t('rejectModalTitle')}
+        width="480px"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-[var(--G1)]">
+              {t('rejectModalReasonLabel')}
+            </label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder={t('rejectModalReasonPlaceholder')}
+              rows={4}
+              className="w-full rounded border border-[var(--G5)] bg-white px-3 py-2 text-sm text-[var(--G1)] placeholder:text-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] transition-colors resize-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="reject"
+              className="flex-1"
+              loading={rejectSaving}
+              disabled={!rejectReason.trim()}
+              onClick={handleRejectConfirm}
+            >
+              {t('rejectModalConfirm')}
+            </Button>
+            <Button variant="ghost" onClick={() => setRejectModalOpen(false)}>
+              {tCommon('cancel')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

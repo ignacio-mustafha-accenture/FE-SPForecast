@@ -6,6 +6,9 @@ import { HttpStateRepository } from '@/src/adapters/http/HttpStateRepository';
 import { HttpTicketRepository } from '@/src/adapters/http/HttpTicketRepository';
 
 import { ApplyPPAUseCase } from './use-cases/ApplyPPAUseCase';
+import { ApproveTicketUseCase } from './use-cases/ApproveTicketUseCase';
+import { AssignEidUseCase } from './use-cases/AssignEidUseCase';
+import { RejectTicketUseCase } from './use-cases/RejectTicketUseCase';
 import { CreateTicketUseCase } from './use-cases/CreateTicketUseCase';
 import { FetchStateUseCase } from './use-cases/FetchStateUseCase';
 import { ForgotPasswordUseCase } from './use-cases/ForgotPasswordUseCase';
@@ -33,6 +36,9 @@ export interface AppContainer {
   listPPA: ListPPAUseCase;
   createTicket: CreateTicketUseCase;
   updateTicket: UpdateTicketUseCase;
+  approveTicket: ApproveTicketUseCase;
+  rejectTicket: RejectTicketUseCase;
+  assignEid: AssignEidUseCase;
   updateEmployee: UpdateEmployeeUseCase;
   applyPPA: ApplyPPAUseCase;
   recalculate: RecalculateUseCase;
@@ -56,6 +62,9 @@ export function createServerContainer(cookieHeader: string): AppContainer {
     listPPA: new ListPPAUseCase(ppaRepo),
     createTicket: new CreateTicketUseCase(ticketRepo),
     updateTicket: new UpdateTicketUseCase(ticketRepo),
+    approveTicket: new ApproveTicketUseCase(ticketRepo),
+    rejectTicket: new RejectTicketUseCase(ticketRepo),
+    assignEid: new AssignEidUseCase(ticketRepo),
     updateEmployee: new UpdateEmployeeUseCase(employeeRepo),
     applyPPA: new ApplyPPAUseCase(ppaRepo),
     recalculate: new RecalculateUseCase(new HttpAdminRepository(ctx)),
@@ -83,6 +92,9 @@ export function getClientContainer(): AppContainer {
       listPPA: new ListPPAUseCase(ppaRepo),
       createTicket: new CreateTicketUseCase(ticketRepo),
       updateTicket: new UpdateTicketUseCase(ticketRepo),
+      approveTicket: new ApproveTicketUseCase(ticketRepo),
+      rejectTicket: new RejectTicketUseCase(ticketRepo),
+      assignEid: new AssignEidUseCase(ticketRepo),
       updateEmployee: new UpdateEmployeeUseCase(employeeRepo),
       applyPPA: new ApplyPPAUseCase(ppaRepo),
       recalculate: new RecalculateUseCase(new HttpAdminRepository(ctx)),

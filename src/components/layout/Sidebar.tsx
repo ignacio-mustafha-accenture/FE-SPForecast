@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { LayoutDashboard, Users, Ticket, ArrowLeftRight, Bot, Settings } from 'lucide-react';
+import { LayoutDashboard, Globe, Ticket, ArrowLeftRight, Bot, Settings } from 'lucide-react';
 
 import { useWindowOffset } from '@/src/hooks/useWindowOffset';
 import { useForecastStore } from '@/src/store/StoreProvider';
@@ -13,12 +13,9 @@ export function Sidebar() {
   const { offset, decrement, increment, reset } = useWindowOffset();
   const period = useForecastStore((s) => s.appState?.period ?? null);
   const isLoading = useForecastStore((s) => s.isLoading);
-
   const NAV_ITEMS = [
     { href: '/', label: t('navDashboard'), icon: LayoutDashboard },
-    { href: '/ar', label: t('navArgentina'), icon: Users },
-    { href: '/mx', label: t('navMexico'), icon: Users },
-    { href: '/cr', label: t('navCostaRica'), icon: Users },
+    { href: '/countries', label: t('navCountries'), icon: Globe, matchPaths: ['/ar', '/mx', '/cr'] },
     { href: '/tickets', label: t('navTickets'), icon: Ticket },
     { href: '/ppa', label: t('navPPA'), icon: ArrowLeftRight },
     { href: '/agent', label: t('navAgent'), icon: Bot },
@@ -59,8 +56,8 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5">
-        {NAV_ITEMS.map((item) => (
-          <SidebarNavItem key={item.href} {...item} />
+        {NAV_ITEMS.map(({ matchPaths, ...item }) => (
+          <SidebarNavItem key={item.href} {...item} matchPaths={matchPaths} />
         ))}
       </nav>
     </aside>
