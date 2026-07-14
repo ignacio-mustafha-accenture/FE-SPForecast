@@ -136,7 +136,7 @@ export function DatePicker({
               locale={es}
               components={{
                 MonthCaption: CalendarHeader,
-                Nav: () => null,
+                Nav: () => <></>,
                 DayButton: CalendarDayButton,
               }}
               classNames={{
