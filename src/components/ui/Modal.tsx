@@ -38,7 +38,7 @@ export function Modal({ open, onClose, title, children, width = '600px' }: Modal
             initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
+            transition={{ duration: 0.18, ease: 'easeOut' as const }}
             style={{ width, maxWidth: '95vw' }}
             className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl flex flex-col max-h-[90vh]"
           >

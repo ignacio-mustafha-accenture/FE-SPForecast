@@ -23,7 +23,7 @@ const page = {
 // Sections that fade up (avg card, offering, alerts)
 const section = {
   hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.38, ease: 'easeOut' } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.38, ease: 'easeOut' as const } },
 };
 
 // Grid rows: only stagger their children, no own animation
@@ -35,7 +35,7 @@ const row = {
 // Individual cards within a row: slide in from the left
 const cardItem = {
   hidden: { opacity: 0, x: -24 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.34, ease: 'easeOut' } },
+  show: { opacity: 1, x: 0, transition: { duration: 0.34, ease: 'easeOut' as const } },
 };
 
 // Skeleton: simple fade in
@@ -235,7 +235,7 @@ export function DashboardView() {
                             style={{ backgroundColor: getOfferingColor(o.name) }}
                             initial={{ width: 0 }}
                             animate={{ width: `${(o.count / (offeringData[0]?.count ?? 1)) * 100}%` }}
-                            transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
+                            transition={{ duration: 0.6, ease: 'easeOut' as const, delay: 0.3 }}
                           />
                         </div>
                       </div>
