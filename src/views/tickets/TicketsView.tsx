@@ -57,7 +57,6 @@ export function TicketsView() {
   const [result, setResult] = useState<Page<Ticket> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -159,19 +158,6 @@ export function TicketsView() {
         return client ?? <span className="text-[var(--G4)]">—</span>;
       },
     },
-    {
-      id: 'hoursToMove',
-      accessorKey: 'hoursToMove',
-      header: t('columnHours'),
-      cell: ({ row }) =>
-        row.original.hoursToMove != null ? `${row.original.hoursToMove}h` : <span className="text-[var(--G4)]">—</span>,
-    },
-    {
-      id: 'comments',
-      accessorKey: 'comments',
-      header: t('columnComments'),
-      cell: ({ row }) => row.original.comments ?? <span className="text-[var(--G4)]">—</span>,
-    },
   ];
 
   const actionsColumn: ColumnDef<Ticket, unknown> = {
@@ -253,7 +239,7 @@ export function TicketsView() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-[var(--BK)]">{t('title')}</h1>
-        <Button onClick={() => { setSelectedTicket(null); setPanelOpen(true); }}>
+        <Button onClick={() => setPanelOpen(true)}>
           {t('newTicket')}
         </Button>
       </div>
@@ -290,10 +276,11 @@ export function TicketsView() {
               }
             : undefined
         }
+        onRowClick={(row) => router.push(`/tickets/${row.id}`)}
       />
       <TicketPanel
         open={panelOpen}
-        ticket={selectedTicket}
+        ticket={null}
         onClose={() => setPanelOpen(false)}
         onSuccess={() => setRefreshKey((k) => k + 1)}
       />
