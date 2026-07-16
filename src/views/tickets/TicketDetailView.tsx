@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { useAuthStore, useForecastStore } from '@/src/store/StoreProvider';
+import type { Ticket } from '@/src/core/domain/ticket';
+import { useAuthStore } from '@/src/store/StoreProvider';
 import { getClientContainer } from '@/src/application/container';
 import { useToast } from '@/src/hooks/useToast';
 import { Badge } from '@/src/components/ui/Badge';
@@ -77,10 +78,17 @@ export function TicketDetailView({ id }: Props) {
   const toast = useToast();
 
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
-  const isLoading = useForecastStore((s) => s.isLoading);
-  const ticket = useForecastStore((s) =>
-    (s.appState?.tickets ?? []).find((tk) => tk.id === id) ?? null,
-  );
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
+
+  useEffect(() => {
+    getClientContainer()
+      .getTicketById.execute(id)
+      .then((t) => setTicket(t))
+      .catch(() => setTicket(null))
+      .finally(() => setFetchAttempted(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -132,7 +140,7 @@ export function TicketDetailView({ id }: Props) {
     }
   }
 
-  if (isLoading && !ticket) {
+  if (!fetchAttempted) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-6 w-32" />

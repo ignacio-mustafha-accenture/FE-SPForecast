@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, forwardRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,6 +20,8 @@ import { X, ChevronDown } from 'lucide-react';
 
 type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
 
+type ScenarioType = 'assumption' | 'effective';
+
 type FormData = {
   type: TicketType;
   eid?: string;
@@ -35,6 +37,7 @@ type FormData = {
   eid_accenture?: string;
   hours_to_move?: string;
   comments?: string;
+  scenario_type?: ScenarioType;
 };
 
 interface TicketPanelProps {
@@ -44,33 +47,6 @@ interface TicketPanelProps {
   onSuccess?: () => void;
 }
 
-const SelectField = forwardRef<
-  HTMLSelectElement,
-  {
-    label: string;
-    options: Array<{ value: string; label: string }>;
-    error?: string;
-  } & React.SelectHTMLAttributes<HTMLSelectElement>
->(function SelectField({ label, options, error, ...selectProps }, ref) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-[var(--G1)]">{label}</label>
-      <select
-        ref={ref}
-        {...selectProps}
-        className="h-9 w-full rounded border border-[var(--G5)] bg-white px-3 text-sm text-[var(--G1)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] transition-colors appearance-none"
-      >
-        <option value="">—</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      {error && <p className="text-xs text-[var(--RD)]">{error}</p>}
-    </div>
-  );
-});
 
 function useDropdownNav(
   listRef: React.RefObject<HTMLUListElement | null>,
@@ -141,13 +117,19 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const [eidSearch, setEidSearch] = useState('');
   const [showEidDrop, setShowEidDrop] = useState(false);
   const [showTypeDrop, setShowTypeDrop] = useState(false);
+  const [showOfferingDrop, setShowOfferingDrop] = useState(false);
+  const [showClDrop, setShowClDrop] = useState(false);
+  const [showLocationDrop, setShowLocationDrop] = useState(false);
 
   const eidListRef = useRef<HTMLUListElement>(null);
   const typeListRef = useRef<HTMLUListElement>(null);
   const clientListRef = useRef<HTMLUListElement>(null);
+  const offeringListRef = useRef<HTMLUListElement>(null);
+  const clListRef = useRef<HTMLUListElement>(null);
+  const locationListRef = useRef<HTMLUListElement>(null);
   const prevAutoEidRef = useRef('');
 
-  const employees = useForecastStore((s) => s.appState?.employees ?? []);
+  const employees = useForecastStore((s) => s.appState?.employees ?? null);
 
   useEffect(() => {
     fetch('/api/admin/clients', { credentials: 'include' })
@@ -172,6 +154,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       eid_accenture: z.string().optional(),
       hours_to_move: z.string().optional(),
       comments: z.string().optional(),
+      scenario_type: z.enum(['assumption', 'effective']).optional(),
     })
     .superRefine((data, ctx) => {
       const req = (field: string, msg: string) => {
@@ -196,6 +179,13 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
         req('end_date', t('required'));
       }
       if (data.type === 'baja') req('end_date', t('required'));
+      if (data.chargeability_pct) {
+        const num = Number(data.chargeability_pct);
+        const decimalDigits = data.chargeability_pct.split('.')[1]?.length ?? 0;
+        if (isNaN(num) || num < 0 || num > 100 || decimalDigits > 1) {
+          ctx.addIssue({ path: ['chargeability_pct'], message: t('chargeabilityInvalid'), code: z.ZodIssueCode.custom });
+        }
+      }
       if (data.type === 'nj') {
         req('nj_name', t('required'));
         req('start_date', t('required'));
@@ -240,6 +230,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
           people_lead: ticket.peopleLead ?? '',
           eid_accenture: '',
           comments: ticket.comments ?? '',
+          scenario_type: ticket.scenarioType ?? 'assumption',
         }
       : undefined,
   });
@@ -254,6 +245,9 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       setClientSearch('');
       setShowEidDrop(false);
       setShowClientDrop(false);
+      setShowOfferingDrop(false);
+      setShowClDrop(false);
+      setShowLocationDrop(false);
       prevAutoEidRef.current = '';
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -280,19 +274,10 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const clientNavItems = [...filteredClients, ...(hasCustomClient ? [clientSearch] : [])];
 
   const selectedEid = watch('eid') ?? '';
-  const selectedEmployee = employees.find((e) => e.id === selectedEid);
+  const selectedEmployee = (employees ?? []).find((e) => e.id === selectedEid);
 
-  // Auto-fill client_name from the selected employee's current client (newproj, create mode only)
-  useEffect(() => {
-    if (ticket) return;
-    if (selectedType !== 'newproj') return;
-    if (!selectedEmployee?.client) return;
-    if (getValues('client_name')) return;
-    setValue('client_name', selectedEmployee.client);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEid, selectedType]);
 
-  const filteredEmployees = employees.filter(
+  const filteredEmployees = (employees ?? []).filter(
     (e) =>
       (e.id.toLowerCase().includes(eidSearch.toLowerCase()) ||
         e.name.toLowerCase().includes(eidSearch.toLowerCase())) &&
@@ -302,6 +287,9 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const eidNav = useDropdownNav(eidListRef, filteredEmployees.length, showEidDrop);
   const typeNav = useDropdownNav(typeListRef, TYPE_OPTIONS.length, showTypeDrop);
   const clientNav = useDropdownNav(clientListRef, clientNavItems.length, showClientDrop);
+  const offeringNav = useDropdownNav(offeringListRef, OFFERING_OPTIONS.length, showOfferingDrop);
+  const clNav = useDropdownNav(clListRef, CL_OPTIONS.length, showClDrop);
+  const locationNav = useDropdownNav(locationListRef, LOCATION_OPTIONS.length, showLocationDrop);
 
   async function onSubmit(data: FormData) {
     setSaving(true);
@@ -347,11 +335,13 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
             : undefined;
           createPayload.start_date = data.start_date;
           createPayload.end_date = data.end_date;
+          createPayload.scenario_type = data.scenario_type ?? 'assumption';
         } else if (data.type === 'ongoing') {
           createPayload.chargeability_pct = data.chargeability_pct
             ? Number(data.chargeability_pct)
             : undefined;
           createPayload.end_date = data.end_date;
+          createPayload.scenario_type = data.scenario_type ?? 'assumption';
         } else if (data.type === 'pto' || data.type === 'sick') {
           createPayload.start_date = data.start_date;
           createPayload.end_date = data.end_date;
@@ -403,14 +393,14 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   () => setShowTypeDrop(false),
                 )
               }
-              className="flex items-center gap-2 w-full px-3 py-2 border border-[var(--G5)] rounded-lg bg-white text-sm text-left focus:outline-none focus:border-[var(--P)] transition-colors"
+              className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showTypeDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
             >
               <span className={`flex-1 ${watch('type') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
                 {TYPE_OPTIONS.find((o) => o.value === watch('type'))?.label ?? t('typeLabel')}
               </span>
               <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
             </button>
-            {errors.type && <p className="text-xs text-red-500 mt-1">{errors.type.message}</p>}
+            {errors.type && <p className="text-xs text-[var(--RD)] mt-1">{errors.type.message}</p>}
             {showTypeDrop && (
               <ul
                 ref={typeListRef}
@@ -457,8 +447,8 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   <div className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text">
                     {selectedEid && !ticket ? (
                       <>
-                        <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-sm shrink-0 max-w-[160px] truncate">
-                          {selectedEmployee ? selectedEmployee.name : selectedEid}
+                        <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-sm min-w-0 max-w-[160px]">
+                          <span className="truncate">{selectedEmployee ? selectedEmployee.name : selectedEid}</span>
                           <button
                             type="button"
                             onMouseDown={(e) => {
@@ -502,7 +492,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                     )}
                     <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
                   </div>
-                  {errors.eid && <p className="text-xs text-red-500 mt-1">{errors.eid.message}</p>}
+                  {errors.eid && <p className="text-xs text-[var(--RD)] mt-1">{errors.eid.message}</p>}
                   {showEidDrop && filteredEmployees.length > 0 && (
                     <ul
                       ref={eidListRef}
@@ -544,20 +534,82 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                     onChange={(v) => setValue('start_date', v)}
                     error={errors.start_date?.message}
                   />
-                  <SelectField
-                    label={t('clLabel')}
-                    options={CL_OPTIONS}
-                    error={errors.cl?.message}
-                    {...register('cl')}
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-[var(--G2)]">{t('clLabel')}</label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowClDrop((v) => !v)}
+                        onBlur={() => setTimeout(() => setShowClDrop(false), 150)}
+                        onKeyDown={(e) =>
+                          clNav.onKey(
+                            e,
+                            (i) => { setValue('cl', CL_OPTIONS[i].value); setShowClDrop(false); },
+                            () => setShowClDrop(false),
+                          )
+                        }
+                        className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showClDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
+                      >
+                        <span className={`flex-1 ${watch('cl') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
+                          {CL_OPTIONS.find((o) => o.value === watch('cl'))?.label ?? '—'}
+                        </span>
+                        <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
+                      </button>
+                      {errors.cl && <p className="text-xs text-[var(--RD)] mt-1">{errors.cl.message}</p>}
+                      {showClDrop && (
+                        <ul ref={clListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden">
+                          {CL_OPTIONS.map((o, i) => (
+                            <li
+                              key={o.value}
+                              onMouseDown={() => { setValue('cl', o.value); setShowClDrop(false); }}
+                              className={`px-3 py-2 text-sm cursor-pointer transition-colors ${i === clNav.idx ? 'bg-[var(--G6)]' : watch('cl') === o.value ? 'bg-[var(--PB)] text-[var(--P)] font-medium' : 'text-[var(--G1)] hover:bg-[var(--G6)]'}`}
+                            >
+                              {o.label}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <SelectField
-                    label={t('locationLabel')}
-                    options={LOCATION_OPTIONS}
-                    error={errors.location?.message}
-                    {...register('location')}
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-[var(--G2)]">{t('locationLabel')}</label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowLocationDrop((v) => !v)}
+                        onBlur={() => setTimeout(() => setShowLocationDrop(false), 150)}
+                        onKeyDown={(e) =>
+                          locationNav.onKey(
+                            e,
+                            (i) => { setValue('location', LOCATION_OPTIONS[i].value); setShowLocationDrop(false); },
+                            () => setShowLocationDrop(false),
+                          )
+                        }
+                        className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showLocationDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
+                      >
+                        <span className={`flex-1 ${watch('location') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
+                          {LOCATION_OPTIONS.find((o) => o.value === watch('location'))?.label ?? '—'}
+                        </span>
+                        <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
+                      </button>
+                      {errors.location && <p className="text-xs text-[var(--RD)] mt-1">{errors.location.message}</p>}
+                      {showLocationDrop && (
+                        <ul ref={locationListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden">
+                          {LOCATION_OPTIONS.map((o, i) => (
+                            <li
+                              key={o.value}
+                              onMouseDown={() => { setValue('location', o.value); setShowLocationDrop(false); }}
+                              className={`px-3 py-2 text-sm cursor-pointer transition-colors ${i === locationNav.idx ? 'bg-[var(--G6)]' : watch('location') === o.value ? 'bg-[var(--PB)] text-[var(--P)] font-medium' : 'text-[var(--G1)] hover:bg-[var(--G6)]'}`}
+                            >
+                              {o.label}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
                   <Input
                     label={t('peopleleadLabel')}
                     placeholder={t('peopleleadPlaceholder')}
@@ -629,7 +681,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                       <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
                     </div>
                     {errors.client_name && (
-                      <p className="text-xs text-red-500 mt-1">{errors.client_name.message}</p>
+                      <p className="text-xs text-[var(--RD)] mt-1">{errors.client_name.message}</p>
                     )}
                     {showClientDrop && (filteredClients.length > 0 || clientSearch) && (
                       <ul
@@ -666,25 +718,116 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   </div>
                 </div>
 
-                <SelectField
-                  label={t('offeringLabel')}
-                  options={OFFERING_OPTIONS}
-                  error={errors.offering_type?.message}
-                  {...register('offering_type')}
-                />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[var(--G2)]">{t('offeringLabel')}</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowOfferingDrop((v) => !v)}
+                      onBlur={() => setTimeout(() => setShowOfferingDrop(false), 150)}
+                      onKeyDown={(e) =>
+                        offeringNav.onKey(
+                          e,
+                          (i) => {
+                            setValue('offering_type', OFFERING_OPTIONS[i].value);
+                            setShowOfferingDrop(false);
+                          },
+                          () => setShowOfferingDrop(false),
+                        )
+                      }
+                      className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showOfferingDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
+                    >
+                      <span className={`flex-1 ${watch('offering_type') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
+                        {OFFERING_OPTIONS.find((o) => o.value === watch('offering_type'))?.label ?? '—'}
+                      </span>
+                      <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
+                    </button>
+                    {errors.offering_type && <p className="text-xs text-[var(--RD)] mt-1">{errors.offering_type.message}</p>}
+                    {showOfferingDrop && (
+                      <ul
+                        ref={offeringListRef}
+                        className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden"
+                      >
+                        {OFFERING_OPTIONS.map((o, i) => (
+                          <li
+                            key={o.value}
+                            onMouseDown={() => {
+                              setValue('offering_type', o.value);
+                              setShowOfferingDrop(false);
+                            }}
+                            className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
+                              i === offeringNav.idx
+                                ? 'bg-[var(--G6)]'
+                                : watch('offering_type') === o.value
+                                  ? 'bg-[var(--PB)] text-[var(--P)] font-medium'
+                                  : 'text-[var(--G1)] hover:bg-[var(--G6)]'
+                            }`}
+                          >
+                            {o.label}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </>
             )}
 
             {/* Chargeability — newproj and ongoing */}
             {(selectedType === 'newproj' || selectedType === 'ongoing') && (
-              <Input
-                label={t('chargeabilityLabel')}
-                type="number"
-                min={0}
-                max={100}
-                error={errors.chargeability_pct?.message}
-                {...register('chargeability_pct')}
-              />
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[var(--G2)]">{t('chargeabilityLabel')}</label>
+                  <div className="flex items-center h-9 rounded-lg border border-[var(--G5)] bg-white focus-within:border-[var(--P)] focus-within:ring-1 focus-within:ring-[var(--P)] transition-colors overflow-hidden">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      className="flex-1 min-w-0 h-full px-3 text-sm text-[var(--G1)] bg-transparent outline-none placeholder:text-[var(--G4)]"
+                      {...register('chargeability_pct')}
+                      onBlur={(e) => {
+                        let val = e.target.value;
+                        if (val !== '') {
+                          let num = parseFloat(val);
+                          if (isNaN(num)) { val = ''; }
+                          else {
+                            num = Math.round(Math.min(Math.max(num, 0), 100) * 10) / 10;
+                            val = String(num);
+                          }
+                          setValue('chargeability_pct', val, { shouldValidate: true });
+                        }
+                      }}
+                    />
+                    <span className="px-2.5 text-sm text-[var(--G3)] border-l border-[var(--G5)] h-full flex items-center bg-[var(--G6)] shrink-0">%</span>
+                  </div>
+                  {errors.chargeability_pct && <p className="text-xs text-[var(--RD)]">{errors.chargeability_pct.message}</p>}
+                </div>
+
+                {/* Scenario type — Asunción / Efectivo */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[var(--G2)]">Escenario</label>
+                  <div className="flex gap-2">
+                    {([
+                      { value: 'assumption', label: 'Asunción' },
+                      { value: 'effective', label: 'Efectivo' },
+                    ] as { value: ScenarioType; label: string }[]).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setValue('scenario_type', opt.value)}
+                        className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${
+                          (watch('scenario_type') ?? 'assumption') === opt.value
+                            ? 'border-[var(--P)] bg-[var(--PB)] text-[var(--P)] font-medium'
+                            : 'border-[var(--G5)] text-[var(--G2)] hover:bg-[var(--G6)]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Hours — sick only */}

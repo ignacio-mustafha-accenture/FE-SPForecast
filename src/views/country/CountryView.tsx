@@ -138,6 +138,16 @@ export function CountryView({ country }: CountryViewProps) {
       cell: ({ row }) => row.original.client ?? <span className="text-[var(--G4)]">—</span>,
     },
     {
+      id: 'scenario',
+      accessorKey: 'scenarioType',
+      header: 'Escenario',
+      cell: ({ row }) => (
+        <Badge variant={row.original.scenarioType === 'effective' ? 'blue' : 'neutral'}>
+          {row.original.scenarioType === 'effective' ? 'Efectivo' : 'Asunción'}
+        </Badge>
+      ),
+    },
+    {
       id: 'chargeability',
       accessorKey: 'chargeabilityPercent',
       header: t('headerChargeability'),

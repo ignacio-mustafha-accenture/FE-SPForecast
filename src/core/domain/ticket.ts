@@ -1,4 +1,5 @@
 export type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
+export type ScenarioType = 'assumption' | 'effective';
 
 export interface Ticket {
   id: string;
@@ -24,6 +25,7 @@ export interface Ticket {
   location: string | null;
   peopleLead: string | null;
   rejectionReason: string | null;
+  scenarioType: ScenarioType;
 }
 
 export interface CreateTicketPayload {
@@ -45,6 +47,7 @@ export interface CreateTicketPayload {
   from_period?: string;
   to_period?: string;
   comments?: string;
+  scenario_type?: ScenarioType;
 }
 
 export interface UpdateTicketPayload {

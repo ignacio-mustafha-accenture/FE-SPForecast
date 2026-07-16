@@ -13,6 +13,7 @@ import { CreateTicketUseCase } from './use-cases/CreateTicketUseCase';
 import { FetchStateUseCase } from './use-cases/FetchStateUseCase';
 import { ForgotPasswordUseCase } from './use-cases/ForgotPasswordUseCase';
 import { GetAuthUserUseCase } from './use-cases/GetAuthUserUseCase';
+import { GetTicketByIdUseCase } from './use-cases/GetTicketByIdUseCase';
 import { ListEmployeesUseCase } from './use-cases/ListEmployeesUseCase';
 import { ListPPAUseCase } from './use-cases/ListPPAUseCase';
 import { ListTicketsUseCase } from './use-cases/ListTicketsUseCase';
@@ -27,6 +28,7 @@ import { UpdateTicketUseCase } from './use-cases/UpdateTicketUseCase';
 export interface AppContainer {
   fetchState: FetchStateUseCase;
   getAuthUser: GetAuthUserUseCase;
+  getTicketById: GetTicketByIdUseCase;
   login: LoginUseCase;
   logout: LogoutUseCase;
   forgotPassword: ForgotPasswordUseCase;
@@ -53,6 +55,7 @@ export function createServerContainer(cookieHeader: string): AppContainer {
   return {
     fetchState: new FetchStateUseCase(new HttpStateRepository(ctx)),
     getAuthUser: new GetAuthUserUseCase(new HttpAuthRepository(ctx)),
+    getTicketById: new GetTicketByIdUseCase(ticketRepo),
     login: new LoginUseCase(new HttpAuthRepository(ctx)),
     logout: new LogoutUseCase(new HttpAuthRepository(ctx)),
     forgotPassword: new ForgotPasswordUseCase(new HttpAuthRepository(ctx)),
@@ -83,6 +86,7 @@ export function getClientContainer(): AppContainer {
     clientContainer = {
       fetchState: new FetchStateUseCase(new HttpStateRepository(ctx)),
       getAuthUser: new GetAuthUserUseCase(new HttpAuthRepository(ctx)),
+      getTicketById: new GetTicketByIdUseCase(ticketRepo),
       login: new LoginUseCase(new HttpAuthRepository(ctx)),
       logout: new LogoutUseCase(new HttpAuthRepository(ctx)),
       forgotPassword: new ForgotPasswordUseCase(new HttpAuthRepository(ctx)),

@@ -1,4 +1,5 @@
 export type Country = 'AR' | 'MX' | 'CR';
+export type ScenarioType = 'assumption' | 'effective';
 
 export type ChargeabilityStatus = 'green' | 'yellow' | 'red' | 'unassigned' | 'leave';
 
@@ -29,4 +30,5 @@ export interface Employee {
   availableHours: number;
   totalHours: number;
   notes: string;
+  scenarioType: ScenarioType;
 }

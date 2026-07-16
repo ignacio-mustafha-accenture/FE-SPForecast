@@ -1,8 +1,8 @@
 import type { AppState, CountrySummary } from '@/src/core/domain/app-state';
-import type { Country, Employee, ChargeabilityStatus } from '@/src/core/domain/employee';
+import type { Country, Employee, ChargeabilityStatus, ScenarioType as EmployeeScenarioType } from '@/src/core/domain/employee';
 import type { Period } from '@/src/core/domain/period';
 import type { PPALog } from '@/src/core/domain/ppa';
-import type { Ticket, TicketType } from '@/src/core/domain/ticket';
+import type { Ticket, TicketType, ScenarioType } from '@/src/core/domain/ticket';
 import type { User, Role } from '@/src/core/domain/user';
 import { getEmployeeStatus } from '@/src/lib/status';
 
@@ -76,6 +76,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     availableHours: Math.max(0, sah0 - chg0),
     totalHours: sah0,
     notes: raw.Notes ?? '',
+    scenarioType: (raw.ScenarioType === 'effective' ? 'effective' : 'assumption') as EmployeeScenarioType,
   };
 }
 
@@ -89,6 +90,7 @@ export function mapRawPeriod(raw: RawPeriod, windowOffset: number): Period {
 }
 
 export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>): Ticket {
+  console.log('[mapRawTicket]', { id: raw.id, by: raw.by, eid: raw.eid, eid_name: raw.eid_name });
   const employee = employeeMap.get(raw.eid);
   const eidCountry = raw.eid_country ? mapCountry(raw.eid_country) : undefined;
   return {
@@ -115,6 +117,7 @@ export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>)
     location: raw.location,
     peopleLead: raw.people_lead,
     rejectionReason: raw.rejection_reason ?? null,
+    scenarioType: (raw.scenario_type === 'effective' ? 'effective' : 'assumption') as ScenarioType,
   };
 }
 

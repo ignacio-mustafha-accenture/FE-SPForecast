@@ -69,7 +69,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
   const fromListRef = useRef<HTMLUListElement>(null);
   const toListRef = useRef<HTMLUListElement>(null);
 
-  const employees = useForecastStore((s) => s.appState?.employees ?? []);
+  const employees = useForecastStore((s) => s.appState?.employees ?? null);
 
   const schema = z.object({
     eid: z.string().min(1, t('required')),
@@ -91,8 +91,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
   });
 
   const selectedEid = watch('eid') ?? '';
-  const selectedEmployee = employees.find((e) => e.id === selectedEid);
-  const filteredEmployees = employees.filter(
+  const selectedEmployee = (employees ?? []).find((e) => e.id === selectedEid);
+  const filteredEmployees = (employees ?? []).filter(
     (e) =>
       (e.id.toLowerCase().includes(eidSearch.toLowerCase()) ||
         e.name.toLowerCase().includes(eidSearch.toLowerCase())) &&
