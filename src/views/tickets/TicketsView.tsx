@@ -43,8 +43,8 @@ export function TicketsView() {
   const toast = useToast();
 
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
-  const storeEmployees = useForecastStore((s) => s.appState?.employees ?? []);
-  const employeeClientMap = new Map(storeEmployees.map((e) => [e.id, e.client]));
+  const storeEmployees = useForecastStore((s) => s.appState?.employees ?? null);
+  const employeeClientMap = new Map((storeEmployees ?? []).map((e) => [e.id, e.client]));
 
   const status = searchParams.get('status') ?? '';
   const type = searchParams.get('type') ?? '';
@@ -149,6 +149,7 @@ export function TicketsView() {
       ),
     },
     { id: 'date', accessorKey: 'date', header: t('columnDate') },
+    { id: 'by', accessorKey: 'by', header: t('columnBy') },
     {
       id: 'clientName',
       accessorKey: 'clientName',
@@ -276,7 +277,6 @@ export function TicketsView() {
               }
             : undefined
         }
-        onRowClick={(row) => router.push(`/tickets/${row.id}`)}
       />
       <TicketPanel
         open={panelOpen}

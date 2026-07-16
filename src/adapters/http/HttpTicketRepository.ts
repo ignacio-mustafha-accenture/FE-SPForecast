@@ -40,6 +40,11 @@ export class HttpTicketRepository implements ITicketRepository {
     return mapRawTicket(raw, new Map());
   }
 
+  async getById(id: string): Promise<Ticket> {
+    const raw = await this.fetch<RawTicket>(`/api/tickets/${id}`);
+    return mapRawTicket(raw, new Map());
+  }
+
   async update(id: string, payload: UpdateTicketPayload): Promise<Ticket> {
     const raw = await this.fetch<RawTicket>(`/api/tickets/${id}`, {
       method: 'PATCH',

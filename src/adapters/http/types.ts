@@ -35,6 +35,7 @@ export interface RawEmployee {
   TerminationDate: string | null;
   Charge: boolean;
   NJFormat: string | null;
+  ScenarioType: string | null;
   chg: number[];
   sah: number[];
   cp: number[];
@@ -66,6 +67,7 @@ export interface RawTicket {
   eid_name?: string | null;
   eid_country?: string | null;
   rejection_reason?: string | null;
+  scenario_type?: string | null;
 }
 
 export interface RawPPALog {

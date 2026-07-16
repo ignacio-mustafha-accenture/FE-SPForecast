@@ -3,6 +3,7 @@ import type { Page, TicketFilter } from '../domain/pagination';
 
 export interface ITicketRepository {
   list(filter: TicketFilter): Promise<Page<Ticket>>;
+  getById(id: string): Promise<Ticket>;
   create(payload: CreateTicketPayload): Promise<Ticket>;
   update(id: string, payload: UpdateTicketPayload): Promise<Ticket>;
   assignEid(id: string, newEid: string, newName?: string): Promise<{ ok: boolean; new_eid: string }>;

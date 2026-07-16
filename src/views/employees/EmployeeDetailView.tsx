@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useTranslations } from 'next-intl';
 
 import { useForecastStore } from '@/src/store/StoreProvider';
@@ -13,8 +15,11 @@ import { Input } from '@/src/components/ui/Input';
 import { Textarea } from '@/src/components/ui/Textarea';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import { Skeleton } from '@/src/components/ui/Skeleton';
+import { DatePicker } from '@/src/components/ui/DatePicker';
 import { useToast } from '@/src/hooks/useToast';
 import { formatPercent } from '@/src/lib/formatters';
+import type { ChargeabilityBlock, ScenarioType } from '@/src/core/domain/chargeabilityBlock';
+import { HttpChargeabilityBlockRepository } from '@/src/adapters/http/HttpChargeabilityBlockRepository';
 
 const statusVariant = {
   green:      'green',
@@ -59,6 +64,29 @@ interface EditForm {
   notes: string;
 }
 
+const blockSchema = z
+  .object({
+    chargeability_pct: z.string().min(1, 'Requerido'),
+    start_date: z.string().min(1, 'Requerido'),
+    end_date: z.string().min(1, 'Requerido'),
+    scenario_type: z.enum(['assumption', 'effective']),
+  })
+  .superRefine((data, ctx) => {
+    const pct = Number(data.chargeability_pct);
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      ctx.addIssue({ path: ['chargeability_pct'], message: 'Debe ser entre 0 y 100', code: z.ZodIssueCode.custom });
+    }
+    if (data.start_date && data.end_date) {
+      const diff = (new Date(data.end_date).getTime() - new Date(data.start_date).getTime()) / 86400000;
+      if (diff < 0) ctx.addIssue({ path: ['end_date'], message: 'Fin debe ser ≥ inicio', code: z.ZodIssueCode.custom });
+      if (diff > 14) ctx.addIssue({ path: ['end_date'], message: 'Máximo 14 días', code: z.ZodIssueCode.custom });
+    }
+  });
+
+type BlockForm = z.infer<typeof blockSchema>;
+
+const blockRepo = new HttpChargeabilityBlockRepository();
+
 function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl border border-[var(--G5)] px-4 py-3">
@@ -87,10 +115,78 @@ export function EmployeeDetailView({ eid }: Props) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
 
+  // Chargeability blocks state
+  const [blocks, setBlocks] = useState<ChargeabilityBlock[]>([]);
+  const [blocksLoading, setBlocksLoading] = useState(false);
+  const [showBlockForm, setShowBlockForm] = useState(false);
+  const [savingBlock, setSavingBlock] = useState(false);
+  const [deletingBlockId, setDeletingBlockId] = useState<number | null>(null);
+
+  const {
+    register: registerBlock,
+    handleSubmit: handleSubmitBlock,
+    formState: { errors: blockErrors },
+    reset: resetBlock,
+    setValue: setBlockValue,
+    watch: watchBlock,
+  } = useForm<BlockForm>({
+    resolver: zodResolver(blockSchema),
+    defaultValues: { scenario_type: 'assumption' },
+  });
+
+  const fetchBlocks = useCallback(async () => {
+    setBlocksLoading(true);
+    try {
+      const data = await blockRepo.list(eid);
+      setBlocks(data);
+    } catch {
+      // silently ignore — employee may have no blocks yet
+    } finally {
+      setBlocksLoading(false);
+    }
+  }, [eid]);
+
+  useEffect(() => {
+    fetchBlocks();
+  }, [fetchBlocks]);
+
+  async function onSaveBlock(data: BlockForm) {
+    setSavingBlock(true);
+    try {
+      await blockRepo.create(eid, {
+        start_date: data.start_date,
+        end_date: data.end_date,
+        chargeability_pct: Number(data.chargeability_pct),
+        scenario_type: data.scenario_type,
+      });
+      toast.success('Bloque creado');
+      resetBlock({ scenario_type: 'assumption' });
+      setShowBlockForm(false);
+      await fetchBlocks();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error al crear bloque');
+    } finally {
+      setSavingBlock(false);
+    }
+  }
+
+  async function onDeleteBlock(blockId: number) {
+    setDeletingBlockId(blockId);
+    try {
+      await blockRepo.delete(eid, blockId);
+      toast.success('Bloque eliminado');
+      await fetchBlocks();
+    } catch {
+      toast.error('Error al eliminar bloque');
+    } finally {
+      setDeletingBlockId(null);
+    }
+  }
+
   const employee = useForecastStore((s) =>
     s.appState?.employees.find((e) => e.id === eid) ?? null,
   );
-  const periods = useForecastStore((s) => s.appState?.periods ?? []);
+  const periods = useForecastStore((s) => s.appState?.periods ?? null);
   const isLoading = useForecastStore((s) => s.isLoading);
 
   const { register, handleSubmit } = useForm<EditForm>({
@@ -307,8 +403,115 @@ export function EmployeeDetailView({ eid }: Props) {
         </div>
       </div>
 
+      {/* Cargabilidad por período */}
+      <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
+        <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)] flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-[var(--G1)]">Cargabilidad por período</h2>
+          <button
+            type="button"
+            onClick={() => setShowBlockForm((v) => !v)}
+            className="text-xs text-[var(--P)] hover:underline"
+          >
+            {showBlockForm ? 'Cancelar' : '+ Agregar bloque'}
+          </button>
+        </div>
+
+        {/* Add block form */}
+        {showBlockForm && (
+          <form onSubmit={handleSubmitBlock(onSaveBlock)} className="px-5 py-4 border-b border-[var(--G5)] space-y-3 bg-[var(--G6)]">
+            <div className="grid grid-cols-2 gap-3">
+              <DatePicker
+                label="Fecha inicio"
+                value={watchBlock('start_date')}
+                onChange={(v) => setBlockValue('start_date', v)}
+                error={blockErrors.start_date?.message}
+              />
+              <DatePicker
+                label="Fecha fin"
+                value={watchBlock('end_date')}
+                onChange={(v) => setBlockValue('end_date', v)}
+                error={blockErrors.end_date?.message}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Cargabilidad %"
+                type="number"
+                min={0}
+                max={100}
+                step={0.1}
+                error={blockErrors.chargeability_pct?.message}
+                {...registerBlock('chargeability_pct')}
+              />
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[var(--G2)]">Escenario</label>
+                <div className="flex gap-2">
+                  {([
+                    { value: 'assumption', label: 'Asunción' },
+                    { value: 'effective', label: 'Efectivo' },
+                  ] as { value: ScenarioType; label: string }[]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setBlockValue('scenario_type', opt.value)}
+                      className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${
+                        (watchBlock('scenario_type') ?? 'assumption') === opt.value
+                          ? 'border-[var(--P)] bg-white text-[var(--P)] font-medium'
+                          : 'border-[var(--G5)] bg-white text-[var(--G2)] hover:bg-[var(--G6)]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <Button type="submit" loading={savingBlock} className="w-full">
+              Guardar bloque
+            </Button>
+          </form>
+        )}
+
+        {/* Blocks list */}
+        {blocksLoading ? (
+          <div className="px-5 py-4 space-y-2">
+            <Skeleton className="h-8 rounded-lg" />
+            <Skeleton className="h-8 rounded-lg" />
+          </div>
+        ) : blocks.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-[var(--G4)]">Sin bloques registrados.</p>
+        ) : (
+          <div className="divide-y divide-[var(--G6)]">
+            {blocks.map((b) => (
+              <div key={b.id} className="px-5 py-3 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 text-sm text-[var(--G1)]">
+                  <Badge variant={b.scenarioType === 'effective' ? 'blue' : 'neutral'}>
+                    {b.scenarioType === 'effective' ? 'Efectivo' : 'Asunción'}
+                  </Badge>
+                  <span className="font-semibold">{b.chargeabilityPct}%</span>
+                  <span className="text-[var(--G3)]">{b.startDate} → {b.endDate}</span>
+                  {b.periodName && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] bg-[var(--G5)] px-1.5 py-0.5 rounded">
+                      {b.periodName}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  disabled={deletingBlockId === b.id}
+                  onClick={() => onDeleteBlock(b.id)}
+                  className="text-xs text-[var(--RD)] hover:underline disabled:opacity-40"
+                >
+                  {deletingBlockId === b.id ? '…' : 'Eliminar'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Forecast histórico */}
-      {periods.length > 0 && (
+      {(periods ?? []).length > 0 && (
         <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
           <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)]">
             <h2 className="text-sm font-semibold text-[var(--G1)]">{t('sectionForecast')}</h2>
@@ -324,7 +527,7 @@ export function EmployeeDetailView({ eid }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--G6)]">
-                {periods.map((p, i) => {
+                {(periods ?? []).map((p, i) => {
                   const chg = employee.chg[i] ?? 0;
                   const sah = employee.sah[i] ?? 0;
                   const cp  = employee.cp[i]  ?? 0;
