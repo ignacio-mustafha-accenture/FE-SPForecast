@@ -13,6 +13,7 @@ import { DataTable } from '@/src/components/ui/DataTable';
 import { FilterBar } from '@/src/components/ui/FilterBar';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { Button } from '@/src/components/ui/Button';
+
 import { PPAPanel } from './PPAPanel';
 
 export function PPAView() {
@@ -60,6 +61,7 @@ export function PPAView() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     getClientContainer()
       .listPPA.execute({

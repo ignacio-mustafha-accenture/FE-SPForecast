@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X, ChevronDown } from 'lucide-react';
 
 import type { Ticket, CreateTicketPayload, UpdateTicketPayload } from '@/src/core/domain/ticket';
 import { getClientContainer } from '@/src/application/container';
@@ -16,7 +17,6 @@ import { Textarea } from '@/src/components/ui/Textarea';
 import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
 import { useForecastStore } from '@/src/store/StoreProvider';
-import { X, ChevronDown } from 'lucide-react';
 
 type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
 
@@ -38,6 +38,7 @@ type FormData = {
   hours_to_move?: string;
   comments?: string;
   scenario_type?: ScenarioType;
+  effectivization_date?: string;
 };
 
 interface TicketPanelProps {
@@ -55,6 +56,7 @@ function useDropdownNav(
 ) {
   const [idx, setIdx] = useState(-1);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIdx(-1);
   }, [open]);
   useEffect(() => {
@@ -155,6 +157,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       hours_to_move: z.string().optional(),
       comments: z.string().optional(),
       scenario_type: z.enum(['assumption', 'effective']).optional(),
+      effectivization_date: z.string().optional(),
     })
     .superRefine((data, ctx) => {
       const req = (field: string, msg: string) => {
@@ -179,6 +182,12 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
         req('end_date', t('required'));
       }
       if (data.type === 'baja') req('end_date', t('required'));
+      if (
+        (data.type === 'newproj' || data.type === 'ongoing') &&
+        (data.scenario_type ?? 'assumption') === 'assumption'
+      ) {
+        req('effectivization_date', t('required'));
+      }
       if (data.chargeability_pct) {
         const num = Number(data.chargeability_pct);
         const decimalDigits = data.chargeability_pct.split('.')[1]?.length ?? 0;
@@ -231,6 +240,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
           eid_accenture: '',
           comments: ticket.comments ?? '',
           scenario_type: ticket.scenarioType ?? 'assumption',
+          effectivization_date: ticket.effectivizationDate ?? '',
         }
       : undefined,
   });
@@ -336,12 +346,18 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
           createPayload.start_date = data.start_date;
           createPayload.end_date = data.end_date;
           createPayload.scenario_type = data.scenario_type ?? 'assumption';
+          if ((data.scenario_type ?? 'assumption') === 'assumption' && data.effectivization_date) {
+            createPayload.effectivization_date = data.effectivization_date;
+          }
         } else if (data.type === 'ongoing') {
           createPayload.chargeability_pct = data.chargeability_pct
             ? Number(data.chargeability_pct)
             : undefined;
           createPayload.end_date = data.end_date;
           createPayload.scenario_type = data.scenario_type ?? 'assumption';
+          if ((data.scenario_type ?? 'assumption') === 'assumption' && data.effectivization_date) {
+            createPayload.effectivization_date = data.effectivization_date;
+          }
         } else if (data.type === 'pto' || data.type === 'sick') {
           createPayload.start_date = data.start_date;
           createPayload.end_date = data.end_date;
@@ -809,13 +825,16 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   <label className="text-xs font-medium text-[var(--G2)]">Escenario</label>
                   <div className="flex gap-2">
                     {([
-                      { value: 'assumption', label: 'Asunción' },
+                      { value: 'assumption', label: 'Estimación' },
                       { value: 'effective', label: 'Efectivo' },
                     ] as { value: ScenarioType; label: string }[]).map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
-                        onClick={() => setValue('scenario_type', opt.value)}
+                        onClick={() => {
+                          setValue('scenario_type', opt.value);
+                          if (opt.value === 'effective') setValue('effectivization_date', '');
+                        }}
                         className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${
                           (watch('scenario_type') ?? 'assumption') === opt.value
                             ? 'border-[var(--P)] bg-[var(--PB)] text-[var(--P)] font-medium'
@@ -827,6 +846,16 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                     ))}
                   </div>
                 </div>
+
+                {/* Effectivization date — required for assumption tickets */}
+                {(watch('scenario_type') ?? 'assumption') === 'assumption' && !ticket && (
+                  <DatePicker
+                    label="Fecha límite de confirmación"
+                    value={watch('effectivization_date')}
+                    onChange={(v) => setValue('effectivization_date', v, { shouldValidate: true })}
+                    error={errors.effectivization_date?.message}
+                  />
+                )}
               </>
             )}
 

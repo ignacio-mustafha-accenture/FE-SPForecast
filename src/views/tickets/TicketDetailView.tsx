@@ -7,7 +7,7 @@ import { Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import type { Ticket } from '@/src/core/domain/ticket';
-import { useAuthStore } from '@/src/store/StoreProvider';
+import { useAuthStore, useForecastStore } from '@/src/store/StoreProvider';
 import { getClientContainer } from '@/src/application/container';
 import { useToast } from '@/src/hooks/useToast';
 import { Badge } from '@/src/components/ui/Badge';
@@ -78,6 +78,8 @@ export function TicketDetailView({ id }: Props) {
   const toast = useToast();
 
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const fetchState = useForecastStore((s) => s.fetchState);
+  const windowOffset = useForecastStore((s) => s.windowOffset);
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [fetchAttempted, setFetchAttempted] = useState(false);
 
@@ -87,7 +89,7 @@ export function TicketDetailView({ id }: Props) {
       .then((t) => setTicket(t))
       .catch(() => setTicket(null))
       .finally(() => setFetchAttempted(true));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [id]);
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -114,6 +116,7 @@ export function TicketDetailView({ id }: Props) {
     try {
       await getClientContainer().approveTicket.execute(ticket.id);
       toast.success(t('toastApproved'));
+      await fetchState(windowOffset);
       router.back();
     } catch {
       toast.error(t('toastApproveError'));

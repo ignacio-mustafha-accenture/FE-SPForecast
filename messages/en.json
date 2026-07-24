@@ -147,6 +147,8 @@
     "countEmployees": "{count} employees",
     "exportBtn": "Export Excel",
     "forecastTitle": "Forecast by period",
+    "scenarioWith": "With assumption",
+    "scenarioWithout": "Without assumption",
     "managerFilter": "Manager",
     "clientFilter": "Client",
     "offeringFilter": "Type"

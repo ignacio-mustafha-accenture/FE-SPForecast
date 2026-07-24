@@ -147,6 +147,8 @@
     "countEmployees": "{count} empleados",
     "exportBtn": "Exportar Excel",
     "forecastTitle": "Forecast por períodos",
+    "scenarioWith": "Con estimación",
+    "scenarioWithout": "Efectivo",
     "managerFilter": "Manager",
     "clientFilter": "Cliente",
     "offeringFilter": "Tipo"

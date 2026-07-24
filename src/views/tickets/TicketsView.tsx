@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from 'next-intl';
+import { Check, X } from 'lucide-react';
 
 import type { Ticket } from '@/src/core/domain/ticket';
 import type { Page } from '@/src/core/domain/pagination';
@@ -17,7 +18,7 @@ import { Badge } from '@/src/components/ui/Badge';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { Button } from '@/src/components/ui/Button';
 import { Modal } from '@/src/components/ui/Modal';
-import { Check, X } from 'lucide-react';
+
 import { TicketPanel } from './TicketPanel';
 
 const typeVariant: Record<string, 'green' | 'blue' | 'yellow' | 'red' | 'neutral' | 'purple'> = {
@@ -44,6 +45,8 @@ export function TicketsView() {
 
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const storeEmployees = useForecastStore((s) => s.appState?.employees ?? null);
+  const fetchState = useForecastStore((s) => s.fetchState);
+  const windowOffset = useForecastStore((s) => s.windowOffset);
   const employeeClientMap = new Map((storeEmployees ?? []).map((e) => [e.id, e.client]));
 
   const status = searchParams.get('status') ?? '';
@@ -99,6 +102,7 @@ export function TicketsView() {
       await getClientContainer().approveTicket.execute(id);
       toast.success(t('toastApproved'));
       setRefreshKey((k) => k + 1);
+      await fetchState(windowOffset);
     } catch {
       toast.error(t('toastApproveError'));
     }
@@ -191,6 +195,7 @@ export function TicketsView() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     getClientContainer()
       .listTickets.execute({

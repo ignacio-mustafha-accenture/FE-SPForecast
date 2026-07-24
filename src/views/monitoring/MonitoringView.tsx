@@ -134,6 +134,7 @@ export function MonitoringView() {
   useEffect(() => {
     if (role !== 'admin') return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
 
     const params = new URLSearchParams();

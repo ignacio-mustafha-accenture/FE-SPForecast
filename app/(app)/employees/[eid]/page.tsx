@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+
 import { EmployeeDetailView } from '@/src/views/employees/EmployeeDetailView';
 
 interface Props {

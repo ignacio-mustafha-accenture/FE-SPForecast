@@ -25,6 +25,12 @@ export interface Employee {
   chg: number[];
   sah: number[];
   cp: number[];
+  chgEffective: number[];
+  chgAssumption: number[];
+  ppaAdj: number[];
+  slReal: number[];
+  slAssumed: number[];
+  hl: number[];
   chargeabilityStatus: ChargeabilityStatus;
   chargeabilityPercent: number;
   availableHours: number;

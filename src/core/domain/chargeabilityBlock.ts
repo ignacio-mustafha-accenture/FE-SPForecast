@@ -10,6 +10,7 @@ export interface ChargeabilityBlock {
   endDate: string;
   createdBy: string | null;
   createdAt: string | null;
+  effectivizationDate: string | null;
 }
 
 export interface CreateChargeabilityBlockPayload {
@@ -17,4 +18,5 @@ export interface CreateChargeabilityBlockPayload {
   end_date: string;
   chargeability_pct: number;
   scenario_type: ScenarioType;
+  effectivization_date?: string;
 }

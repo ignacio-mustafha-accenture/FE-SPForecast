@@ -11,6 +11,7 @@ interface RawBlock {
   end_date: string;
   created_by: string | null;
   created_at: string | null;
+  effectivization_date: string | null;
 }
 
 function mapBlock(raw: RawBlock): ChargeabilityBlock {
@@ -24,6 +25,7 @@ function mapBlock(raw: RawBlock): ChargeabilityBlock {
     endDate: raw.end_date,
     createdBy: raw.created_by,
     createdAt: raw.created_at,
+    effectivizationDate: raw.effectivization_date ?? null,
   };
 }
 
@@ -60,5 +62,22 @@ export class HttpChargeabilityBlockRepository implements IChargeabilityBlockRepo
     if (!res.ok && res.status !== 204) {
       throw new Error('Failed to delete chargeability block');
     }
+  }
+
+  async effectivize(eid: string, periodNames: string[], chargeabilityPct: number): Promise<{ ok: boolean; updated: number }> {
+    const res = await fetch(`/api/employees/${eid}/effectivize`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        period_names: periodNames.length > 0 ? periodNames : null,
+        chargeability_pct: chargeabilityPct,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail ?? 'Failed to effectivize employee');
+    }
+    return res.json();
   }
 }

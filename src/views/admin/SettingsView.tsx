@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { cn } from '@/src/lib/cn';
+
 import { AdminView } from './AdminView';
 import { MonitoringView } from '../monitoring/MonitoringView';
 
