@@ -3,6 +3,7 @@
 import { AnimatePresence } from 'framer-motion';
 
 import { useUIStore } from '@/src/store/StoreProvider';
+
 import { Toast } from './Toast';
 
 export function ToastContainer() {

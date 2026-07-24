@@ -1,5 +1,5 @@
 import type { AppState, CountrySummary } from '@/src/core/domain/app-state';
-import type { Country, Employee, ChargeabilityStatus, ScenarioType as EmployeeScenarioType } from '@/src/core/domain/employee';
+import type { Country, Employee, ScenarioType as EmployeeScenarioType } from '@/src/core/domain/employee';
 import type { Period } from '@/src/core/domain/period';
 import type { PPALog } from '@/src/core/domain/ppa';
 import type { Ticket, TicketType, ScenarioType } from '@/src/core/domain/ticket';
@@ -71,6 +71,12 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     chg: raw.chg ?? [],
     sah: raw.sah ?? [],
     cp: raw.cp ?? [],
+    chgEffective: raw.chg_effective ?? [],
+    chgAssumption: raw.chg_assumption ?? [],
+    ppaAdj: raw.ppaAdj ?? [],
+    slReal: raw.sickDays ?? [],
+    slAssumed: raw.sl_assumed ?? [],
+    hl: raw.hl ?? [],
     chargeabilityStatus: getEmployeeStatus(cp0, target, hasClient, isTerminated),
     chargeabilityPercent: cp0 / 100,
     availableHours: Math.max(0, sah0 - chg0),
@@ -90,7 +96,6 @@ export function mapRawPeriod(raw: RawPeriod, windowOffset: number): Period {
 }
 
 export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>): Ticket {
-  console.log('[mapRawTicket]', { id: raw.id, by: raw.by, eid: raw.eid, eid_name: raw.eid_name });
   const employee = employeeMap.get(raw.eid);
   const eidCountry = raw.eid_country ? mapCountry(raw.eid_country) : undefined;
   return {
@@ -118,6 +123,7 @@ export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>)
     peopleLead: raw.people_lead,
     rejectionReason: raw.rejection_reason ?? null,
     scenarioType: (raw.scenario_type === 'effective' ? 'effective' : 'assumption') as ScenarioType,
+    effectivizationDate: raw.effectivization_date ?? null,
   };
 }
 

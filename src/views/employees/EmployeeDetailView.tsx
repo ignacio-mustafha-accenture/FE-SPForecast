@@ -447,7 +447,7 @@ export function EmployeeDetailView({ eid }: Props) {
                 <label className="text-xs font-medium text-[var(--G2)]">Escenario</label>
                 <div className="flex gap-2">
                   {([
-                    { value: 'assumption', label: 'Asunción' },
+                    { value: 'assumption', label: 'Estimación' },
                     { value: 'effective', label: 'Efectivo' },
                   ] as { value: ScenarioType; label: string }[]).map((opt) => (
                     <button
@@ -486,7 +486,7 @@ export function EmployeeDetailView({ eid }: Props) {
               <div key={b.id} className="px-5 py-3 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 text-sm text-[var(--G1)]">
                   <Badge variant={b.scenarioType === 'effective' ? 'blue' : 'neutral'}>
-                    {b.scenarioType === 'effective' ? 'Efectivo' : 'Asunción'}
+                    {b.scenarioType === 'effective' ? 'Efectivo' : 'Estimación'}
                   </Badge>
                   <span className="font-semibold">{b.chargeabilityPct}%</span>
                   <span className="text-[var(--G3)]">{b.startDate} → {b.endDate}</span>

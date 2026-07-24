@@ -26,6 +26,7 @@ export interface Ticket {
   peopleLead: string | null;
   rejectionReason: string | null;
   scenarioType: ScenarioType;
+  effectivizationDate: string | null;
 }
 
 export interface CreateTicketPayload {
@@ -48,6 +49,7 @@ export interface CreateTicketPayload {
   to_period?: string;
   comments?: string;
   scenario_type?: ScenarioType;
+  effectivization_date?: string;
 }
 
 export interface UpdateTicketPayload {

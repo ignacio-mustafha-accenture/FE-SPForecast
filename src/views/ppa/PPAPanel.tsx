@@ -41,6 +41,7 @@ interface PPAPanelProps {
 
 function useDropdownNav(listRef: React.RefObject<HTMLUListElement | null>, count: number, open: boolean) {
   const [idx, setIdx] = useState(-1);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setIdx(-1); }, [open]);
   useEffect(() => {
     if (idx < 0 || !listRef.current) return;

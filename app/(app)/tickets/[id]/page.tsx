@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+
 import { TicketDetailView } from '@/src/views/tickets/TicketDetailView';
 
 interface Props {

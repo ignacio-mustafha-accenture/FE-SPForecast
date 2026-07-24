@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useStore } from 'zustand';
 
 import type { AppState } from '@/src/core/domain/app-state';
@@ -25,28 +25,12 @@ interface StoreProviderProps {
 }
 
 export function StoreProvider({ children, initialState, user }: StoreProviderProps) {
-  const authStoreRef = useRef<AuthStore>(null);
-  const forecastStoreRef = useRef<ForecastStore>(null);
-  const uiStoreRef = useRef<UIStore>(null);
-
-  if (!authStoreRef.current) {
-    authStoreRef.current = createAuthStore(user ?? null);
-  }
-  if (!forecastStoreRef.current) {
-    forecastStoreRef.current = createForecastStore(initialState ?? null);
-  }
-  if (!uiStoreRef.current) {
-    uiStoreRef.current = createUIStore();
-  }
+  const [authStore] = useState<AuthStore>(() => createAuthStore(user ?? null));
+  const [forecastStore] = useState<ForecastStore>(() => createForecastStore(initialState ?? null));
+  const [uiStore] = useState<UIStore>(() => createUIStore());
 
   return (
-    <StoreCtx.Provider
-      value={{
-        authStore: authStoreRef.current,
-        forecastStore: forecastStoreRef.current,
-        uiStore: uiStoreRef.current,
-      }}
-    >
+    <StoreCtx.Provider value={{ authStore, forecastStore, uiStore }}>
       {children}
     </StoreCtx.Provider>
   );

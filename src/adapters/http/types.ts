@@ -39,8 +39,12 @@ export interface RawEmployee {
   chg: number[];
   sah: number[];
   cp: number[];
-  sickDays: number[];
+  sickDays: number[];    // sl_real: approved absences
   ppaAdj: number[];
+  chg_effective: number[];
+  chg_assumption: number[];
+  sl_assumed: number[];
+  hl: number[];
 }
 
 export interface RawTicket {
@@ -68,6 +72,7 @@ export interface RawTicket {
   eid_country?: string | null;
   rejection_reason?: string | null;
   scenario_type?: string | null;
+  effectivization_date?: string | null;
 }
 
 export interface RawPPALog {
