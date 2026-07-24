@@ -50,6 +50,7 @@ export interface CreateTicketPayload {
   comments?: string;
   scenario_type?: ScenarioType;
   effectivization_date?: string;
+  te_approver?: string;
 }
 
 export interface UpdateTicketPayload {
