@@ -39,12 +39,12 @@ export interface RawEmployee {
   chg: number[];
   sah: number[];
   cp: number[];
-  sickDays: number[];    // sl_real: approved absences
-  ppaAdj: number[];
-  chg_effective: number[];
-  chg_assumption: number[];
-  sl_assumed: number[];
-  hl: number[];
+  absence_hours: number[];
+  chg_cascadeadas: number[];
+  chg_hl: number[];
+  chg_sl: number[];
+  chg_pct_sl: number[];
+  chg_pct_hl: number[];
 }
 
 export interface RawTicket {

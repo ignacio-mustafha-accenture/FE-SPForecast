@@ -35,6 +35,7 @@ type FormData = {
   location?: string;
   people_lead?: string;
   eid_accenture?: string;
+  te_approver?: string;
   hours_to_move?: string;
   comments?: string;
   scenario_type?: ScenarioType;
@@ -154,6 +155,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       location: z.string().optional(),
       people_lead: z.string().optional(),
       eid_accenture: z.string().optional(),
+      te_approver: z.string().optional(),
       hours_to_move: z.string().optional(),
       comments: z.string().optional(),
       scenario_type: z.enum(['assumption', 'effective']).optional(),
@@ -201,6 +203,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
         req('cl', t('required'));
         req('location', t('required'));
         req('people_lead', t('required'));
+        req('te_approver', t('required'));
       }
     });
 
@@ -373,6 +376,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
           createPayload.location = data.location;
           createPayload.people_lead = data.people_lead;
           if (data.eid_accenture) createPayload.eid_accenture = data.eid_accenture;
+          if (data.te_approver) createPayload.te_approver = data.te_approver;
         }
         await container.createTicket.execute(createPayload);
         toast.success(t('toastCreated'));
@@ -637,6 +641,12 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   label={t('eidAccentureLabel')}
                   placeholder={t('eidAccenturePlaceholder')}
                   {...register('eid_accenture')}
+                />
+                <Input
+                  label="TE Approver (EID)"
+                  placeholder="ej. garcia.sofia"
+                  error={errors.te_approver?.message}
+                  {...register('te_approver')}
                 />
               </>
             )}

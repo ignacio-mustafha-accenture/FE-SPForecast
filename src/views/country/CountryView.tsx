@@ -419,13 +419,16 @@ export function CountryView({ country }: CountryViewProps) {
                             )}
                           </div>
                         </td>
-                        {e.cp.map((cp, i) => (
-                          <td key={i} className={`py-2 px-3 text-center ${i === 0 ? 'font-semibold' : ''}`}>
-                            <span className={cp >= 80 ? 'text-[var(--GR)]' : cp >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]'}>
-                              {cp}%
-                            </span>
-                          </td>
-                        ))}
+                        {e.cp.map((cp, i) => {
+                          const displayPct = e.scenarioType === 'assumption' ? (e.slAssumed[i] ?? 0) : cp;
+                          return (
+                            <td key={i} className={`py-2 px-3 text-center ${i === 0 ? 'font-semibold' : ''}`}>
+                              <span className={displayPct >= 80 ? 'text-[var(--GR)]' : displayPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]'}>
+                                {displayPct}%
+                              </span>
+                            </td>
+                          );
+                        })}
                       </motion.tr>
                     ))}
                   </AnimatePresence>

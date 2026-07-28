@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { LayoutDashboard, Globe, Ticket, ArrowLeftRight, Bot, Settings } from 'lucide-react';
+import { LayoutDashboard, Globe, Ticket, ArrowLeftRight, Bot, Settings, Users } from 'lucide-react';
 
 import { useWindowOffset } from '@/src/hooks/useWindowOffset';
 import { useForecastStore } from '@/src/store/StoreProvider';
@@ -16,6 +16,7 @@ export function Sidebar() {
   const NAV_ITEMS = [
     { href: '/', label: t('navDashboard'), icon: LayoutDashboard },
     { href: '/countries', label: t('navCountries'), icon: Globe, matchPaths: ['/ar', '/mx', '/cr'] },
+    { href: '/all', label: t('navAll'), icon: Users },
     { href: '/tickets', label: t('navTickets'), icon: Ticket },
     { href: '/ppa', label: t('navPPA'), icon: ArrowLeftRight },
     { href: '/agent', label: t('navAgent'), icon: Bot },
