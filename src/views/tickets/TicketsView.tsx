@@ -62,6 +62,8 @@ export function TicketsView() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -98,14 +100,17 @@ export function TicketsView() {
   ];
 
   async function handleApprove(id: string) {
+    setApprovingId(id);
     try {
       await getClientContainer().approveTicket.execute(id);
       toast.success(t('toastApproved'));
       setRefreshKey((k) => k + 1);
-      await fetchState(windowOffset);
     } catch {
       toast.error(t('toastApproveError'));
+    } finally {
+      setApprovingId(null);
     }
+    fetchState(windowOffset).catch(console.error);
   }
 
   function openRejectModal(id: string) {
@@ -130,35 +135,66 @@ export function TicketsView() {
   }
 
   const baseColumns: ColumnDef<Ticket, unknown>[] = [
-    { id: 'employeeName', accessorKey: 'employeeName', header: t('columnEmployee') },
-    { id: 'country', accessorKey: 'country', header: t('columnCountry') },
+    {
+      id: 'employeeName',
+      accessorKey: 'employeeName',
+      header: t('columnEmployee'),
+      cell: ({ row }) =>
+        approvingId === row.original.id ? <Skeleton className="h-4 w-32" /> : row.original.employeeName,
+    },
+    {
+      id: 'country',
+      accessorKey: 'country',
+      header: t('columnCountry'),
+      cell: ({ row }) =>
+        approvingId === row.original.id ? <Skeleton className="h-4 w-16" /> : row.original.country,
+    },
     {
       id: 'type',
       accessorKey: 'type',
       header: t('columnType'),
-      cell: ({ row }) => (
-        <Badge variant={typeVariant[row.original.type] ?? 'neutral'}>
-          {typeLabel[row.original.type] ?? row.original.type}
-        </Badge>
-      ),
+      cell: ({ row }) =>
+        approvingId === row.original.id ? (
+          <Skeleton className="h-5 w-20 rounded-full" />
+        ) : (
+          <Badge variant={typeVariant[row.original.type] ?? 'neutral'}>
+            {typeLabel[row.original.type] ?? row.original.type}
+          </Badge>
+        ),
     },
     {
       id: 'status',
       accessorKey: 'status',
       header: t('columnStatus'),
-      cell: ({ row }) => (
-        <Badge variant={statusVariant[row.original.status] ?? 'neutral'}>
-          {statusLabel[row.original.status] ?? row.original.status}
-        </Badge>
-      ),
+      cell: ({ row }) =>
+        approvingId === row.original.id ? (
+          <Skeleton className="h-5 w-20 rounded-full" />
+        ) : (
+          <Badge variant={statusVariant[row.original.status] ?? 'neutral'}>
+            {statusLabel[row.original.status] ?? row.original.status}
+          </Badge>
+        ),
     },
-    { id: 'date', accessorKey: 'date', header: t('columnDate') },
-    { id: 'by', accessorKey: 'by', header: t('columnBy') },
+    {
+      id: 'date',
+      accessorKey: 'date',
+      header: t('columnDate'),
+      cell: ({ row }) =>
+        approvingId === row.original.id ? <Skeleton className="h-4 w-24" /> : row.original.date,
+    },
+    {
+      id: 'by',
+      accessorKey: 'by',
+      header: t('columnBy'),
+      cell: ({ row }) =>
+        approvingId === row.original.id ? <Skeleton className="h-4 w-20" /> : row.original.by,
+    },
     {
       id: 'clientName',
       accessorKey: 'clientName',
       header: t('columnClient'),
       cell: ({ row }) => {
+        if (approvingId === row.original.id) return <Skeleton className="h-4 w-28" />;
         const client = row.original.clientName ?? employeeClientMap.get(row.original.employeeId) ?? null;
         return client ?? <span className="text-[var(--G4)]">—</span>;
       },
@@ -168,8 +204,9 @@ export function TicketsView() {
   const actionsColumn: ColumnDef<Ticket, unknown> = {
     id: 'actions',
     header: t('columnActions'),
-    cell: ({ row }) =>
-      row.original.status === 'Open' ? (
+    cell: ({ row }) => {
+      if (approvingId === row.original.id) return <Skeleton className="h-7 w-32" />;
+      return row.original.status === 'Open' ? (
         <div className="flex items-center gap-1.5">
           <Button
             variant="approve-outline"
@@ -188,7 +225,8 @@ export function TicketsView() {
             {t('reject')}
           </Button>
         </div>
-      ) : null,
+      ) : null;
+    },
   };
 
   const columns = isAdmin ? [...baseColumns, actionsColumn] : baseColumns;

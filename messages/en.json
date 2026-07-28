@@ -13,7 +13,8 @@
     "navTickets": "Tickets",
     "navPPA": "PPA",
     "navAgent": "AI Agent",
-    "navAdmin": "Settings"
+    "navAdmin": "Settings",
+    "navAll": "Global view"
   },
   "common": {
     "save": "Save",
@@ -354,6 +355,29 @@
     "colStatus": "Status",
     "colDuration": "Duration",
     "noData": "No records"
+  },
+  "all": {
+    "title": "All employees",
+    "countEmployees": "{count} employees",
+    "searchPlaceholder": "Search name or EID...",
+    "filterCountry": "Country",
+    "filterStatus": "Status",
+    "headerName": "Name",
+    "headerEID": "EID",
+    "headerLevel": "Level",
+    "headerClient": "Client",
+    "headerCountry": "Country",
+    "headerChargeability": "Chargeability",
+    "headerStatus": "Status",
+    "toggleHL": "CHG% HL",
+    "toggleSL": "CHG% SL",
+    "forecastTitle": "Forecast by period",
+    "exportBtn": "Export Excel",
+    "statusChargeable": "On target",
+    "statusAtRisk": "At risk",
+    "statusNotChargeable": "Below target",
+    "statusUnassigned": "Unassigned",
+    "statusOnLeave": "On leave"
   },
   "errors": {
     "unexpected": "Unexpected error"

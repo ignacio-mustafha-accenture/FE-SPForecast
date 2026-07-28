@@ -13,7 +13,8 @@
     "navTickets": "Tickets",
     "navPPA": "PPA",
     "navAgent": "Agente IA",
-    "navAdmin": "Configuraciones"
+    "navAdmin": "Configuraciones",
+    "navAll": "Vista global"
   },
   "common": {
     "save": "Guardar",
@@ -354,6 +355,29 @@
     "colStatus": "Status",
     "colDuration": "Duración",
     "noData": "Sin registros"
+  },
+  "all": {
+    "title": "Todos los empleados",
+    "countEmployees": "{count} empleados",
+    "searchPlaceholder": "Buscar nombre o EID...",
+    "filterCountry": "País",
+    "filterStatus": "Estado",
+    "headerName": "Nombre",
+    "headerEID": "EID",
+    "headerLevel": "Nivel",
+    "headerClient": "Cliente",
+    "headerCountry": "País",
+    "headerChargeability": "Cargabilidad",
+    "headerStatus": "Estado",
+    "toggleHL": "CHG% HL",
+    "toggleSL": "CHG% SL",
+    "forecastTitle": "Forecast por períodos",
+    "exportBtn": "Exportar Excel",
+    "statusChargeable": "En objetivo",
+    "statusAtRisk": "En riesgo",
+    "statusNotChargeable": "Bajo objetivo",
+    "statusUnassigned": "Sin proyecto",
+    "statusOnLeave": "Baja"
   },
   "errors": {
     "unexpected": "Error inesperado"
