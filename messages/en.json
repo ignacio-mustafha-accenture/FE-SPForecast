@@ -59,7 +59,18 @@
     "noClients": "No clients registered",
     "noClientMatch": "No results for that filter",
     "tabAdmin": "Administration",
-    "tabMonitoring": "Monitoring"
+    "tabMonitoring": "Monitoring",
+    "tabHolidays": "Hours criteria",
+    "holidaysTitle": "Holidays",
+    "holidayAdd": "Add holiday",
+    "holidayNamePlaceholder": "Holiday name",
+    "holidayAdded": "Holiday added",
+    "holidayAddError": "Error adding holiday",
+    "holidayDeleted": "Holiday deleted",
+    "holidayDeleteError": "Error deleting holiday",
+    "sahTitle": "How we calculate available hours",
+    "sahFormula": "SAH = working days × 8 hrs",
+    "sahExplain": "Working days per period exclude Saturdays, Sundays and holidays for the employee's country."
   },
   "agent": {
     "title": "AI Agent",
@@ -377,7 +388,10 @@
     "statusAtRisk": "At risk",
     "statusNotChargeable": "Below target",
     "statusUnassigned": "Unassigned",
-    "statusOnLeave": "On leave"
+    "statusOnLeave": "On leave",
+    "effectivizeSuccess": "Hours effectivized successfully",
+    "effectivizeNoop": "No assumption blocks found for the selected periods",
+    "effectivizeError": "Error effectivizing"
   },
   "errors": {
     "unexpected": "Unexpected error"

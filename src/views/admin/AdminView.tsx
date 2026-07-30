@@ -25,12 +25,10 @@ const itemVariants = {
   exit: { opacity: 0, transition: { duration: 0.12 } },
 };
 
-import { getClientContainer } from '@/src/application/container';
 import { Button } from '@/src/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { useToast } from '@/src/hooks/useToast';
-import { useForecastStore } from '@/src/store/StoreProvider';
 
 // ---- ClientTag ----
 
@@ -109,15 +107,12 @@ function ClientTag({ name, onDelete, onRename }: ClientTagProps) {
 export function AdminView() {
   const t = useTranslations('admin');
   const toast = useToast();
-  const [recalcLoading, setRecalcLoading] = useState(false);
-  const [syncLoading, setSyncLoading] = useState(false);
   const [clients, setClients] = useState<string[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [newClient, setNewClient] = useState('');
   const [addingClient, setAddingClient] = useState(false);
   const [filter, setFilter] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const periodLabel = useForecastStore((s) => s.appState?.period.label ?? '');
 
   const filteredClients = filter
     ? clients.filter((c) => c.toLowerCase().includes(filter.toLowerCase()))
@@ -207,67 +202,11 @@ export function AdminView() {
     }
   }
 
-  async function handleRecalculate() {
-    if (!periodLabel) { toast.error(t('toastNoPeriod')); return; }
-    setRecalcLoading(true);
-    try {
-      await getClientContainer().recalculate.execute(periodLabel);
-      toast.success(t('toastRecalcOk'));
-    } catch {
-      toast.error(t('toastRecalcError'));
-    } finally {
-      setRecalcLoading(false);
-    }
-  }
-
-  async function handleSync() {
-    setSyncLoading(true);
-    try {
-      await getClientContainer().sync.execute();
-      toast.success(t('toastSyncOk'));
-    } catch {
-      toast.error(t('toastSyncError'));
-    } finally {
-      setSyncLoading(false);
-    }
-  }
-
   return (
     <motion.div className="space-y-6" variants={containerVariants} initial="hidden" animate="show">
       <motion.h1 variants={cardVariants} className="text-xl font-bold text-[var(--BK)]">{t('title')}</motion.h1>
 
-      {/* Operations — constrained width */}
-      <motion.div variants={cardVariants} className="max-w-2xl">
-        <Card>
-          <CardHeader>
-            <h2 className="text-sm font-semibold text-[var(--G1)]">{t('operations')}</h2>
-          </CardHeader>
-          <CardBody>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between py-2 border-b border-[var(--G5)]">
-                <div>
-                  <p className="text-sm font-medium text-[var(--G1)]">{t('recalculate')}</p>
-                  <p className="text-xs text-[var(--G3)]">{t('recalculateDesc')}</p>
-                </div>
-                <Button variant="ghost" loading={recalcLoading} onClick={handleRecalculate}>
-                  {t('execute')}
-                </Button>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="text-sm font-medium text-[var(--G1)]">{t('sync')}</p>
-                  <p className="text-xs text-[var(--G3)]">{t('syncDesc')}</p>
-                </div>
-                <Button variant="ghost" loading={syncLoading} onClick={handleSync}>
-                  {t('syncBtn')}
-                </Button>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </motion.div>
-
-      {/* Clients — full width */}
+      {/* Clients */}
       <motion.div variants={cardVariants}>
       <Card>
         <CardHeader>

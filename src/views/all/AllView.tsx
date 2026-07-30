@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
+import { useToast } from '@/src/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
@@ -19,6 +20,7 @@ import { Modal } from '@/src/components/ui/Modal';
 import { Button } from '@/src/components/ui/Button';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { exportToXlsx } from '@/src/lib/excel';
+import { parseDDMMYY } from '@/src/lib/formatters';
 
 const blockRepo = new HttpChargeabilityBlockRepository();
 
@@ -36,15 +38,14 @@ const ROW_VARIANTS = {
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-const DAY_W = 40; // px — must stay exact for Gantt bar pixel math
+const DAY_W = 40;
+const SUMMARY_W = 60;
 
 const DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 const AVATAR_PALETTE = [
   '#7c5cff', '#0ea5b5', '#12a86f', '#e0872a', '#e05c8a', '#5c9ae0', '#c05cc0',
 ];
-
-type ViewMode = 'weekly' | 'period' | 'monthly';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -73,12 +74,11 @@ function endOfDay(d: Date): Date {
   return c;
 }
 
-function parseDDMMYY(s: string | null): Date | null {
-  if (!s) return null;
-  const [d, m, y] = s.split('/').map(Number);
-  if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
-  return startOfDay(new Date(2000 + y, m - 1, d));
+function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
+
 
 interface DayCell {
   idx: number;
@@ -94,7 +94,6 @@ interface DayGroup {
   count: number;
 }
 
-// Build an array of DayCell from startDate to endDate (inclusive)
 function cellsInRange(from: Date, to: Date): DayCell[] {
   const cells: DayCell[] = [];
   const cur = startOfDay(new Date(from));
@@ -108,35 +107,29 @@ function cellsInRange(from: Date, to: Date): DayCell[] {
   return cells;
 }
 
-// Group DayCell[] by store periods (no hardcoded splits)
-function groupByStorePeriods(cells: DayCell[], periods: Period[], getPIdx: (d: Date) => number): DayGroup[] {
-  const groups: DayGroup[] = [];
-  let cur: DayGroup | null = null;
-  for (const d of cells) {
-    const pIdx = getPIdx(d.date);
-    const key = pIdx >= 0 ? `p${pIdx}` : `gap-${d.date.getTime()}`;
-    const label = pIdx >= 0 ? periods[pIdx].label : '—';
-    if (!cur || cur.key !== key) { cur = { key, label, count: 0 }; groups.push(cur); }
-    cur.count++;
-  }
-  return groups;
-}
-
 // ─── component ───────────────────────────────────────────────────────────────
 
 export function AllView() {
   const t = useTranslations('all');
+  const toast = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const periods = useForecastStore((s) => s.appState?.periods ?? []);
-  const fetchState = useForecastStore((s) => s.fetchState);
-  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const periods       = useForecastStore((s) => s.appState?.periods ?? []);
+  const storeEmps     = useForecastStore((s) => s.appState?.employees ?? []);
+  const fetchState    = useForecastStore((s) => s.fetchState);
+  const isAdmin       = useAuthStore((s) => s.user?.role === 'admin');
   const { offset: windowOffset } = useWindowOffset();
+
+  const storeEmpMap = useMemo(
+    () => new Map(storeEmps.map((e) => [e.id, e])),
+    [storeEmps],
+  );
 
   // ── BE pagination state ──────────────────────────────────────────────────
   const [result, setResult] = useState<Page<Employee> | null>(null);
   const [isFetching, setIsFetching] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // ── efectivizar modal state ──────────────────────────────────────────────
@@ -148,6 +141,9 @@ export function AllView() {
   const [rangeEnd, setRangeEnd] = useState(0);
   const [rangeAnchor, setRangeAnchor] = useState<number | null>(null);
 
+  // ── holidays state ───────────────────────────────────────────────────────
+  const [holidays, setHolidays] = useState<Map<string, Map<string, string>>>(new Map());
+
   // ── URL filters ──────────────────────────────────────────────────────────
   const q = searchParams.get('q') ?? '';
   const country = searchParams.get('country') ?? '';
@@ -155,9 +151,27 @@ export function AllView() {
   const chgType = (searchParams.get('chg') === 'SL' ? 'SL' : 'HL') as 'HL' | 'SL';
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10));
-  const debouncedQ = useDebounce(q, 300);
 
-  // ── fetch from BE ────────────────────────────────────────────────────────
+  // Local state for the search input — decoupled from URL to avoid router.replace on every keystroke.
+  // The URL is only updated after the debounce fires, keeping the input snappy.
+  const [localQ, setLocalQ] = useState(q);
+  const didMount = useRef(false);
+
+  // Sync URL → local when navigating back/forward (external URL change).
+  useEffect(() => { setLocalQ(q); }, [q]);
+
+  const debouncedQ = useDebounce(localQ, 300);
+
+  // Push debounced search to URL (skip on first render to avoid spurious navigation).
+  useEffect(() => {
+    if (!didMount.current) { didMount.current = true; return; }
+    const p = new URLSearchParams(searchParams.toString());
+    debouncedQ ? p.set('q', debouncedQ) : p.delete('q');
+    p.delete('page');
+    router.replace(`?${p.toString()}`, { scroll: false });
+  }, [debouncedQ]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── fetch employees from BE ──────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     setIsFetching(true);
@@ -165,81 +179,51 @@ export function AllView() {
       .listEmployees.execute({ country: country || undefined, q: debouncedQ || undefined, status: status || undefined, page, pageSize })
       .then((data) => { if (!cancelled) setResult(data); })
       .catch(console.error)
-      .finally(() => { if (!cancelled) setIsFetching(false); });
+      .finally(() => { if (!cancelled) { setIsFetching(false); setIsRefetching(false); } });
     return () => { cancelled = true; };
   }, [country, debouncedQ, status, page, pageSize, refreshKey]);
 
+  // ── fetch holidays ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const countries = ['AR', 'MX', 'CR'];
+    Promise.all(
+      countries.map((c) =>
+        fetch(`/api/admin/holidays?country=${c}`)
+          .then((r) => r.ok ? r.json() : { holidays: [] })
+          .then((data) => [c, data.holidays] as const)
+      )
+    ).then((results) => {
+      const map = new Map<string, Map<string, string>>();
+      for (const [c, list] of results) {
+        const inner = new Map<string, string>();
+        for (const h of list) inner.set(h.date, h.name);
+        map.set(c, inner);
+      }
+      setHolidays(map);
+    });
+  }, []);
+
   // ── view state ───────────────────────────────────────────────────────────
-  const [viewMode, setViewMode] = useState<ViewMode>('period');
-  // windowAnchor is any date inside the desired window; derivations snap it to proper boundaries
   const [windowAnchor, setWindowAnchor] = useState<Date>(() => startOfDay(new Date()));
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [viewMode, setViewMode] = useState<'daily' | 'forecast'>('daily');
 
   // ── period index lookup ──────────────────────────────────────────────────
   const getPeriodIdx = useCallback(
     (date: Date): number => {
       for (let i = 0; i < periods.length; i++) {
-        if (date >= startOfDay(new Date(periods[i].startDate)) && date <= endOfDay(new Date(periods[i].endDate))) return i;
+        if (date >= startOfDay(parseLocalDate(periods[i].startDate)) && date <= endOfDay(parseLocalDate(periods[i].endDate))) return i;
       }
       return -1;
     },
     [periods],
   );
 
-  // ── derive days, groups, window edges from viewMode + anchor ────────────
-  const { days, dayGroups, windowStart, windowEnd, toolbarLabel, canPrev, canNext } = useMemo(() => {
+  // ── derive days, groups, window edges from anchor ────────────────────────
+  const { days, dayGroups, windowStart, windowEnd, toolbarLabel, canPrev, canNext, currentPIdx } = useMemo(() => {
     const today = startOfDay(new Date());
 
-    // ── weekly ──────────────────────────────────────────────────────────
-    if (viewMode === 'weekly') {
-      const dow = windowAnchor.getDay();
-      const monday = new Date(windowAnchor);
-      monday.setDate(monday.getDate() - (dow === 0 ? 6 : dow - 1));
-      startOfDay(monday);
-      const sunday = new Date(monday);
-      sunday.setDate(sunday.getDate() + 6);
-
-      const cells = cellsInRange(monday, sunday);
-      const wStart = cells[0].date;
-      const wEnd = endOfDay(cells[cells.length - 1].date);
-      const groups = groupByStorePeriods(cells, periods, getPeriodIdx);
-
-      const fmt = (d: Date) => d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
-      const label = `${fmt(monday)} – ${fmt(sunday)}`;
-
-      return { days: cells, dayGroups: groups, windowStart: wStart, windowEnd: wEnd, toolbarLabel: label, canPrev: true, canNext: true };
-    }
-
-    // ── monthly: show P1 + P2 from store (never mix calendar months) ─────
-    if (viewMode === 'monthly') {
-      if (periods.length === 0) {
-        const cells = cellsInRange(today, new Date(today.getTime() + 29 * 86_400_000));
-        return { days: cells, dayGroups: [{ key: 'loading', label: '…', count: cells.length }], windowStart: today, windowEnd: endOfDay(cells[cells.length - 1].date), toolbarLabel: '—', canPrev: false, canNext: false };
-      }
-      const pIdx = getPeriodIdx(windowAnchor);
-      const safePIdx = pIdx >= 0 ? pIdx : 0;
-      const isP2 = periods[safePIdx]?.label?.toUpperCase().includes('P2') ?? false;
-      const p1Idx = isP2 ? Math.max(0, safePIdx - 1) : safePIdx;
-      const p2Idx = Math.min(periods.length - 1, p1Idx + 1);
-      const p1 = periods[p1Idx];
-      const p2 = periods[p2Idx];
-
-      const cells1 = cellsInRange(new Date(p1.startDate), new Date(p1.endDate));
-      const cells2 = p2Idx !== p1Idx ? cellsInRange(new Date(p2.startDate), new Date(p2.endDate)) : [];
-      const cells = [...cells1, ...cells2.map(c => ({ ...c, idx: cells1.length + c.idx }))];
-
-      const wStart = startOfDay(new Date(p1.startDate));
-      const wEnd = endOfDay(new Date(p2.endDate));
-      const groups: DayGroup[] = [{ key: p1.label, label: p1.label, count: cells1.length }];
-      if (p2Idx !== p1Idx) groups.push({ key: p2.label, label: p2.label, count: cells2.length });
-
-      const label = wStart.toLocaleDateString('es', { month: 'long', year: 'numeric' });
-      return { days: cells, dayGroups: groups, windowStart: wStart, windowEnd: wEnd, toolbarLabel: label, canPrev: p1Idx > 0, canNext: p2Idx < periods.length - 1 };
-    }
-
-    // ── period (default) ─────────────────────────────────────────────────
     if (periods.length === 0) {
-      // Fallback while store loads
       const cells = cellsInRange(today, new Date(today.getTime() + 13 * 86_400_000));
       return {
         days: cells,
@@ -249,15 +233,16 @@ export function AllView() {
         toolbarLabel: '—',
         canPrev: false,
         canNext: false,
+        currentPIdx: 0,
       };
     }
 
     const pIdx = getPeriodIdx(windowAnchor);
     const safePIdx = pIdx >= 0 ? pIdx : 0;
     const p = periods[safePIdx];
-    const cells = cellsInRange(new Date(p.startDate), new Date(p.endDate));
-    const wStart = startOfDay(new Date(p.startDate));
-    const wEnd = endOfDay(new Date(p.endDate));
+    const cells = cellsInRange(parseLocalDate(p.startDate), parseLocalDate(p.endDate));
+    const wStart = startOfDay(parseLocalDate(p.startDate));
+    const wEnd = endOfDay(parseLocalDate(p.endDate));
 
     const first = cells[0];
     const last = cells[cells.length - 1];
@@ -272,53 +257,61 @@ export function AllView() {
       toolbarLabel: label,
       canPrev: safePIdx > 0,
       canNext: safePIdx < periods.length - 1,
+      currentPIdx: safePIdx,
     };
-  }, [viewMode, windowAnchor, periods, getPeriodIdx]);
+  }, [windowAnchor, periods, getPeriodIdx]);
 
   const nDays = days.length;
-  // weekly gets wider columns so 7 days fill the viewport; period/monthly stay at 40px
-  const colW = viewMode === 'weekly' ? 120 : DAY_W;
+  const colW = DAY_W;
 
   // ── navigation ───────────────────────────────────────────────────────────
   function navigate(dir: number) {
     setWindowAnchor((prev) => {
-      if (viewMode === 'weekly') {
-        const d = new Date(prev);
-        d.setDate(d.getDate() + dir * 7);
-        return d;
-      }
-      if (viewMode === 'monthly') {
-        const pIdx = getPeriodIdx(prev);
-        const safePIdx = pIdx >= 0 ? pIdx : 0;
-        const isP2 = periods[safePIdx]?.label?.toUpperCase().includes('P2') ?? false;
-        const p1Idx = isP2 ? Math.max(0, safePIdx - 1) : safePIdx;
-        const p2Idx = Math.min(periods.length - 1, p1Idx + 1);
-        const targetIdx = dir > 0
-          ? Math.min(periods.length - 1, p2Idx + 1)   // jump to next P1
-          : Math.max(0, p1Idx - 2);                    // jump to prev P1
-        return startOfDay(new Date(periods[targetIdx].startDate));
-      }
-      // period: jump to adjacent period start
       const pIdx = getPeriodIdx(prev);
       const safePIdx = pIdx >= 0 ? pIdx : 0;
       const targetIdx = Math.max(0, Math.min(periods.length - 1, safePIdx + dir));
-      return startOfDay(new Date(periods[targetIdx].startDate));
+      return startOfDay(parseLocalDate(periods[targetIdx].startDate));
     });
   }
 
   // ── derived from BE result ───────────────────────────────────────────────
   const activeCountries = useMemo(() => (country ? country.split(',') : []), [country]);
-  const paged = result?.items ?? [];
+
+  const paged = useMemo(() => {
+    const items = result?.items ?? [];
+    const enriched = items.map((e) => {
+      const s = storeEmpMap.get(e.id);
+      if (!s || s.cp.length <= 1) return e;
+      return {
+        ...e,
+        cp:             s.cp,
+        slAssumed:      s.slAssumed,
+        hl:             s.hl,
+        chg:            s.chg,
+        sah:            s.sah,
+        chgEffective:   s.chgEffective,
+        chgAssumption:  s.chgAssumption,
+        ppaAdj:         s.ppaAdj,
+        slReal:         s.slReal,
+      };
+    });
+    return enriched;
+  }, [result?.items, storeEmpMap]);
+
   const pageCount = result?.pages ?? 1;
   const safePage = result?.page ?? page;
 
+  // ── holiday lookup helper ────────────────────────────────────────────────
+  const isHoliday = (date: Date, empCountry: string): string | null => {
+    const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidays.get(empCountry)?.get(iso) ?? null;
+  };
+
   // ── efectivizar ──────────────────────────────────────────────────────────
   function openEffectivizeModal(emp: Employee) {
-    // Find the first period with an active SL
     const firstIdx = emp.slAssumed.findIndex((v) => (v ?? 0) > 0);
     const safeStart = firstIdx >= 0 ? firstIdx : 0;
 
-    // Extend range while consecutive periods still have SL > 0
     let safeEnd = safeStart;
     for (let i = safeStart + 1; i < emp.slAssumed.length; i++) {
       if ((emp.slAssumed[i] ?? 0) > 0) safeEnd = i;
@@ -372,12 +365,21 @@ export function AllView() {
     setIsEffectivizing(true);
     setEffectivizeError(null);
     try {
-      await blockRepo.effectivize(effectivizeTarget.eid, selectedPeriodNames, pct);
+      const efResult = await blockRepo.effectivize(effectivizeTarget.eid, selectedPeriodNames, pct);
+      if (efResult.updated === 0) {
+        toast.info(t('effectivizeNoop'));
+      } else {
+        toast.success(t('effectivizeSuccess'));
+      }
+      setIsRefetching(true);
+      setEffectivizeTarget(null);
       await fetchState(windowOffset);
       setRefreshKey((k) => k + 1);
-      setEffectivizeTarget(null);
     } catch (err) {
-      setEffectivizeError(err instanceof Error ? err.message : 'Error al efectivizar');
+      const msg = err instanceof Error ? err.message : t('effectivizeError');
+      setEffectivizeError(msg);
+      toast.error(msg);
+      setIsRefetching(false);
     } finally {
       setIsEffectivizing(false);
     }
@@ -468,27 +470,6 @@ export function AllView() {
 
         <div className="flex-1" />
 
-        {/* view mode toggle */}
-        <div className="flex border border-[var(--G5)] rounded-lg overflow-hidden bg-white">
-          {([
-            { key: 'weekly',  label: 'Semanal'  },
-            { key: 'period',  label: 'Período'  },
-            { key: 'monthly', label: 'Mensual'  },
-          ] as const).map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setViewMode(key)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === key
-                  ? 'bg-[var(--P)] text-white'
-                  : 'text-[var(--G3)] hover:text-[var(--G1)]'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
         {/* HL / SL toggle */}
         <div className="flex border border-[var(--G5)] rounded-lg overflow-hidden bg-white">
           {(['HL', 'SL'] as const).map((mode) => (
@@ -506,6 +487,23 @@ export function AllView() {
           ))}
         </div>
 
+        {/* Diario / Forecast view toggle */}
+        <div className="flex border border-[var(--G5)] rounded-lg overflow-hidden bg-white">
+          {(['daily', 'forecast'] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === mode
+                  ? 'bg-[var(--P)] text-white'
+                  : 'text-[var(--G3)] hover:text-[var(--G1)]'
+              }`}
+            >
+              {mode === 'daily' ? 'Diario' : 'Forecast'}
+            </button>
+          ))}
+        </div>
+
         <Button variant="ghost" size="sm" onClick={handleExport}>
           {t('exportBtn')}
         </Button>
@@ -513,7 +511,7 @@ export function AllView() {
 
       {/* ── filters ───────────────────────────────────────────────────── */}
       <FilterBar
-        search={{ value: q, onChange: (v) => setParam('q', v), placeholder: t('searchPlaceholder') }}
+        search={{ value: localQ, onChange: setLocalQ, placeholder: t('searchPlaceholder') }}
         toggleGroups={[
           {
             label: t('filterCountry'),
@@ -537,20 +535,156 @@ export function AllView() {
 
       <p className="text-xs text-[var(--G3)]">{t('countEmployees', { count: result?.total ?? 0 })}</p>
 
-      {/* ── grid ──────────────────────────────────────────────────────── */}
-      <div className={`overflow-x-auto border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
+      {/* ── grid / forecast toggle ────────────────────────────────────── */}
+      {viewMode === 'forecast' ? (
+
+        /* ── Forecast multi-period table ── */
+        <div className={`overflow-x-auto border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
+          <table
+            style={{
+              borderCollapse: 'separate',
+              borderSpacing: 0,
+              tableLayout: 'fixed',
+              minWidth: 200 + periods.length * 170,
+            }}
+          >
+            <colgroup>
+              <col style={{ width: 200 }} />
+              {periods.flatMap((_, i) => [
+                <col key={`fc-chg-${i}`} style={{ width: 55 }} />,
+                <col key={`fc-sah-${i}`} style={{ width: 55 }} />,
+                <col key={`fc-pct-${i}`} style={{ width: 60 }} />,
+              ])}
+            </colgroup>
+            <thead>
+              {/* Period label headers */}
+              <tr>
+                <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
+                  {t('title')}
+                </th>
+                {periods.map((p, i) => (
+                  <th
+                    key={p.label}
+                    colSpan={3}
+                    className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0 ${
+                      i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'
+                    }`}
+                  >
+                    {p.label}
+                  </th>
+                ))}
+              </tr>
+              {/* CHG | SAH | CHG% sub-headers */}
+              <tr>
+                <th className="sticky left-0 z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                {periods.map((p, i) => (
+                  <Fragment key={p.label}>
+                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG</th>
+                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#dce8fc]' : 'bg-[#f4f6f9]'}`}>SAH</th>
+                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG%</th>
+                  </Fragment>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Totals summary row */}
+              <tr>
+                <td className="sticky left-0 z-10 bg-[#f0f2f7] border-b border-r border-[var(--G5)] px-3 py-2">
+                  <span className="text-[11px] font-semibold text-[var(--G1)]">Total</span>
+                  <span className="block text-[9px] text-[var(--G3)]">{paged.length} empleados</span>
+                </td>
+                {periods.map((_, i) => {
+                  const totalSah = paged.reduce((s, e) => s + (e.sah[i] ?? 0), 0);
+                  const totalChg = paged.reduce((s, e) => {
+                    const p = chgType === 'HL' ? (e.cp[i] ?? 0) : (e.slAssumed[i] ?? 0);
+                    return s + Math.round((e.sah[i] ?? 0) * p / 100);
+                  }, 0);
+                  const avgPct = totalSah > 0 ? Math.round(totalChg / totalSah * 100) : 0;
+                  const sumColor = avgPct >= 80 ? 'text-[var(--GR)]' : avgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
+                  const isCur = i === currentPIdx;
+                  return (
+                    <Fragment key={i}>
+                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'}`} style={{ padding: 0 }}>
+                        <span className="text-[11px] font-semibold text-[var(--G1)]">{totalChg}</span>
+                      </td>
+                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#c8d8f4]' : 'bg-[#e8effc]'}`} style={{ padding: 0 }}>
+                        <span className="text-[11px] font-semibold text-[#2f5bb7]">{Math.round(totalSah)}</span>
+                      </td>
+                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'} last:border-r-0`} style={{ padding: 0 }}>
+                        <span className={`text-[11px] font-semibold ${sumColor}`}>{avgPct}%</span>
+                      </td>
+                    </Fragment>
+                  );
+                })}
+              </tr>
+              {/* Employee rows */}
+              {paged.length === 0 ? (
+                <tr>
+                  <td colSpan={1 + periods.length * 3} className="text-center text-sm text-[var(--G3)] py-12">
+                    Sin empleados
+                  </td>
+                </tr>
+              ) : paged.map((emp) => (
+                <tr key={emp.id} className="group">
+                  <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                        style={{ background: avatarColor(emp.id) }}
+                      >
+                        {getInitials(emp.name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
+                        <span className="block text-[9px] text-[var(--G4)]">{emp.level} · {emp.country}</span>
+                      </div>
+                    </div>
+                  </td>
+                  {periods.map((_, i) => {
+                    const sah = emp.sah[i] ?? 0;
+                    const p = chgType === 'HL' ? (emp.cp[i] ?? 0) : (emp.slAssumed[i] ?? 0);
+                    const chg = Math.round(sah * p / 100);
+                    const cellColor = p >= 80 ? 'text-[var(--GR)]' : p >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
+                    const isCur = i === currentPIdx;
+                    return (
+                      <Fragment key={i}>
+                        <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
+                          <span className={`text-[11px] font-semibold ${cellColor}`}>{chg}</span>
+                        </td>
+                        <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e4edfc]' : 'bg-[#f4f8ff]'}`} style={{ padding: 0 }}>
+                          <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sah)}</span>
+                        </td>
+                        <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
+                          <span className={`text-[11px] font-semibold ${cellColor}`}>{p}%</span>
+                        </td>
+                      </Fragment>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+      ) : (
+
+        /* ── Daily grid ── */
+        <div className={`overflow-x-auto border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
         <table
           style={{
             borderCollapse: 'separate',
             borderSpacing: 0,
             tableLayout: 'fixed',
             width: '100%',
-            minWidth: 172 + nDays * colW,
+            minWidth: 172 + nDays * DAY_W + 3 * SUMMARY_W,
           }}
         >
           <colgroup>
             <col />
             {days.map((d) => <col key={d.idx} style={{ width: colW }} />)}
+            <col style={{ width: SUMMARY_W }} />
+            <col style={{ width: SUMMARY_W }} />
+            <col style={{ width: SUMMARY_W }} />
           </colgroup>
 
           <thead>
@@ -568,6 +702,9 @@ export function AllView() {
                   {g.label}
                 </th>
               ))}
+              <th colSpan={3} className="bg-[#f4f6f9] text-center text-[11px] font-semibold text-[var(--G3)] py-2 px-1 tracking-wide border-b border-l border-[var(--G5)]">
+                Resumen
+              </th>
             </tr>
 
             {/* day number + dow */}
@@ -586,31 +723,46 @@ export function AllView() {
                   </span>
                 </th>
               ))}
+              <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">Total h</th>
+              <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">SAH</th>
+              <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG%</th>
             </tr>
           </thead>
 
           <motion.tbody
-            key={`${safePage}-${debouncedQ}-${status}-${country}-${windowStart.getTime()}-${viewMode}-${refreshKey}`}
+            key={`${safePage}-${debouncedQ}-${status}-${country}-${windowStart.getTime()}-${refreshKey}`}
             initial="hidden"
             animate="visible"
             variants={TBODY_VARIANTS}
           >
             {paged.length === 0 ? (
               <tr>
-                <td colSpan={nDays + 1} className="text-center text-sm text-[var(--G3)] py-12">
+                <td colSpan={nDays + 4} className="text-center text-sm text-[var(--G3)] py-12">
                   Sin empleados
                 </td>
               </tr>
             ) : (
               paged.flatMap((emp) => {
                 const isExpanded = !!expanded[emp.id];
-                const sahDay = Math.round((emp.totalHours || 80) / 10);
+                const pIdx = currentPIdx;
+                const sahForPeriod = emp.sah?.[pIdx] ?? emp.totalHours ?? 80;
+                const workingDays = days.filter(
+                  (d) => !d.weekend && !isHoliday(d.date, emp.country)
+                ).length || 1;
+                const dailySAH = 8;
+                const sahDay = Math.round(dailySAH);
                 const rollOnDate  = parseDDMMYY(emp.rollOn);
                 const rollOffDate = parseDDMMYY(emp.rollOff);
+                const ptoStart = parseDDMMYY(emp.nextPTO);
+                const ptoEnd   = parseDDMMYY(emp.nextPTOEnd);
+
+                const chgPct = chgType === 'HL' ? (emp.cp[pIdx] ?? 0) : (emp.slAssumed[pIdx] ?? 0);
+                const totalH = Math.round(sahForPeriod * chgPct / 100);
+                const summaryColor = chgPct >= 80 ? 'text-[var(--GR)]' : chgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
 
                 return [
                   /* person row */
-                  <motion.tr key={emp.id} variants={ROW_VARIANTS} className="group cursor-pointer select-none" onClick={() => toggleExpand(emp.id)}>
+                  <motion.tr key={emp.id} variants={ROW_VARIANTS} className={`group cursor-pointer select-none${emp.isOnPTO ? ' opacity-50' : ''}`} onClick={() => toggleExpand(emp.id)}>
                       <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div
@@ -620,10 +772,20 @@ export function AllView() {
                             {getInitials(emp.name)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
+                              {emp.isOnPTO && (
+                                <span
+                                  title={emp.nextPTO && emp.nextPTOEnd ? `En vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}` : 'En vacaciones'}
+                                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 cursor-default select-none flex-shrink-0"
+                                >
+                                  PTO
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/día · {emp.country}</div>
                           </div>
-                          {isAdmin && emp.scenarioType === 'assumption' && (
+                          {isAdmin && ((emp.chgAssumption?.[0] ?? 0) > 0 || (emp.chgAssumption?.[1] ?? 0) > 0) && (
                             <button
                               title="Hacer efectivo"
                               className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--G3)] hover:text-[var(--P)] p-0.5 rounded flex-shrink-0"
@@ -639,38 +801,38 @@ export function AllView() {
                       </td>
 
                       {days.map((d) => {
-                        const pIdx = getPeriodIdx(d.date);
-                        const hlPct = pIdx >= 0 ? (emp.cp[pIdx]        ?? 0) : null;
-                        const slPct = pIdx >= 0 ? (emp.slAssumed[pIdx] ?? 0) : null;
-                        const shown = chgType === 'HL' ? hlPct : slPct;
-                        const sub   = chgType === 'HL' ? slPct : hlPct;
+                        const holidayName = isHoliday(d.date, emp.country);
+                        const isPtoDay = ptoStart !== null && ptoEnd !== null && d.date >= ptoStart && d.date <= ptoEnd;
                         return (
                           <td
                             key={d.idx}
-                            className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${d.weekend ? 'bg-white' : 'bg-[#fafbfc]'}`}
+                            className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${
+                              isPtoDay ? 'bg-amber-50' : holidayName ? 'bg-orange-50' : d.weekend ? 'bg-white' : 'bg-[#fafbfc]'
+                            }`}
                             style={{ padding: 0 }}
                           >
-                            {shown === null ? (
-                              <span className="text-[11px] text-[var(--G4)]">—</span>
-                            ) : (
-                              <>
-                                <span
-                                  className={`block text-[12px] font-semibold leading-tight ${
-                                    shown >= 80 ? 'text-[var(--GR)]' : shown >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]'
-                                  }`}
-                                >
-                                  {shown}%
-                                </span>
-                                {sub !== null && (
-                                  <span className="block text-[9px] text-[var(--G4)] font-medium leading-tight">
-                                    {chgType === 'HL' ? 'SL' : 'HL'} {sub}%
-                                  </span>
-                                )}
-                              </>
+                            {isPtoDay ? (
+                              <span className="text-[10px] font-semibold text-amber-500">PTO</span>
+                            ) : holidayName ? (
+                              <span className="text-[11px] text-orange-400" title={holidayName}>—</span>
+                            ) : d.weekend ? null : (
+                              <span className="block text-[11px] font-semibold leading-tight text-[var(--G1)]">
+                                {dailySAH}h
+                              </span>
                             )}
                           </td>
                         );
                       })}
+
+                      <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
+                        <span className="text-[11px] font-semibold text-[var(--G3)]">{workingDays * 8}h</span>
+                      </td>
+                      <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
+                        <span className={`text-[11px] font-semibold ${summaryColor}`}>{totalH}h</span>
+                      </td>
+                      <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
+                        <span className={`text-[11px] font-semibold ${summaryColor}`}>{chgPct}%</span>
+                      </td>
                   </motion.tr>,
 
                   /* expanded: Gantt bar row */
@@ -686,55 +848,104 @@ export function AllView() {
                           className="sticky left-0 z-10 bg-white border-b border-r border-[var(--G5)] text-xs text-[var(--G3)] font-medium"
                           style={{ paddingLeft: 26, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}
                         >
-                          {emp.client ?? '—'}
-                          <span className="ml-1 text-[9px] text-[var(--G4)]">
-                            ({emp.scenarioType === 'effective' ? 'HL' : 'SL'})
-                          </span>
+                          {!isRefetching && (
+                            <>
+                              {emp.client ?? '—'}
+                              <span className="ml-1 text-[9px] text-[var(--G4)]">
+                                ({emp.scenarioType === 'effective' ? 'HL' : 'SL'})
+                              </span>
+                            </>
+                          )}
                         </td>
                         <td
                           colSpan={nDays}
                           className="border-b border-[var(--G5)] bg-white"
-                          style={{ position: 'relative', height: 32, padding: 0 }}
+                          style={{ position: 'relative', height: 32, padding: isRefetching ? '6px 8px' : 0 }}
                         >
-                          {rollOnDate && rollOffDate && (() => {
-                            const barStart = rollOnDate < windowStart ? windowStart : rollOnDate;
-                            const barEnd   = rollOffDate > windowEnd  ? windowEnd  : rollOffDate;
-                            if (barStart > windowEnd || barEnd < windowStart) return null;
+                          {isRefetching ? (
+                            <Skeleton className="h-5 w-full rounded-sm" />
+                          ) : (
+                            rollOnDate && rollOffDate && (() => {
+                              const barStart = rollOnDate < windowStart ? windowStart : rollOnDate;
+                              const barEnd   = rollOffDate > windowEnd  ? windowEnd  : rollOffDate;
+                              if (barStart > windowEnd || barEnd < windowStart) return null;
 
-                            const leftDays  = Math.round((barStart.getTime() - windowStart.getTime()) / 86_400_000);
-                            const widthDays = Math.round((barEnd.getTime() - barStart.getTime()) / 86_400_000) + 1;
-                            const isHL      = emp.scenarioType === 'effective';
-                            const pctIdx    = getPeriodIdx(barStart);
-                            const pct       = isHL
-                              ? (emp.cp[pctIdx >= 0 ? pctIdx : 0] ?? 0)
-                              : (emp.slAssumed[pctIdx >= 0 ? pctIdx : 0] ?? 0);
+                              const leftDays  = Math.round((barStart.getTime() - windowStart.getTime()) / 86_400_000);
+                              const widthDays = Math.round((barEnd.getTime() - barStart.getTime()) / 86_400_000) + 1;
+                              const isHL      = emp.scenarioType === 'effective';
+                              const pctIdx    = getPeriodIdx(barStart);
+                              const pct       = isHL
+                                ? (emp.cp[pctIdx >= 0 ? pctIdx : 0] ?? 0)
+                                : (emp.slAssumed[pctIdx >= 0 ? pctIdx : 0] ?? 0);
 
-                            return (
-                              <div
-                                style={{
-                                  position: 'absolute',
-                                  top: 6, bottom: 6,
-                                  left: leftDays * colW,
-                                  width: Math.max(widthDays * colW - 4, 0),
-                                  borderRadius: 6,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  padding: '0 8px',
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  letterSpacing: '-0.01em',
-                                  ...(isHL
-                                    ? { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' }
-                                    : { background: 'transparent', color: '#5a6ea3', border: '1.5px dashed #8aa4d6' }),
-                                }}
-                              >
-                                {pct}% · {emp.client ?? 'Sin proyecto'}
-                              </div>
-                            );
-                          })()}
+                              const ptoStart = parseDDMMYY(emp.nextPTO);
+                              const ptoEnd   = parseDDMMYY(emp.nextPTOEnd);
+                              const ptoBar = ptoStart && ptoEnd ? (() => {
+                                const ps = ptoStart < windowStart ? windowStart : ptoStart;
+                                const pe = ptoEnd   > windowEnd   ? windowEnd   : ptoEnd;
+                                if (ps > windowEnd || pe < windowStart) return null;
+                                const ptoLeft  = Math.round((ps.getTime() - windowStart.getTime()) / 86_400_000);
+                                const ptoWidth = Math.round((pe.getTime() - ps.getTime()) / 86_400_000) + 1;
+                                return (
+                                  <div
+                                    title={`Vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}`}
+                                    style={{
+                                      position: 'absolute',
+                                      top: 6, bottom: 6,
+                                      left: ptoLeft * colW,
+                                      width: Math.max(ptoWidth * colW - 2, 0),
+                                      borderRadius: 6,
+                                      background: '#fef3c7',
+                                      border: '1.5px solid #f59e0b',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      padding: '0 6px',
+                                      fontSize: 10,
+                                      fontWeight: 600,
+                                      color: '#92400e',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      zIndex: 2,
+                                    }}
+                                  >
+                                    🏖 PTO
+                                  </div>
+                                );
+                              })() : null;
+
+                              return (
+                                <>
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      top: 6, bottom: 6,
+                                      left: leftDays * colW,
+                                      width: Math.max(widthDays * colW - 4, 0),
+                                      borderRadius: 6,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      padding: '0 8px',
+                                      fontSize: 10,
+                                      fontWeight: 600,
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      letterSpacing: '-0.01em',
+                                      ...(isHL
+                                        ? { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' }
+                                        : { background: 'transparent', color: '#5a6ea3', border: '1.5px dashed #8aa4d6' }),
+                                    }}
+                                  >
+                                    {pct}% · {emp.client ?? 'Sin proyecto'}
+                                  </div>
+                                  {ptoBar}
+                                </>
+                              );
+                            })()
+                          )}
                         </td>
+                        <td className="border-b border-l border-[var(--G5)] bg-white" />
+                        <td className="border-b border-l border-[var(--G5)] bg-white" />
+                        <td className="border-b border-l border-[var(--G5)] bg-white" />
                       </motion.tr>
                     )}
                   </AnimatePresence>,
@@ -814,6 +1025,9 @@ export function AllView() {
                             })}
                           </div>
                         </td>
+                        <td className="border-b border-l border-[var(--G5)] bg-white" />
+                        <td className="border-b border-l border-[var(--G5)] bg-white" />
+                        <td className="border-b border-l border-[var(--G5)] bg-white" />
                       </motion.tr>
                     )}
                   </AnimatePresence>,
@@ -824,18 +1038,22 @@ export function AllView() {
         </table>
       </div>
 
-      {/* ── legend ────────────────────────────────────────────────────── */}
-      <div className="flex gap-4 flex-wrap items-center pt-1">
-        {[
-          { style: { background: '#e8effc', border: '1.5px solid #5b8def' },     label: 'Hard Lock (efectivo)' },
-          { style: { background: 'transparent', border: '1.5px dashed #8aa4d6' }, label: 'Soft Lock (supuesto)' },
-        ].map(({ style, label }) => (
-          <div key={label} className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
-            <div className="w-6 h-[13px] rounded-[3px]" style={style} />
-            {label}
-          </div>
-        ))}
-      </div>
+      )} {/* end viewMode ternary */}
+
+      {/* ── legend (daily only) ───────────────────────────────────────── */}
+      {viewMode === 'daily' && (
+        <div className="flex gap-4 flex-wrap items-center pt-1">
+          {[
+            { style: { background: '#e8effc', border: '1.5px solid #5b8def' },     label: 'Hard Lock (efectivo)' },
+            { style: { background: 'transparent', border: '1.5px dashed #8aa4d6' }, label: 'Soft Lock (supuesto)' },
+          ].map(({ style, label }) => (
+            <div key={label} className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
+              <div className="w-6 h-[13px] rounded-[3px]" style={style} />
+              {label}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── pagination ────────────────────────────────────────────────── */}
       {(result?.total ?? 0) > 0 && (
@@ -886,6 +1104,7 @@ export function AllView() {
           </select>
         </div>
       )}
+
       {/* ── efectivizar modal ─────────────────────────────────────────── */}
       <Modal
         open={effectivizeTarget !== null}

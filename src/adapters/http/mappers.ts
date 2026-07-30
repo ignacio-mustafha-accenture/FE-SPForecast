@@ -65,6 +65,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     daysToAvailable: raw.DaysToAvailable ?? 0,
     hireDate: raw.HireDate || null,
     nextPTO: raw.NextPTO || null,
+    nextPTOEnd: raw.NextPTOEnd || null,
     nextPTOHours: raw.NextPTOHours ?? null,
     newJoiner: raw.NewJoiner ?? false,
     charge: hasClient,
@@ -82,7 +83,12 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     availableHours: Math.max(0, sah0 - chg0),
     totalHours: sah0,
     notes: raw.Notes ?? '',
-    scenarioType: (raw.ScenarioType === 'effective' ? 'effective' : 'assumption') as EmployeeScenarioType,
+    scenarioType: (raw.ScenarioType != null
+      ? (raw.ScenarioType === 'effective' ? 'effective' : 'assumption')
+      : ((raw.chg_pct_sl?.[0] ?? 0) > 0 ? 'assumption' : 'effective')
+    ) as EmployeeScenarioType,
+    hasAssumptionBlocks: raw.HasAssumptionBlocks ?? ((raw.chg_pct_sl?.[0] ?? 0) > 0),
+    isOnPTO: raw.IsOnPTO ?? false,
   };
 }
 

@@ -59,7 +59,18 @@
     "noClients": "Sin clientes registrados",
     "noClientMatch": "Sin resultados para ese filtro",
     "tabAdmin": "Administración",
-    "tabMonitoring": "Monitoreo"
+    "tabMonitoring": "Monitoreo",
+    "tabHolidays": "Criterio de horas",
+    "holidaysTitle": "Feriados",
+    "holidayAdd": "Agregar feriado",
+    "holidayNamePlaceholder": "Nombre del feriado",
+    "holidayAdded": "Feriado agregado",
+    "holidayAddError": "Error al agregar feriado",
+    "holidayDeleted": "Feriado eliminado",
+    "holidayDeleteError": "Error al eliminar feriado",
+    "sahTitle": "Cómo calculamos las horas disponibles",
+    "sahFormula": "SAH = días hábiles × 8 hs",
+    "sahExplain": "Los días hábiles de cada período excluyen sábados, domingos y los feriados del país del empleado."
   },
   "agent": {
     "title": "Agente IA",
@@ -377,7 +388,10 @@
     "statusAtRisk": "En riesgo",
     "statusNotChargeable": "Bajo objetivo",
     "statusUnassigned": "Sin proyecto",
-    "statusOnLeave": "Baja"
+    "statusOnLeave": "Baja",
+    "effectivizeSuccess": "Horas efectivizadas correctamente",
+    "effectivizeNoop": "No había bloques de asunción para los períodos seleccionados",
+    "effectivizeError": "Error al efectivizar"
   },
   "errors": {
     "unexpected": "Error inesperado"

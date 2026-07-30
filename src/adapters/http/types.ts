@@ -36,6 +36,8 @@ export interface RawEmployee {
   Charge: boolean;
   NJFormat: string | null;
   ScenarioType: string | null;
+  HasAssumptionBlocks: boolean;
+  IsOnPTO: boolean;
   chg: number[];
   sah: number[];
   cp: number[];

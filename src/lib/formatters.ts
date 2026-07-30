@@ -1,3 +1,10 @@
+export function parseDDMMYY(s: string | null): Date | null {
+  if (!s) return null;
+  const [d, m, y] = s.split('/').map(Number);
+  if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
+  return new Date(2000 + y, m - 1, d);
+}
+
 export function formatPercent(value: number, decimals = 1): string {
   return `${(value * 100).toFixed(decimals)}%`;
 }
