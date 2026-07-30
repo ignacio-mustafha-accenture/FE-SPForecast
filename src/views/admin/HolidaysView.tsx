@@ -211,7 +211,7 @@ export function HolidaysView() {
                     components={{
                       MonthCaption: HolidayMonthCaption,
                       DayButton: HolidayDayButton,
-                      Nav: () => null,
+                      Nav: () => <></>,
                     }}
                     classNames={{
                       root: 'w-full',

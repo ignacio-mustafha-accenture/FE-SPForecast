@@ -24,8 +24,8 @@ export function Sidebar() {
     >
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5">
-        {NAV_ITEMS.map(({ matchPaths, ...item }) => (
-          <SidebarNavItem key={item.href} {...item} matchPaths={matchPaths} />
+        {NAV_ITEMS.map((item) => (
+          <SidebarNavItem key={item.href} {...item} />
         ))}
       </nav>
     </aside>
