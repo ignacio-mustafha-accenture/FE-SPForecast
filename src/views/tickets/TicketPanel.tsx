@@ -123,6 +123,8 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const [showOfferingDrop, setShowOfferingDrop] = useState(false);
   const [showClDrop, setShowClDrop] = useState(false);
   const [showLocationDrop, setShowLocationDrop] = useState(false);
+  const [plSearch, setPlSearch] = useState('');
+  const [showPlDrop, setShowPlDrop] = useState(false);
 
   const eidListRef = useRef<HTMLUListElement>(null);
   const typeListRef = useRef<HTMLUListElement>(null);
@@ -130,6 +132,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const offeringListRef = useRef<HTMLUListElement>(null);
   const clListRef = useRef<HTMLUListElement>(null);
   const locationListRef = useRef<HTMLUListElement>(null);
+  const plListRef = useRef<HTMLUListElement>(null);
   const prevAutoEidRef = useRef('');
 
   const employees = useForecastStore((s) => s.appState?.employees ?? null);
@@ -261,6 +264,8 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       setShowOfferingDrop(false);
       setShowClDrop(false);
       setShowLocationDrop(false);
+      setPlSearch('');
+      setShowPlDrop(false);
       prevAutoEidRef.current = '';
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -303,6 +308,16 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const offeringNav = useDropdownNav(offeringListRef, OFFERING_OPTIONS.length, showOfferingDrop);
   const clNav = useDropdownNav(clListRef, CL_OPTIONS.length, showClDrop);
   const locationNav = useDropdownNav(locationListRef, LOCATION_OPTIONS.length, showLocationDrop);
+
+  const selectedPl = watch('people_lead') ?? '';
+  const selectedPlEmployee = (employees ?? []).find((e) => e.id === selectedPl);
+  const filteredPl = (employees ?? []).filter(
+    (e) =>
+      (e.id.toLowerCase().includes(plSearch.toLowerCase()) ||
+        e.name.toLowerCase().includes(plSearch.toLowerCase())) &&
+      e.id !== selectedPl,
+  );
+  const plNav = useDropdownNav(plListRef, filteredPl.length, showPlDrop);
 
   async function onSubmit(data: FormData) {
     setSaving(true);

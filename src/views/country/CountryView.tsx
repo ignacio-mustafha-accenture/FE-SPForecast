@@ -136,7 +136,19 @@ export function CountryView({ country }: CountryViewProps) {
       id: 'name',
       accessorKey: 'name',
       header: t('headerName'),
-      cell: ({ row }) => <span className="font-medium text-[var(--G1)]">{row.original.name}</span>,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-[var(--G1)]">{row.original.name}</span>
+          {row.original.isOnPTO && (
+            <span
+              title="En vacaciones"
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 cursor-default select-none"
+            >
+              PTO
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       id: 'id',
@@ -336,7 +348,7 @@ export function CountryView({ country }: CountryViewProps) {
         columns={columns}
         tableKey={`country-${country}`}
         onRowClick={(e) => router.push(`/employees/${e.id}`)}
-        getRowClassName={(e) => rowStatusClass[e.chargeabilityStatus] ?? 'hover:bg-[var(--G6)]'}
+        getRowClassName={(e) => `${rowStatusClass[e.chargeabilityStatus] ?? 'hover:bg-[var(--G6)]'}${e.isOnPTO ? ' opacity-50' : ''}`}
         pagination={{
           page: safePage,
           pageSize,

@@ -19,6 +19,7 @@ export interface Employee {
   daysToAvailable: number;
   hireDate: string | null;
   nextPTO: string | null;
+  nextPTOEnd: string | null;
   nextPTOHours: number | null;
   newJoiner: boolean;
   charge: boolean;
@@ -37,4 +38,6 @@ export interface Employee {
   totalHours: number;
   notes: string;
   scenarioType: ScenarioType;
+  hasAssumptionBlocks: boolean;
+  isOnPTO: boolean;
 }

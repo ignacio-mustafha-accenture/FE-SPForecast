@@ -1,13 +1,14 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Settings, Activity } from 'lucide-react';
+import { Settings, Activity, CalendarDays } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { cn } from '@/src/lib/cn';
 
 import { AdminView } from './AdminView';
+import { HolidaysView } from './HolidaysView';
 import { MonitoringView } from '../monitoring/MonitoringView';
 
 const panelVariants = {
@@ -22,7 +23,8 @@ export function SettingsView() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const activeTab = searchParams.get('view') === 'monitoring' ? 'monitoring' : 'admin';
+  const view = searchParams.get('view');
+  const activeTab = view === 'monitoring' ? 'monitoring' : view === 'holidays' ? 'holidays' : 'admin';
 
   return (
     <div>
@@ -70,6 +72,20 @@ export function SettingsView() {
           <Activity size={15} />
           {t('tabMonitoring')}
         </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === 'holidays'}
+          onClick={() => router.replace('/admin?view=holidays')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
+            activeTab === 'holidays'
+              ? 'border-[var(--P)] text-[var(--P)]'
+              : 'border-transparent text-[var(--G3)] hover:text-[var(--G1)] hover:border-[var(--G4)]',
+          )}
+        >
+          <CalendarDays size={15} />
+          {t('tabHolidays')}
+        </button>
       </motion.div>
 
       <AnimatePresence mode="wait">
@@ -80,7 +96,9 @@ export function SettingsView() {
           animate="show"
           exit="exit"
         >
-          {activeTab === 'admin' ? <AdminView /> : <MonitoringView />}
+          {activeTab === 'admin' && <AdminView />}
+          {activeTab === 'monitoring' && <MonitoringView />}
+          {activeTab === 'holidays' && <HolidaysView />}
         </motion.div>
       </AnimatePresence>
     </div>
