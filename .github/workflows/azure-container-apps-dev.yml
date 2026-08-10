@@ -1,9 +1,7 @@
 name: Deploy to Azure Container Apps - Dev
 
 on:
-  push:
-    branches:
-      - dev
+  workflow_dispatch:
 
 env:
   REGISTRY: forecastregistry.azurecr.io
