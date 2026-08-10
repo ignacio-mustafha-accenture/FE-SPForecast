@@ -28,7 +28,7 @@ jobs:
       - name: Build and push Docker image
         run: |
           docker build \
-            --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.API_BASE_URL_DEV }} \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL_DEV }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
