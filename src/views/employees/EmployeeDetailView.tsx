@@ -12,6 +12,7 @@ import { getClientContainer } from '@/src/application/container';
 import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
+import { Modal } from '@/src/components/ui/Modal';
 import { Textarea } from '@/src/components/ui/Textarea';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import { Skeleton } from '@/src/components/ui/Skeleton';
@@ -20,6 +21,7 @@ import { useToast } from '@/src/hooks/useToast';
 import { formatPercent } from '@/src/lib/formatters';
 import type { ChargeabilityBlock, ScenarioType } from '@/src/core/domain/chargeabilityBlock';
 import { HttpChargeabilityBlockRepository } from '@/src/adapters/http/HttpChargeabilityBlockRepository';
+import { HttpEmployeeRepository } from '@/src/adapters/http/HttpEmployeeRepository';
 
 const statusVariant = {
   green:      'green',
@@ -115,6 +117,12 @@ export function EmployeeDetailView({ eid }: Props) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
 
+  // Assign real EID (NJ effectivization)
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [newEid, setNewEid] = useState('');
+  const [newName, setNewName] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
   // Chargeability blocks state
   const [blocks, setBlocks] = useState<ChargeabilityBlock[]>([]);
   const [blocksLoading, setBlocksLoading] = useState(false);
@@ -188,6 +196,8 @@ export function EmployeeDetailView({ eid }: Props) {
   );
   const periods = useForecastStore((s) => s.appState?.periods ?? null);
   const isLoading = useForecastStore((s) => s.isLoading);
+  const fetchState = useForecastStore((s) => s.fetchState);
+  const windowOffset = useForecastStore((s) => s.windowOffset);
 
   const { register, handleSubmit } = useForm<EditForm>({
     values: employee
@@ -205,6 +215,23 @@ export function EmployeeDetailView({ eid }: Props) {
         }
       : undefined,
   });
+
+  async function handleAssignEid() {
+    if (!newEid.trim() || !employee) return;
+    setAssigning(true);
+    try {
+      const repo = new HttpEmployeeRepository({ credentials: 'include' });
+      await repo.assignRealEid(employee.id, newEid.trim(), newName.trim() || undefined);
+      await fetchState(windowOffset);
+      setShowAssignModal(false);
+      toast.success(`${newName.trim() || newEid.trim()} ya no es New Joiner`);
+      router.push(`/employees/${newEid.trim()}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error al efectivizar NJ');
+    } finally {
+      setAssigning(false);
+    }
+  }
 
   async function onSave(data: EditForm) {
     if (!employee) return;
@@ -376,6 +403,16 @@ export function EmployeeDetailView({ eid }: Props) {
             <div className="px-5 py-3 border-t border-[var(--G6)]">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] mb-1">{t('fieldNotes')}</p>
               <p className="text-sm text-[var(--G1)] whitespace-pre-wrap">{employee.notes}</p>
+            </div>
+          )}
+          {employee.newJoiner && (
+            <div className="px-5 py-3 border-t border-[var(--G5)]">
+              <Button
+                size="sm"
+                onClick={() => { setNewName(employee.name); setShowAssignModal(true); }}
+              >
+                Efectivizar New Joiner
+              </Button>
             </div>
           )}
         </div>
@@ -567,6 +604,49 @@ export function EmployeeDetailView({ eid }: Props) {
           </div>
         </div>
       )}
+
+      <Modal
+        open={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        title="Efectivizar New Joiner"
+        width="440px"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--G3)]">
+            Asignar el EID real al empleado <span className="font-semibold text-[var(--G1)]">{employee?.name}</span>.
+            Esto actualizará todos los registros y eliminará el flag NJ.
+          </p>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--G3)]">
+              Nuevo EID
+            </label>
+            <Input
+              value={newEid}
+              onChange={(e) => setNewEid(e.target.value)}
+              placeholder="john.doe"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--G3)]">
+              Nombre real <span className="font-normal text-[var(--G4)]">(opcional)</span>
+            </label>
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={employee?.name}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setShowAssignModal(false)} disabled={assigning}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAssignEid} disabled={!newEid.trim() || assigning}>
+              {assigning ? 'Efectivizando...' : 'Confirmar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

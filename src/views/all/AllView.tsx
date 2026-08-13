@@ -4,10 +4,11 @@ import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'rea
 import { useToast } from '@/src/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type { Employee } from '@/src/core/domain/employee';
+import type { Ticket } from '@/src/core/domain/ticket';
 import type { Period } from '@/src/core/domain/period';
 import type { Page } from '@/src/core/domain/pagination';
 import { HttpChargeabilityBlockRepository } from '@/src/adapters/http/HttpChargeabilityBlockRepository';
@@ -17,6 +18,7 @@ import { useWindowOffset } from '@/src/hooks/useWindowOffset';
 import { useDebounce } from '@/src/hooks/useDebounce';
 import { FilterBar } from '@/src/components/ui/FilterBar';
 import { Modal } from '@/src/components/ui/Modal';
+import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { exportToXlsx } from '@/src/lib/excel';
@@ -46,6 +48,38 @@ const DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const AVATAR_PALETTE = [
   '#7c5cff', '#0ea5b5', '#12a86f', '#e0872a', '#e05c8a', '#5c9ae0', '#c05cc0',
 ];
+
+// ─── ticket modal constants ───────────────────────────────────────────────────
+
+const TYPE_LABELS: Record<string, string> = {
+  newproj: 'Nuevo proyecto',
+  ongoing: 'En curso',
+  pto: 'Vacaciones',
+  sick: 'Enfermedad',
+  nj: 'No joineo',
+  baja: 'Baja',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  Open: 'Abierto',
+  Approved: 'Aprobado',
+  Rejected: 'Rechazado',
+};
+
+const typeVariant: Record<string, 'green' | 'blue' | 'yellow' | 'red' | 'neutral' | 'purple'> = {
+  newproj: 'green',
+  ongoing: 'blue',
+  pto: 'yellow',
+  sick: 'yellow',
+  nj: 'red',
+  baja: 'red',
+};
+
+const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'neutral'> = {
+  Open: 'yellow',
+  Approved: 'green',
+  Rejected: 'red',
+};
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -117,6 +151,7 @@ export function AllView() {
 
   const periods       = useForecastStore((s) => s.appState?.periods ?? []);
   const storeEmps     = useForecastStore((s) => s.appState?.employees ?? []);
+  const allTickets    = useForecastStore((s) => s.appState?.tickets ?? []);
   const fetchState    = useForecastStore((s) => s.fetchState);
   const isAdmin       = useAuthStore((s) => s.user?.role === 'admin');
   const { offset: windowOffset } = useWindowOffset();
@@ -124,6 +159,11 @@ export function AllView() {
   const storeEmpMap = useMemo(
     () => new Map(storeEmps.map((e) => [e.id, e])),
     [storeEmps],
+  );
+
+  const employeeIdsWithTickets = useMemo(
+    () => new Set(allTickets.map((t) => t.employeeId)),
+    [allTickets],
   );
 
   // ── BE pagination state ──────────────────────────────────────────────────
@@ -134,6 +174,9 @@ export function AllView() {
 
   // ── efectivizar modal state ──────────────────────────────────────────────
   const [effectivizeTarget, setEffectivizeTarget] = useState<{ eid: string; name: string } | null>(null);
+
+  // ── CHG% tickets modal state ─────────────────────────────────────────────
+  const [chgModal, setChgModal] = useState<{ emp: Employee; tickets: Ticket[] } | null>(null);
   const [effectivizePct, setEffectivizePct] = useState('');
   const [isEffectivizing, setIsEffectivizing] = useState(false);
   const [effectivizeError, setEffectivizeError] = useState<string | null>(null);
@@ -148,9 +191,17 @@ export function AllView() {
   const q = searchParams.get('q') ?? '';
   const country = searchParams.get('country') ?? '';
   const status = searchParams.get('status') ?? '';
+  const offering = searchParams.get('offering') ?? '';
+  const teApprover = searchParams.get('te_approver') ?? '';
+  const chgBucket = searchParams.get('chg_bucket') ?? '';
   const chgType = (searchParams.get('chg') === 'SL' ? 'SL' : 'HL') as 'HL' | 'SL';
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10));
+
+  // ── te_approver autocomplete state ──────────────────────────────────────
+  const [teApprovers, setTeApprovers] = useState<string[]>([]);
+  const [teApproverSearch, setTeApproverSearch] = useState('');
+  const [showTeApproverDrop, setShowTeApproverDrop] = useState(false);
 
   // Local state for the search input — decoupled from URL to avoid router.replace on every keystroke.
   // The URL is only updated after the debounce fires, keeping the input snappy.
@@ -171,17 +222,34 @@ export function AllView() {
     router.replace(`?${p.toString()}`, { scroll: false });
   }, [debouncedQ]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── fetch te_approvers catalog ───────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/te-approvers', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => setTeApprovers(d.items ?? []))
+      .catch(() => {});
+  }, []);
+
   // ── fetch employees from BE ──────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     setIsFetching(true);
     getClientContainer()
-      .listEmployees.execute({ country: country || undefined, q: debouncedQ || undefined, status: status || undefined, page, pageSize })
+      .listEmployees.execute({
+        country: country || undefined,
+        q: debouncedQ || undefined,
+        status: status || undefined,
+        page,
+        pageSize,
+        offering: offering || undefined,
+        teApprover: teApprover || undefined,
+        chgBucket: chgBucket || undefined,
+      })
       .then((data) => { if (!cancelled) setResult(data); })
       .catch(console.error)
       .finally(() => { if (!cancelled) { setIsFetching(false); setIsRefetching(false); } });
     return () => { cancelled = true; };
-  }, [country, debouncedQ, status, page, pageSize, refreshKey]);
+  }, [country, debouncedQ, status, offering, teApprover, chgBucket, page, pageSize, refreshKey]);
 
   // ── fetch holidays ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -425,6 +493,24 @@ export function AllView() {
     { value: 'unassigned', label: t('statusUnassigned') },
   ];
 
+  const OFFERING_OPTIONS = [
+    { value: 'Tech-led',      label: 'Tech-led' },
+    { value: 'Cost Take Out', label: 'Cost Take Out' },
+    { value: 'OM+SPY+Others', label: 'OM+SPY+Others' },
+    { value: 'Internal',      label: 'Internal' },
+    { value: 'CTO',           label: 'CTO' },
+  ];
+
+  const CHG_BUCKET_OPTIONS = [
+    { value: 'over',  label: '>100%' },
+    { value: 'full',  label: '=100%' },
+    { value: 'under', label: '<100%' },
+  ];
+
+  const teApproversFiltered = teApprovers.filter((name) =>
+    name.toLowerCase().includes(teApproverSearch.toLowerCase()),
+  );
+
   // ── loading ──────────────────────────────────────────────────────────────
   if (isFetching && !result) {
     return (
@@ -530,8 +616,78 @@ export function AllView() {
             active: status ? [status] : [],
             onToggle: (v) => setParam('status', status === v ? '' : v),
           },
+          {
+            label: 'Proyecto',
+            options: OFFERING_OPTIONS,
+            active: offering ? [offering] : [],
+            onToggle: (v) => setParam('offering', offering === v ? '' : v),
+          },
+          {
+            label: 'CHG%',
+            options: CHG_BUCKET_OPTIONS,
+            active: chgBucket ? [chgBucket] : [],
+            onToggle: (v) => setParam('chg_bucket', chgBucket === v ? '' : v),
+          },
         ]}
       />
+
+      {/* ── T&E Approver filter ──────────────────────────────────────── */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[var(--G3)] whitespace-nowrap">T&amp;E Approver:</span>
+        {teApprover ? (
+          <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-xs font-medium">
+            {teApprover}
+            <button
+              type="button"
+              onClick={() => { setTeApproverSearch(''); setParam('te_approver', ''); }}
+              className="hover:opacity-70 transition-opacity"
+            >
+              <X size={11} />
+            </button>
+          </span>
+        ) : (
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="buscar..."
+              value={teApproverSearch}
+              onChange={(e) => { setTeApproverSearch(e.target.value); setShowTeApproverDrop(true); }}
+              onFocus={() => setShowTeApproverDrop(true)}
+              onBlur={() => setTimeout(() => setShowTeApproverDrop(false), 150)}
+              className="px-2.5 py-0.5 text-xs border border-[var(--G5)] rounded-md bg-white text-[var(--G1)] placeholder-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] w-32"
+            />
+            {showTeApproverDrop && (teApproversFiltered.length > 0 || teApproverSearch.length > 0) && (
+              <ul className="absolute z-10 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto min-w-[180px] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)]">
+                {teApproversFiltered.map((name) => (
+                  <li
+                    key={name}
+                    onMouseDown={() => {
+                      setParam('te_approver', name);
+                      setTeApproverSearch('');
+                      setShowTeApproverDrop(false);
+                    }}
+                    className="px-3 py-2 text-xs cursor-pointer text-[var(--G1)] hover:bg-[var(--G6)]"
+                  >
+                    {name}
+                  </li>
+                ))}
+                {teApproverSearch.length > 0 && !teApprovers.includes(teApproverSearch) && (
+                  <li
+                    onMouseDown={() => {
+                      setParam('te_approver', teApproverSearch);
+                      setTeApproverSearch('');
+                      setShowTeApproverDrop(false);
+                    }}
+                    className="px-3 py-2 text-xs cursor-pointer text-[var(--P)] border-t border-[var(--G6)] hover:bg-[var(--PB)]"
+                  >
+                    + Usar &quot;{teApproverSearch}&quot;
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
       <p className="text-xs text-[var(--G3)]">{t('countEmployees', { count: result?.total ?? 0 })}</p>
 
@@ -654,9 +810,24 @@ export function AllView() {
                         <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e4edfc]' : 'bg-[#f4f8ff]'}`} style={{ padding: 0 }}>
                           <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sah)}</span>
                         </td>
-                        <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
-                          <span className={`text-[11px] font-semibold ${cellColor}`}>{p}%</span>
-                        </td>
+                        {(() => {
+                          const isClickable = p !== 100 && employeeIdsWithTickets.has(emp.id);
+                          return (
+                            <td
+                              className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                              style={{ padding: 0 }}
+                              onClick={isClickable ? () => {
+                                const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
+                                setChgModal({ emp, tickets: empTickets });
+                              } : undefined}
+                            >
+                              <span className={`text-[11px] font-semibold ${cellColor}`}>
+                                {p}%
+                                {isClickable && <span className="ml-0.5 text-[9px] opacity-50">ⓘ</span>}
+                              </span>
+                            </td>
+                          );
+                        })()}
                       </Fragment>
                     );
                   })}
@@ -730,7 +901,7 @@ export function AllView() {
           </thead>
 
           <motion.tbody
-            key={`${safePage}-${debouncedQ}-${status}-${country}-${windowStart.getTime()}-${refreshKey}`}
+            key={`${safePage}-${debouncedQ}-${status}-${country}-${offering}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
             initial="hidden"
             animate="visible"
             variants={TBODY_VARIANTS}
@@ -964,6 +1135,13 @@ export function AllView() {
                           style={{ paddingLeft: 26, paddingRight: 12, paddingTop: 6, paddingBottom: 10, verticalAlign: 'top' }}
                         >
                           <span style={{ fontSize: 10, color: 'var(--G4)', fontWeight: 500 }}>Forecast</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); router.push(`/employees/${emp.id}`); }}
+                            style={{ fontSize: 10, color: 'var(--P)', fontWeight: 500, marginTop: 6, display: 'block', textAlign: 'left' }}
+                            className="hover:underline"
+                          >
+                            Ver detalle →
+                          </button>
                         </td>
                         <td
                           colSpan={nDays}
@@ -1200,6 +1378,74 @@ export function AllView() {
             {isEffectivizing ? 'Procesando…' : 'Hacer efectivo'}
           </Button>
         </div>
+      </Modal>
+
+      {/* ── CHG% tickets modal ───────────────────────────────────────── */}
+      <Modal
+        open={chgModal !== null}
+        onClose={() => setChgModal(null)}
+        title={chgModal?.emp.name}
+        width="560px"
+      >
+        {chgModal && (
+          <div className="space-y-3">
+            <p className="text-xs text-[var(--G3)] mb-1">
+              {chgModal.tickets.length} ticket{chgModal.tickets.length !== 1 ? 's' : ''} asociado{chgModal.tickets.length !== 1 ? 's' : ''}
+            </p>
+            {chgModal.tickets.map((ticket) => (
+              <div key={ticket.id} className="border border-[var(--G5)] rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant={typeVariant[ticket.type] ?? 'neutral'}>
+                    {TYPE_LABELS[ticket.type] ?? ticket.type}
+                  </Badge>
+                  <Badge variant={statusVariant[ticket.status] ?? 'neutral'}>
+                    {STATUS_LABELS[ticket.status] ?? ticket.status}
+                  </Badge>
+                  <Badge variant="neutral" className="text-[10px]">
+                    {ticket.scenarioType === 'assumption' ? 'Estimación' : 'Efectivo'}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  {ticket.clientName && (
+                    <>
+                      <span className="text-[var(--G3)]">Cliente</span>
+                      <span className="text-[var(--G1)] font-medium">{ticket.clientName}</span>
+                    </>
+                  )}
+                  {ticket.chargeabilityPct != null && (
+                    <>
+                      <span className="text-[var(--G3)]">Cargabilidad</span>
+                      <span className="text-[var(--G1)] font-medium">{ticket.chargeabilityPct}%</span>
+                    </>
+                  )}
+                  {ticket.startDate && (
+                    <>
+                      <span className="text-[var(--G3)]">Inicio</span>
+                      <span className="text-[var(--G1)] font-medium">{ticket.startDate}</span>
+                    </>
+                  )}
+                  {ticket.endDate && (
+                    <>
+                      <span className="text-[var(--G3)]">Fin</span>
+                      <span className="text-[var(--G1)] font-medium">{ticket.endDate}</span>
+                    </>
+                  )}
+                </div>
+                {(ticket.detail || ticket.comments) && (
+                  <p className="text-[11px] text-[var(--G2)] border-t border-[var(--G6)] pt-2">
+                    {ticket.detail ?? ticket.comments}
+                  </p>
+                )}
+                <button
+                  className="text-[11px] text-[var(--P)] hover:underline mt-1"
+                  onClick={() => { router.push(`/tickets/${ticket.id}`); setChgModal(null); }}
+                >
+                  Ver detalle completo →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );

@@ -38,6 +38,7 @@ export interface RawEmployee {
   ScenarioType: string | null;
   HasAssumptionBlocks: boolean;
   IsOnPTO: boolean;
+  Ringfenced?: boolean;
   chg: number[];
   sah: number[];
   cp: number[];

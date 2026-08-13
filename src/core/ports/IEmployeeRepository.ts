@@ -19,4 +19,5 @@ export interface IEmployeeRepository {
   list(filter: EmployeeFilter): Promise<Page<Employee>>;
   update(id: string, data: EmployeeUpdatePayload): Promise<void>;
   getById(id: string): Promise<Employee>;
+  assignRealEid(eid: string, newEid: string, newName?: string): Promise<{ ok: boolean; new_eid: string }>;
 }

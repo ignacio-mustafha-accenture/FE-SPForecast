@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -88,9 +88,9 @@ function useDropdownNav(
 
 const CL_OPTIONS = ['8', '9', '10', '11', '12', '13'].map((v) => ({ value: v, label: v }));
 const LOCATION_OPTIONS = [
-  { value: 'AR', label: 'Argentina' },
-  { value: 'MX', label: 'Mexico' },
-  { value: 'CR', label: 'Costa Rica' },
+  { value: 'Argentina', label: 'Argentina' },
+  { value: 'Mexico', label: 'Mexico' },
+  { value: 'Costa Rica', label: 'Costa Rica' },
 ];
 const OFFERING_OPTIONS = [
   { value: 'Tech-led', label: 'Tech-led' },
@@ -125,6 +125,9 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const [showLocationDrop, setShowLocationDrop] = useState(false);
   const [plSearch, setPlSearch] = useState('');
   const [showPlDrop, setShowPlDrop] = useState(false);
+  const [teApprovers, setTeApprovers] = useState<string[]>([]);
+  const [teApproverSearch, setTeApproverSearch] = useState('');
+  const [showTeApproverDrop, setShowTeApproverDrop] = useState(false);
 
   const eidListRef = useRef<HTMLUListElement>(null);
   const typeListRef = useRef<HTMLUListElement>(null);
@@ -133,14 +136,23 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const clListRef = useRef<HTMLUListElement>(null);
   const locationListRef = useRef<HTMLUListElement>(null);
   const plListRef = useRef<HTMLUListElement>(null);
+  const teApproverListRef = useRef<HTMLUListElement>(null);
   const prevAutoEidRef = useRef('');
 
   const employees = useForecastStore((s) => s.appState?.employees ?? null);
+  const periods = useForecastStore((s) => s.appState?.periods ?? []);
 
   useEffect(() => {
     fetch('/api/admin/clients', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { clients: [] }))
       .then((d) => setClients(d.clients ?? []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/te-approvers', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => setTeApprovers(d.items ?? []))
       .catch(() => {});
   }, []);
 
@@ -266,6 +278,8 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       setShowLocationDrop(false);
       setPlSearch('');
       setShowPlDrop(false);
+      setTeApproverSearch('');
+      setShowTeApproverDrop(false);
       prevAutoEidRef.current = '';
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -285,6 +299,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   }, [njName]);
 
   const selectedClient = watch('client_name') ?? '';
+  const scenarioTypeValue = watch('scenario_type') ?? 'assumption';
   const filteredClients = clients.filter(
     (c) => c.toLowerCase().includes(clientSearch.toLowerCase()) && c !== selectedClient,
   );
@@ -293,6 +308,46 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
 
   const selectedEid = watch('eid') ?? '';
   const selectedEmployee = (employees ?? []).find((e) => e.id === selectedEid);
+
+  const assumptionInfo = useMemo(() => {
+    const isNewprojAssumption =
+      selectedType === 'newproj' && scenarioTypeValue === 'assumption';
+    const isNJ = selectedType === 'nj';
+    if (!isNewprojAssumption && !isNJ) return null;
+
+    let num: 1 | 2 | 3 | 4;
+    if (selectedClient === 'ISG PE Assessment') num = 4;
+    else if (isNJ) num = 3;
+    else if (selectedEmployee?.ringfenced) num = 2;
+    else num = 1;
+
+    const ASSUMPTION_LABELS: Record<number, string> = {
+      1: 'Assumption 1 — No ISG (post roll-off)',
+      2: 'Assumption 2 — ISG Ringfenced (post roll-off)',
+      3: 'Assumption 3 — New Joiner (post hire date)',
+      4: 'Assumption 4 — ISG PE Assessment',
+    };
+
+    const refDateStr = isNJ ? selectedEmployee?.hireDate : selectedEmployee?.rollOff;
+    if (!refDateStr) return { num, label: ASSUMPTION_LABELS[num], projectedPeriods: [] };
+
+    const refDate = new Date(refDateStr);
+    const startIdx = periods.findIndex((p) => new Date(p.endDate) > refDate);
+    if (startIdx === -1) return { num, label: ASSUMPTION_LABELS[num], projectedPeriods: [] };
+
+    const projectedPeriods = Array.from({ length: 6 }, (_, i) => {
+      const period = periods[startIdx + i];
+      if (!period) return null;
+      const pNum = i + 1;
+      let pct: number;
+      if (num === 4) pct = 90;
+      else if (num === 1 || num === 3) pct = pNum <= 2 ? 0 : 50;
+      else pct = pNum === 1 ? 0 : pNum === 2 ? 75 : 100;
+      return { label: period.label, pct };
+    }).filter(Boolean) as { label: string; pct: number }[];
+
+    return { num, label: ASSUMPTION_LABELS[num], projectedPeriods };
+  }, [selectedType, scenarioTypeValue, selectedClient, selectedEmployee, periods]);
 
 
   const filteredEmployees = (employees ?? []).filter(
@@ -318,6 +373,14 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       e.id !== selectedPl,
   );
   const plNav = useDropdownNav(plListRef, filteredPl.length, showPlDrop);
+
+  const selectedTeApprover = watch('te_approver') ?? '';
+  const filteredTeApprovers = teApprovers.filter(
+    (name) => name.toLowerCase().includes(teApproverSearch.toLowerCase()),
+  );
+  const hasCustomTeApprover = teApproverSearch.length > 0 && !teApprovers.includes(teApproverSearch);
+  const teApproverNavItems = [...filteredTeApprovers, ...(hasCustomTeApprover ? [teApproverSearch] : [])];
+  const teApproverNav = useDropdownNav(teApproverListRef, teApproverNavItems.length, showTeApproverDrop);
 
   async function onSubmit(data: FormData) {
     setSaving(true);
@@ -657,12 +720,90 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   placeholder={t('eidAccenturePlaceholder')}
                   {...register('eid_accenture')}
                 />
-                <Input
-                  label="TE Approver (EID)"
-                  placeholder="ej. garcia.sofia"
-                  error={errors.te_approver?.message}
-                  {...register('te_approver')}
-                />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[var(--G2)]">T&amp;E Approver</label>
+                  <div className="relative">
+                    <div
+                      className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text"
+                      onClick={() => !selectedTeApprover && setShowTeApproverDrop(true)}
+                    >
+                      {selectedTeApprover ? (
+                        <>
+                          <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-sm shrink-0">
+                            {selectedTeApprover}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setValue('te_approver', '');
+                                setTeApproverSearch('');
+                              }}
+                              className="hover:opacity-70 transition-opacity"
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                          <span className="flex-1" />
+                        </>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="Nombre del approver"
+                          value={teApproverSearch}
+                          onChange={(e) => { setTeApproverSearch(e.target.value); setShowTeApproverDrop(true); }}
+                          onFocus={() => setShowTeApproverDrop(true)}
+                          onBlur={() => setTimeout(() => setShowTeApproverDrop(false), 150)}
+                          onKeyDown={(e) =>
+                            teApproverNav.onKey(
+                              e,
+                              (i) => {
+                                setValue('te_approver', teApproverNavItems[i]);
+                                setTeApproverSearch('');
+                                setShowTeApproverDrop(false);
+                              },
+                              () => setShowTeApproverDrop(false),
+                            )
+                          }
+                          className="flex-1 text-sm text-[var(--G1)] outline-none bg-transparent placeholder:text-[var(--G4)]"
+                        />
+                      )}
+                      <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
+                    </div>
+                    {errors.te_approver && <p className="text-xs text-[var(--RD)] mt-1">{errors.te_approver.message}</p>}
+                    {showTeApproverDrop && (filteredTeApprovers.length > 0 || teApproverSearch) && (
+                      <ul
+                        ref={teApproverListRef}
+                        className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+                      >
+                        {filteredTeApprovers.map((name, i) => (
+                          <li
+                            key={name}
+                            onMouseDown={() => {
+                              setValue('te_approver', name);
+                              setTeApproverSearch('');
+                              setShowTeApproverDrop(false);
+                            }}
+                            className={`px-3 py-2 text-sm cursor-pointer transition-colors ${i === teApproverNav.idx ? 'bg-[var(--G6)]' : 'text-[var(--G1)] hover:bg-[var(--G6)]'}`}
+                          >
+                            {name}
+                          </li>
+                        ))}
+                        {hasCustomTeApprover && (
+                          <li
+                            onMouseDown={() => {
+                              setValue('te_approver', teApproverSearch);
+                              setTeApproverSearch('');
+                              setShowTeApproverDrop(false);
+                            }}
+                            className={`px-3 py-2 text-sm cursor-pointer border-t border-[var(--G6)] transition-colors ${filteredTeApprovers.length === teApproverNav.idx ? 'bg-[var(--G6)]' : 'text-[var(--P)] hover:bg-[var(--PB)]'}`}
+                          >
+                            + Usar &quot;{teApproverSearch}&quot;
+                          </li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </>
             )}
 
@@ -925,6 +1066,45 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                 onChange={(v) => setValue('end_date', v)}
                 error={errors.end_date?.message}
               />
+            )}
+
+            {/* Assumption projection panel — newproj (assumption) and nj */}
+            {assumptionInfo && (
+              <div className="rounded-lg border border-[var(--PBG)] bg-[var(--PBG)] p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--P)]">
+                    Proyección de cargabilidad
+                  </span>
+                  <span className="text-[10px] text-[var(--PD)] font-medium">
+                    {assumptionInfo.label}
+                  </span>
+                </div>
+
+                {assumptionInfo.projectedPeriods.length === 0 ? (
+                  <p className="text-[11px] text-[var(--G3)]">
+                    Seleccioná un empleado para ver la proyección.
+                  </p>
+                ) : (
+                  <div className="flex gap-1.5">
+                    {assumptionInfo.projectedPeriods.map(({ label, pct }, i) => {
+                      const color =
+                        pct >= 80 ? 'text-[var(--GR)]' :
+                        pct >= 50 ? 'text-[var(--YL)]' :
+                        'text-[var(--RD)]';
+                      return (
+                        <div
+                          key={label}
+                          className="flex-1 flex flex-col items-center gap-0.5 rounded-md bg-white border border-[var(--G5)] py-1.5 px-1"
+                        >
+                          <span className="text-[9px] text-[var(--G3)] font-medium">{label}</span>
+                          <span className={`text-xs font-bold ${color}`}>{pct}%</span>
+                          <span className="text-[8px] text-[var(--G4)]">P{i + 1}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Comments — all types */}

@@ -211,7 +211,7 @@ export function TicketsView() {
           <Button
             variant="approve-outline"
             size="sm"
-            onClick={() => handleApprove(row.original.id)}
+            onClick={(e) => { e.stopPropagation(); handleApprove(row.original.id); }}
           >
             <Check size={13} strokeWidth={2.5} />
             {t('approve')}
@@ -219,7 +219,7 @@ export function TicketsView() {
           <Button
             variant="reject-outline"
             size="sm"
-            onClick={() => openRejectModal(row.original.id)}
+            onClick={(e) => { e.stopPropagation(); openRejectModal(row.original.id); }}
           >
             <X size={13} strokeWidth={2.5} />
             {t('reject')}
@@ -320,6 +320,7 @@ export function TicketsView() {
               }
             : undefined
         }
+        onRowClick={(ticket) => router.push(`/tickets/${ticket.id}`)}
       />
       <TicketPanel
         open={panelOpen}

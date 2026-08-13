@@ -89,6 +89,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     ) as EmployeeScenarioType,
     hasAssumptionBlocks: raw.HasAssumptionBlocks ?? ((raw.chg_pct_sl?.[0] ?? 0) > 0),
     isOnPTO: raw.IsOnPTO ?? false,
+    ringfenced: raw.Ringfenced ?? false,
   };
 }
 

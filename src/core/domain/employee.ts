@@ -40,4 +40,5 @@ export interface Employee {
   scenarioType: ScenarioType;
   hasAssumptionBlocks: boolean;
   isOnPTO: boolean;
+  ringfenced: boolean;
 }

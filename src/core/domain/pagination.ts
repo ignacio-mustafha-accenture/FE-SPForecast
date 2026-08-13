@@ -12,6 +12,9 @@ export interface EmployeeFilter {
   status?: string;
   page?: number;
   pageSize?: number;
+  offering?: string;
+  teApprover?: string;
+  chgBucket?: string;
 }
 
 export interface TicketFilter {

@@ -18,6 +18,9 @@ export class HttpEmployeeRepository implements IEmployeeRepository {
     if (filter.country) params.set('country', filter.country);
     if (filter.q) params.set('q', filter.q);
     if (filter.status) params.set('status', filter.status);
+    if (filter.offering) params.set('offering', filter.offering);
+    if (filter.teApprover) params.set('te_approver', filter.teApprover);
+    if (filter.chgBucket) params.set('chg_bucket', filter.chgBucket);
     params.set('page', String(filter.page ?? 1));
     params.set('page_size', String(filter.pageSize ?? 10));
     const raw = await this.fetch<RawPage<RawEmployee>>(`/api/employees?${params}`);
@@ -52,5 +55,14 @@ export class HttpEmployeeRepository implements IEmployeeRepository {
   async getById(id: string): Promise<Employee> {
     const raw = await this.fetch<RawEmployee>(`/api/employees/${id}`);
     return mapRawEmployee(raw);
+  }
+
+  async assignRealEid(eid: string, newEid: string, newName?: string): Promise<{ ok: boolean; new_eid: string }> {
+    const body: Record<string, string> = { new_eid: newEid };
+    if (newName) body.new_name = newName;
+    return this.fetch<{ ok: boolean; new_eid: string }>(`/api/employees/${eid}/assign-eid`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
   }
 }
