@@ -308,6 +308,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
 
   const selectedEid = watch('eid') ?? '';
   const selectedEmployee = (employees ?? []).find((e) => e.id === selectedEid);
+  const formEndDate = watch('end_date');
 
   const assumptionInfo = useMemo(() => {
     const isNewprojAssumption =
@@ -328,7 +329,9 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       4: 'Assumption 4 — ISG PE Assessment',
     };
 
-    const refDateStr = isNJ ? selectedEmployee?.hireDate : selectedEmployee?.rollOff;
+    const refDateStr = isNJ
+      ? selectedEmployee?.hireDate
+      : (selectedEmployee?.rollOff ?? formEndDate ?? undefined);
     if (!refDateStr) return { num, label: ASSUMPTION_LABELS[num], projectedPeriods: [] };
 
     const refDate = new Date(refDateStr);
@@ -347,7 +350,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     }).filter(Boolean) as { label: string; pct: number }[];
 
     return { num, label: ASSUMPTION_LABELS[num], projectedPeriods };
-  }, [selectedType, scenarioTypeValue, selectedClient, selectedEmployee, periods]);
+  }, [selectedType, scenarioTypeValue, selectedClient, selectedEmployee, periods, formEndDate]);
 
 
   const filteredEmployees = (employees ?? []).filter(
