@@ -166,6 +166,17 @@ export function AllView() {
     [allTickets],
   );
 
+  const sickRangesMap = useMemo(() => {
+    const map = new Map<string, { start: Date; end: Date }[]>();
+    for (const t of allTickets) {
+      if (t.type !== 'sick' || t.status !== 'Approved' || !t.startDate || !t.endDate || !t.employeeId) continue;
+      const ranges = map.get(t.employeeId) ?? [];
+      ranges.push({ start: parseLocalDate(t.startDate), end: parseLocalDate(t.endDate) });
+      map.set(t.employeeId, ranges);
+    }
+    return map;
+  }, [allTickets]);
+
   // ── BE pagination state ──────────────────────────────────────────────────
   const [result, setResult] = useState<Page<Employee> | null>(null);
   const [isFetching, setIsFetching] = useState(true);
@@ -974,17 +985,22 @@ export function AllView() {
                       {days.map((d) => {
                         const holidayName = isHoliday(d.date, emp.country);
                         const isPtoDay = ptoStart !== null && ptoEnd !== null && d.date >= ptoStart && d.date <= ptoEnd;
+                        const sickRanges = sickRangesMap.get(emp.id) ?? [];
+                        const isSickDay = !d.weekend && !isPtoDay && sickRanges.some((r) => d.date >= r.start && d.date <= r.end);
+                        const effectivePto = isPtoDay && !d.weekend;
                         return (
                           <td
                             key={d.idx}
                             className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${
-                              isPtoDay ? 'bg-amber-50' : holidayName ? 'bg-orange-50' : d.weekend ? 'bg-white' : 'bg-[#fafbfc]'
+                              d.weekend ? 'bg-white' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : holidayName ? 'bg-orange-50' : 'bg-[#fafbfc]'
                             }`}
                             style={{ padding: 0 }}
                           >
-                            {isPtoDay ? (
+                            {effectivePto ? (
                               <span className="text-[10px] font-semibold text-amber-500">PTO</span>
-                            ) : holidayName ? (
+                            ) : isSickDay ? (
+                              <span className="text-[10px] font-semibold text-blue-400">SIC</span>
+                            ) : holidayName && !d.weekend ? (
                               <span className="text-[11px] text-orange-400" title={holidayName}>—</span>
                             ) : d.weekend ? null : (
                               <span className="block text-[11px] font-semibold leading-tight text-[var(--G1)]">
