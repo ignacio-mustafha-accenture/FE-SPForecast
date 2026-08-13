@@ -64,6 +64,7 @@ interface DatePickerProps {
   error?: string;
   placeholder?: string;
   disabled?: boolean;
+  minDate?: Date;
 }
 
 export function DatePicker({
@@ -73,6 +74,7 @@ export function DatePicker({
   error,
   placeholder = 'dd/mm/aaaa',
   disabled,
+  minDate,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -127,7 +129,7 @@ export function DatePicker({
               mode="single"
               selected={selected ?? new Date()}
               defaultMonth={selected ?? new Date()}
-              disabled={[{ dayOfWeek: [0, 6] }, { before: new Date() }]}
+              disabled={[{ dayOfWeek: [0, 6] }, { before: minDate ?? new Date() }]}
               onSelect={(date) => {
                 if (date) {
                   onChange?.(format(date, ISO));

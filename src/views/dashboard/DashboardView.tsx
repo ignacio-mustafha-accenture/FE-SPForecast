@@ -51,10 +51,10 @@ export function DashboardView() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return appState.employees
-      .filter((e) => e.nextPTO !== null)
+      .filter((e) => e.isOnPTO || e.nextPTO !== null)
       .map((e) => ({ ...e, _ptoStart: parseDDMMYY(e.nextPTO) }))
-      .filter((e) => e._ptoStart !== null && e._ptoStart >= today)
-      .sort((a, b) => a._ptoStart!.getTime() - b._ptoStart!.getTime());
+      .filter((e) => e.isOnPTO || (e._ptoStart !== null && e._ptoStart >= today))
+      .sort((a, b) => (a._ptoStart?.getTime() ?? 0) - (b._ptoStart?.getTime() ?? 0));
   }, [appState]);
 
   const showSkeleton = isLoading && !appState;

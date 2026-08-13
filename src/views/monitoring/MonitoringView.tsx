@@ -183,6 +183,17 @@ export function MonitoringView() {
 
   const totalPages = result ? Math.ceil(result.total / PAGE_SIZE) : 1;
 
+  function handleRowClick(row: AuditRow) {
+    const ticketEndpoint = row.endpoint.match(/\/api\/tickets\/(\d+)/);
+    if (ticketEndpoint) { router.push(`/tickets/${ticketEndpoint[1]}`); return; }
+
+    const ticketAction = row.action?.match(/#(\d+)/);
+    if (ticketAction) { router.push(`/tickets/${ticketAction[1]}`); return; }
+
+    const empEndpoint = row.endpoint.match(/\/api\/employees\/([^/]+)/);
+    if (empEndpoint) { router.push(`/employees/${empEndpoint[1]}`); }
+  }
+
   if (isLoading && !result) {
     return (
       <div className="space-y-4">
@@ -221,6 +232,7 @@ export function MonitoringView() {
         data={result?.items ?? []}
         columns={columns}
         tableKey="monitoring"
+        onRowClick={handleRowClick}
         pagination={
           result
             ? {

@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Check, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Check, X, Plus, UserCheck, UserX, Key } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 import type { Ticket } from '@/src/core/domain/ticket';
 import { useAuthStore, useForecastStore } from '@/src/store/StoreProvider';
@@ -47,23 +47,93 @@ const headerStyle: Record<string, { bg: string; border: string }> = {
   Rejected: { bg: 'bg-red-50',    border: 'border-red-400' },
 };
 
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="py-2.5 border-b border-[var(--G6)] last:border-0">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] mb-0.5">{label}</p>
-      <p className="text-sm text-[var(--G1)]">{value ?? <span className="text-[var(--G4)]">—</span>}</p>
-    </div>
-  );
+type AuditEvent = {
+  id: number;
+  created_at: string;
+  user_email: string | null;
+  action: string | null;
+};
+
+type EventMeta = { label: string; Icon: React.ElementType; color: string; dot: string };
+
+function getEventMeta(action: string): EventMeta {
+  if (/^Create ticket:/i.test(action))        return { label: 'Ticket creado',   Icon: Plus,      color: 'text-[var(--P)]',  dot: 'bg-[var(--P)]' };
+  if (/^Approve ticket/i.test(action))         return { label: 'Aprobado',        Icon: UserCheck, color: 'text-[var(--GR)]', dot: 'bg-[var(--GR)]' };
+  if (/^Reject ticket/i.test(action))          return { label: 'Rechazado',       Icon: UserX,     color: 'text-[var(--RD)]', dot: 'bg-[var(--RD)]' };
+  if (/^Assign EID to ticket/i.test(action))   return { label: 'EID asignado',    Icon: Key,       color: 'text-[var(--P)]',  dot: 'bg-[var(--P)]' };
+  return { label: action, Icon: Plus, color: 'text-[var(--G3)]', dot: 'bg-[var(--G3)]' };
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function formatEventDate(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  const date = `${String(d.getDate()).padStart(2,'0')} ${MONTHS_ES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+  const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  return { date, time };
+}
+
+function TicketTimeline({ ticketId, rejectionReason }: { ticketId: string; rejectionReason?: string | null }) {
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/admin/audit-log?ticket_id=${ticketId}&page_size=50`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => setEvents((d.items ?? []).slice().reverse()))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [ticketId]);
+
+  if (loading) return <Skeleton className="h-24 rounded-lg" />;
+  if (events.length === 0) return null;
+
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-sm font-semibold text-[var(--G1)]">{title}</h2>
+        <h2 className="text-sm font-semibold text-[var(--G1)]">Historial</h2>
       </CardHeader>
-      <CardBody>{children}</CardBody>
+      <CardBody>
+        <ol className="relative ml-2">
+          {events.map((ev, i) => {
+            const meta = getEventMeta(ev.action ?? '');
+            const { date, time } = formatEventDate(ev.created_at);
+            const isLast = i === events.length - 1;
+            const isRejection = /^Reject ticket/i.test(ev.action ?? '');
+            return (
+              <li key={ev.id} className="relative pl-6 pb-5 last:pb-0">
+                {!isLast && (
+                  <span className="absolute left-[7px] top-4 bottom-0 w-px bg-[var(--G5)]" />
+                )}
+                <span className={`absolute left-0 top-1 w-3.5 h-3.5 rounded-full border-2 border-white ${meta.dot}`} />
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className={`text-sm font-semibold ${meta.color}`}>{meta.label}</span>
+                  <span className="text-xs text-[var(--G4)] whitespace-nowrap">{date} · {time}</span>
+                </div>
+                {ev.user_email && (
+                  <p className="text-xs text-[var(--G3)] mt-0.5">{ev.user_email}</p>
+                )}
+                {isRejection && rejectionReason && (
+                  <div className="mt-1.5 text-xs bg-red-50 border border-red-100 rounded px-2 py-1.5">
+                    <span className="font-semibold text-red-400 uppercase tracking-wider">Motivo: </span>
+                    <span className="text-red-600 whitespace-pre-wrap">{rejectionReason}</span>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </CardBody>
     </Card>
+  );
+}
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] mb-0.5">{label}</p>
+      <p className="text-sm text-[var(--G1)]">{value}</p>
+    </div>
   );
 }
 
@@ -169,6 +239,24 @@ export function TicketDetailView({ id }: Props) {
 
   const style = headerStyle[ticket.status] ?? { bg: 'bg-gray-50', border: 'border-gray-400' };
 
+  const fields: { label: string; value: React.ReactNode }[] = [
+    { label: t('fieldDetail'),       value: ticket.detail },
+    { label: t('fieldClient'),        value: ticket.clientName },
+    { label: t('fieldOffering'),      value: ticket.offeringType },
+    { label: t('fieldChargeability'), value: ticket.chargeabilityPct != null ? `${ticket.chargeabilityPct}%` : null },
+    { label: t('fieldNJName'),        value: ticket.njName },
+    { label: t('fieldCL'),            value: ticket.cl },
+    { label: t('fieldLocation'),      value: ticket.location },
+    { label: t('fieldPeopleLead'),    value: ticket.peopleLead },
+    { label: t('fieldStartDate'),     value: ticket.startDate },
+    { label: t('fieldEndDate'),       value: ticket.endDate },
+    { label: t('fieldHours'),         value: ticket.hoursToMove != null ? `${ticket.hoursToMove}h` : null },
+    { label: t('fieldFromPeriod'),    value: ticket.fromPeriod },
+    { label: t('fieldToPeriod'),      value: ticket.toPeriod },
+  ].filter((f) => f.value != null && f.value !== '');
+
+  const hasBody = fields.length > 0;
+
   return (
     <motion.div className="space-y-4" variants={page} initial="hidden" animate="show">
 
@@ -194,113 +282,53 @@ export function TicketDetailView({ id }: Props) {
         )}
       </motion.div>
 
-      {/* Hero header */}
-      <motion.div
-        variants={item}
-        className={`rounded-lg border-l-4 ${style.bg} ${style.border} border border-[var(--G5)] px-6 py-4`}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={typeVariant[ticket.type] ?? 'neutral'}>
-                {typeLabel[ticket.type] ?? ticket.type}
-              </Badge>
-              <h1 className="text-xl font-bold text-[var(--BK)]">{ticket.employeeName}</h1>
-            </div>
-            <p className="text-sm text-[var(--G3)]">
-              {ticket.country}
-              {ticket.by && <> · {t('fieldCreatedBy')}: <span className="text-[var(--G2)]">{ticket.by}</span></>}
-              {ticket.date && <> · {ticket.date}</>}
-            </p>
+      {/* Unified ticket card */}
+      <motion.div variants={item} className="rounded-lg border border-[var(--G5)] overflow-hidden shadow-sm">
+
+        {/* Colored header */}
+        <div className={`border-l-4 ${style.bg} ${style.border} px-6 py-5`}>
+          {/* Top row: type (left) · status (right) */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <Badge variant={typeVariant[ticket.type] ?? 'neutral'}>
+              {typeLabel[ticket.type] ?? ticket.type}
+            </Badge>
+            <Badge variant={statusVariant[ticket.status] ?? 'neutral'}>
+              {statusLabel[ticket.status] ?? ticket.status}
+            </Badge>
           </div>
-          <Badge variant={statusVariant[ticket.status] ?? 'neutral'}>
-            {statusLabel[ticket.status] ?? ticket.status}
-          </Badge>
+          {/* Name */}
+          <h1 className="text-xl font-bold text-[var(--BK)]">{ticket.employeeName}</h1>
+          {/* Meta */}
+          <p className="text-xs text-[var(--G4)] mt-1">
+            {[
+              ticket.country,
+              ticket.by ? `${t('fieldCreatedBy')}: ${ticket.by}` : null,
+              ticket.date,
+            ].filter(Boolean).join(' · ')}
+          </p>
         </div>
-      </motion.div>
 
-      {/* Details */}
-      <motion.div variants={item}>
-        <Section title={t('sectionDetails')}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6">
-            <Field label={t('fieldDetail')}       value={ticket.detail} />
-            <Field label={t('fieldClient')}        value={ticket.clientName} />
-            <Field label={t('fieldOffering')}      value={ticket.offeringType} />
-            <Field label={t('fieldChargeability')} value={ticket.chargeabilityPct != null ? `${ticket.chargeabilityPct}%` : null} />
-            <Field label={t('fieldCL')}            value={ticket.cl} />
-            <Field label={t('fieldLocation')}      value={ticket.location} />
-            <Field label={t('fieldPeopleLead')}    value={ticket.peopleLead} />
-            <Field label={t('fieldNJName')}        value={ticket.njName} />
-          </div>
-        </Section>
-      </motion.div>
-
-      {/* Dates */}
-      <motion.div variants={item}>
-        <Section title={t('sectionDates')}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6">
-            <Field label={t('fieldStartDate')}  value={ticket.startDate} />
-            <Field label={t('fieldEndDate')}    value={ticket.endDate} />
-            <Field label={t('fieldFromPeriod')} value={ticket.fromPeriod} />
-            <Field label={t('fieldToPeriod')}   value={ticket.toPeriod} />
-          </div>
-        </Section>
-      </motion.div>
-
-      {/* Hours transfer — only if hoursToMove */}
-      <AnimatePresence>
-        {ticket.hoursToMove != null && (
-          <motion.div
-            key="hours"
-            variants={item}
-            initial="hidden"
-            animate="show"
-            exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
-          >
-            <Section title={t('sectionHours')}>
-              <div className="grid grid-cols-3 gap-x-6">
-                <Field label={t('fieldHours')}      value={`${ticket.hoursToMove}h`} />
-                <Field label={t('fieldFromPeriod')} value={ticket.fromPeriod} />
-                <Field label={t('fieldToPeriod')}   value={ticket.toPeriod} />
+        {/* Body */}
+        {hasBody && (
+          <div className="bg-white px-6 py-4 space-y-4">
+            {fields.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-10">
+                {fields.map(({ label, value }) => (
+                  <Field key={label} label={label} value={value} />
+                ))}
               </div>
-            </Section>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            )}
 
-      {/* Comments */}
-      <AnimatePresence>
-        {ticket.comments && (
-          <motion.div
-            key="comments"
-            variants={item}
-            initial="hidden"
-            animate="show"
-            exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
-          >
-            <Section title={t('sectionComments')}>
-              <p className="text-sm text-[var(--G1)] whitespace-pre-wrap">{ticket.comments}</p>
-            </Section>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </motion.div>
 
-      {/* Rejection reason */}
-      <AnimatePresence>
-        {ticket.rejectionReason && (
-          <motion.div
-            key="rejection"
-            variants={item}
-            initial="hidden"
-            animate="show"
-            exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
-          >
-            <Section title={t('sectionRejection')}>
-              <p className="text-sm text-[var(--G1)] whitespace-pre-wrap">{ticket.rejectionReason}</p>
-            </Section>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Timeline — admin only */}
+      {isAdmin && (
+        <motion.div variants={item}>
+          <TicketTimeline ticketId={id} rejectionReason={ticket.rejectionReason} />
+        </motion.div>
+      )}
 
       {/* Reject modal */}
       <Modal

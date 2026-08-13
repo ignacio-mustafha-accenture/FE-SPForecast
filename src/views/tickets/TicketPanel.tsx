@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useForm, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslations } from 'next-intl';
@@ -100,6 +100,16 @@ const OFFERING_OPTIONS = [
   { value: 'CTO', label: 'CTO' },
 ];
 
+function parseDDMMYY(str: string | null | undefined): Date | null {
+  if (!str) return null;
+  const parts = str.split('/');
+  if (parts.length !== 3) return null;
+  const [d, m, y] = parts;
+  const full = `20${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  const date = new Date(full);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 function generateEidFromName(name: string): string {
   return name
     .trim()
@@ -107,6 +117,49 @@ function generateEidFromName(name: string): string {
     .replace(/[̀-ͯ]/g, '') // strip diacritics (á→a, ñ→n, etc.)
     .toLowerCase()
     .replace(/\s+/g, '.'); // spaces → dots
+}
+
+type PeriodPreviewInfo = {
+  subtitle: string;
+  projectedPeriods: { label: string; pct: number }[];
+  emptyMessage: string;
+};
+
+function PeriodPreviewPanel({ info }: { info: PeriodPreviewInfo }) {
+  return (
+    <div className="rounded-lg border border-[var(--PBG)] bg-[var(--PBG)] p-3 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-[var(--P)]">
+          Proyección de cargabilidad
+        </span>
+        <span className="text-[10px] text-[var(--PD)] font-medium">
+          {info.subtitle}
+        </span>
+      </div>
+      {info.projectedPeriods.length === 0 ? (
+        <p className="text-[11px] text-[var(--G3)]">{info.emptyMessage}</p>
+      ) : (
+        <div className="flex gap-1.5">
+          {info.projectedPeriods.map(({ label, pct }, i) => {
+            const color =
+              pct >= 80 ? 'text-[var(--GR)]' :
+              pct >= 50 ? 'text-[var(--YL)]' :
+              'text-[var(--RD)]';
+            return (
+              <div
+                key={label}
+                className="flex-1 flex flex-col items-center gap-0.5 rounded-md bg-white border border-[var(--G5)] py-1.5 px-1"
+              >
+                <span className="text-[9px] text-[var(--G3)] font-medium">{label}</span>
+                <span className={`text-xs font-bold ${color}`}>{pct}%</span>
+                <span className="text-[8px] text-[var(--G4)]">P{i + 1}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelProps) {
@@ -238,6 +291,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     reset,
     setValue,
     watch,
+    control,
     getValues,
   } = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
@@ -308,14 +362,36 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
 
   const selectedEid = watch('eid') ?? '';
   const selectedEmployee = (employees ?? []).find((e) => e.id === selectedEid);
-  const formEndDate = watch('end_date');
+  const formEndDate = useWatch({ control, name: 'end_date' });
+  const formStartDate = useWatch({ control, name: 'start_date' });
+  const formChargeabilityPct = Number(useWatch({ control, name: 'chargeability_pct' }) ?? 0);
 
   const assumptionInfo = useMemo(() => {
-    const isNewprojAssumption =
-      selectedType === 'newproj' && scenarioTypeValue === 'assumption';
+    const isNewproj = selectedType === 'newproj';
     const isNJ = selectedType === 'nj';
-    if (!isNewprojAssumption && !isNJ) return null;
+    if (!isNewproj && !isNJ) return null;
+    if (!selectedEmployee) return null;
 
+    // Effective scenario: show period coverage for entered date range
+    if (isNewproj && scenarioTypeValue === 'effective') {
+      if (!formStartDate || !formEndDate) {
+        return {
+          subtitle: 'Efectivo',
+          projectedPeriods: [],
+          emptyMessage: 'Ingresá fechas de inicio y fin para ver los períodos.',
+        };
+      }
+      const coveredPeriods = periods
+        .filter((p) => p.startDate <= formEndDate && p.endDate >= formStartDate)
+        .map((p) => ({ label: p.label, pct: formChargeabilityPct }));
+      return {
+        subtitle: 'Efectivo',
+        projectedPeriods: coveredPeriods,
+        emptyMessage: 'No hay períodos en el rango seleccionado.',
+      };
+    }
+
+    // Assumption scenario
     let num: 1 | 2 | 3 | 4;
     if (selectedClient === 'ISG PE Assessment') num = 4;
     else if (isNJ) num = 3;
@@ -329,14 +405,19 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       4: 'Assumption 4 — ISG PE Assessment',
     };
 
-    const refDateStr = isNJ
-      ? selectedEmployee?.hireDate
-      : (selectedEmployee?.rollOff ?? formEndDate ?? undefined);
-    if (!refDateStr) return { num, label: ASSUMPTION_LABELS[num], projectedPeriods: [] };
+    const refDate = isNJ
+      ? parseDDMMYY(selectedEmployee?.hireDate)
+      : (parseDDMMYY(selectedEmployee?.rollOff) ?? (formEndDate ? new Date(formEndDate) : null));
+    if (!refDate) return {
+      num, subtitle: ASSUMPTION_LABELS[num], projectedPeriods: [],
+      emptyMessage: 'Seleccioná un empleado para ver la proyección.',
+    };
 
-    const refDate = new Date(refDateStr);
     const startIdx = periods.findIndex((p) => new Date(p.endDate) > refDate);
-    if (startIdx === -1) return { num, label: ASSUMPTION_LABELS[num], projectedPeriods: [] };
+    if (startIdx === -1) return {
+      num, subtitle: ASSUMPTION_LABELS[num], projectedPeriods: [],
+      emptyMessage: 'Seleccioná un empleado para ver la proyección.',
+    };
 
     const projectedPeriods = Array.from({ length: 6 }, (_, i) => {
       const period = periods[startIdx + i];
@@ -349,8 +430,11 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       return { label: period.label, pct };
     }).filter(Boolean) as { label: string; pct: number }[];
 
-    return { num, label: ASSUMPTION_LABELS[num], projectedPeriods };
-  }, [selectedType, scenarioTypeValue, selectedClient, selectedEmployee, periods, formEndDate]);
+    return {
+      num, subtitle: ASSUMPTION_LABELS[num], projectedPeriods,
+      emptyMessage: 'Seleccioná un empleado para ver la proyección.',
+    };
+  }, [selectedType, scenarioTypeValue, selectedClient, selectedEmployee, periods, formStartDate, formEndDate, formChargeabilityPct]);
 
 
   const filteredEmployees = (employees ?? []).filter(
@@ -994,7 +1078,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   <label className="text-xs font-medium text-[var(--G2)]">Escenario</label>
                   <div className="flex gap-2">
                     {([
-                      { value: 'assumption', label: 'Estimación' },
+                      { value: 'assumption', label: 'Assumption' },
                       { value: 'effective', label: 'Efectivo' },
                     ] as { value: ScenarioType; label: string }[]).map((opt) => (
                       <button
@@ -1024,6 +1108,11 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                     onChange={(v) => setValue('effectivization_date', v, { shouldValidate: true })}
                     error={errors.effectivization_date?.message}
                   />
+                )}
+
+                {/* Period preview — newproj (assumption + effective) */}
+                {selectedType === 'newproj' && assumptionInfo && (
+                  <PeriodPreviewPanel info={assumptionInfo} />
                 )}
               </>
             )}
@@ -1055,6 +1144,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   value={watch('end_date')}
                   onChange={(v) => setValue('end_date', v)}
                   error={errors.end_date?.message}
+                  minDate={formStartDate ? new Date(formStartDate) : undefined}
                 />
               </div>
             )}
@@ -1071,43 +1161,9 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               />
             )}
 
-            {/* Assumption projection panel — newproj (assumption) and nj */}
-            {assumptionInfo && (
-              <div className="rounded-lg border border-[var(--PBG)] bg-[var(--PBG)] p-3 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[var(--P)]">
-                    Proyección de cargabilidad
-                  </span>
-                  <span className="text-[10px] text-[var(--PD)] font-medium">
-                    {assumptionInfo.label}
-                  </span>
-                </div>
-
-                {assumptionInfo.projectedPeriods.length === 0 ? (
-                  <p className="text-[11px] text-[var(--G3)]">
-                    Seleccioná un empleado para ver la proyección.
-                  </p>
-                ) : (
-                  <div className="flex gap-1.5">
-                    {assumptionInfo.projectedPeriods.map(({ label, pct }, i) => {
-                      const color =
-                        pct >= 80 ? 'text-[var(--GR)]' :
-                        pct >= 50 ? 'text-[var(--YL)]' :
-                        'text-[var(--RD)]';
-                      return (
-                        <div
-                          key={label}
-                          className="flex-1 flex flex-col items-center gap-0.5 rounded-md bg-white border border-[var(--G5)] py-1.5 px-1"
-                        >
-                          <span className="text-[9px] text-[var(--G3)] font-medium">{label}</span>
-                          <span className={`text-xs font-bold ${color}`}>{pct}%</span>
-                          <span className="text-[8px] text-[var(--G4)]">P{i + 1}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+            {/* Period preview — nj only (newproj already shown inside its section) */}
+            {selectedType === 'nj' && assumptionInfo && (
+              <PeriodPreviewPanel info={assumptionInfo} />
             )}
 
             {/* Comments — all types */}
