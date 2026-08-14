@@ -791,7 +791,13 @@ export function AllView() {
                     Sin empleados
                   </td>
                 </tr>
-              ) : paged.map((emp) => (
+              ) : paged.map((emp) => {
+                const fRollOn  = parseDDMMYY(emp.rollOn);
+                const fRollOff = parseDDMMYY(emp.rollOff);
+                const fPtoStart = parseDDMMYY(emp.nextPTO);
+                const fPtoEnd   = parseDDMMYY(emp.nextPTOEnd);
+                const fSick     = sickRangesMap.get(emp.id) ?? [];
+                return (
                 <tr key={emp.id} className="group">
                   <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
                     <div className="flex items-center gap-2">
@@ -807,16 +813,29 @@ export function AllView() {
                       </div>
                     </div>
                   </td>
-                  {periods.map((_, i) => {
+                  {periods.map((period, i) => {
                     const sah = emp.sah[i] ?? 0;
                     const p = chgType === 'HL' ? (emp.cp[i] ?? 0) : (emp.slAssumed[i] ?? 0);
-                    const chg = Math.round(sah * p / 100);
+                    const periodDays = cellsInRange(parseLocalDate(period.startDate), parseLocalDate(period.endDate));
+                    const chgDayCount = periodDays.filter((d) => {
+                      if (d.weekend) return false;
+                      if (chgType === 'HL') {
+                        if (fRollOn  !== null && d.date < fRollOn)  return false;
+                        if (fRollOff !== null && d.date > fRollOff) return false;
+                      }
+                      if (fPtoStart !== null && fPtoEnd !== null && d.date >= fPtoStart && d.date <= fPtoEnd) return false;
+                      if (fSick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
+                      if (isHoliday(d.date, emp.country)) return false;
+                      return true;
+                    }).length;
+                    const totalCHGVal = chgDayCount * 8 * p / 100;
+                    const chgLabel = totalCHGVal % 1 === 0 ? `${Math.round(totalCHGVal)}` : totalCHGVal.toFixed(1);
                     const cellColor = p >= 80 ? 'text-[var(--GR)]' : p >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
                     const isCur = i === currentPIdx;
                     return (
                       <Fragment key={i}>
                         <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
-                          <span className={`text-[11px] font-semibold ${cellColor}`}>{chg}</span>
+                          <span className={`text-[11px] font-semibold ${cellColor}`}>{chgLabel}</span>
                         </td>
                         <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e4edfc]' : 'bg-[#f4f8ff]'}`} style={{ padding: 0 }}>
                           <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sah)}</span>
@@ -843,7 +862,8 @@ export function AllView() {
                     );
                   })}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -905,7 +925,7 @@ export function AllView() {
                   </span>
                 </th>
               ))}
-              <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">Total h</th>
+              <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG</th>
               <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">SAH</th>
               <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG%</th>
             </tr>
@@ -928,9 +948,6 @@ export function AllView() {
                 const isExpanded = !!expanded[emp.id];
                 const pIdx = currentPIdx;
                 const sahForPeriod = emp.sah?.[pIdx] ?? emp.totalHours ?? 80;
-                const workingDays = days.filter(
-                  (d) => !d.weekend && !isHoliday(d.date, emp.country)
-                ).length || 1;
                 const dailySAH = 8;
                 const sahDay = Math.round(dailySAH);
                 const rollOnDate  = parseDDMMYY(emp.rollOn);
@@ -939,7 +956,22 @@ export function AllView() {
                 const ptoEnd   = parseDDMMYY(emp.nextPTOEnd);
 
                 const chgPct = chgType === 'HL' ? (emp.cp[pIdx] ?? 0) : (emp.slAssumed[pIdx] ?? 0);
-                const totalH = Math.round(sahForPeriod * chgPct / 100);
+                const dailyCHG = 8 * chgPct / 100;
+                const dailyCHGLabel = dailyCHG % 1 === 0 ? `${dailyCHG}h` : `${dailyCHG.toFixed(1)}h`;
+                const chgDays = days.filter((d) => {
+                  if (d.weekend) return false;
+                  if (chgType === 'HL') {
+                    if (rollOnDate !== null && d.date < rollOnDate) return false;
+                    if (rollOffDate !== null && d.date > rollOffDate) return false;
+                  }
+                  if (ptoStart !== null && ptoEnd !== null && d.date >= ptoStart && d.date <= ptoEnd) return false;
+                  const sick = sickRangesMap.get(emp.id) ?? [];
+                  if (sick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
+                  if (isHoliday(d.date, emp.country)) return false;
+                  return true;
+                }).length;
+                const totalCHGVal = chgDays * dailyCHG;
+                const totalCHGLabel = totalCHGVal % 1 === 0 ? `${totalCHGVal}h` : `${totalCHGVal.toFixed(1)}h`;
                 const summaryColor = chgPct >= 80 ? 'text-[var(--GR)]' : chgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
 
                 return [
@@ -983,6 +1015,9 @@ export function AllView() {
                       </td>
 
                       {days.map((d) => {
+                        const isBeforeRollOn = chgType === 'HL' && rollOnDate !== null && d.date < rollOnDate;
+                        const isAfterRollOff = chgType === 'HL' && rollOffDate !== null && d.date > rollOffDate;
+                        const isOutOfRange = isBeforeRollOn || isAfterRollOff;
                         const holidayName = isHoliday(d.date, emp.country);
                         const isPtoDay = ptoStart !== null && ptoEnd !== null && d.date >= ptoStart && d.date <= ptoEnd;
                         const sickRanges = sickRangesMap.get(emp.id) ?? [];
@@ -992,19 +1027,21 @@ export function AllView() {
                           <td
                             key={d.idx}
                             className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${
-                              d.weekend ? 'bg-white' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : holidayName ? 'bg-orange-50' : 'bg-[#fafbfc]'
+                              d.weekend ? 'bg-white' : holidayName ? 'bg-[#efefef]' : isOutOfRange ? 'bg-[#f7f7f7]' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : 'bg-[#fafbfc]'
                             }`}
                             style={{ padding: 0 }}
                           >
-                            {effectivePto ? (
+                            {holidayName && !d.weekend ? (
+                              <span className="text-[13px] leading-none" title={holidayName}>🌴</span>
+                            ) : isOutOfRange ? (
+                              <span className="block text-[11px] font-semibold leading-tight text-[var(--G4)]">0h</span>
+                            ) : effectivePto ? (
                               <span className="text-[10px] font-semibold text-amber-500">PTO</span>
                             ) : isSickDay ? (
                               <span className="text-[10px] font-semibold text-blue-400">SIC</span>
-                            ) : holidayName && !d.weekend ? (
-                              <span className="text-[11px] text-orange-400" title={holidayName}>—</span>
                             ) : d.weekend ? null : (
                               <span className="block text-[11px] font-semibold leading-tight text-[var(--G1)]">
-                                {dailySAH}h
+                                {dailyCHGLabel}
                               </span>
                             )}
                           </td>
@@ -1012,10 +1049,10 @@ export function AllView() {
                       })}
 
                       <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[var(--G3)]">{workingDays * 8}h</span>
+                        <span className={`text-[11px] font-semibold ${summaryColor}`}>{totalCHGLabel}</span>
                       </td>
                       <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
-                        <span className={`text-[11px] font-semibold ${summaryColor}`}>{totalH}h</span>
+                        <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sahForPeriod)}h</span>
                       </td>
                       <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
                         <span className={`text-[11px] font-semibold ${summaryColor}`}>{chgPct}%</span>
