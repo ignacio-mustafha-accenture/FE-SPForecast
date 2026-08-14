@@ -100,14 +100,61 @@ const OFFERING_OPTIONS = [
   { value: 'CTO', label: 'CTO' },
 ];
 
-function parseDDMMYY(str: string | null | undefined): Date | null {
+const MONTH_SHORT_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const;
+
+function generateAssumptionPeriods(refDate: Date, count: number): { label: string }[] {
+  let year = refDate.getUTCFullYear();
+  let month = refDate.getUTCMonth(); // 0-indexed
+  const day = refDate.getUTCDate();
+  let half: 1 | 2;
+
+  if (day < 15) {
+    // period 1 ends on 15th, which is > day → start here
+    half = 1;
+  } else {
+    // period 1 ends on 15 ≤ day → try period 2
+    half = 2;
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    if (lastDay <= day) {
+      // period 2 also doesn't end after refDate (e.g. last day of month) → next month
+      half = 1;
+      month++;
+      if (month > 11) { month = 0; year++; }
+    }
+  }
+
+  const result: { label: string }[] = [];
+  for (let i = 0; i < count; i++) {
+    result.push({ label: `${MONTH_SHORT_ES[month]}-${half}` });
+    if (half === 1) {
+      half = 2;
+    } else {
+      half = 1;
+      month++;
+      if (month > 11) { month = 0; year++; }
+    }
+  }
+  return result;
+}
+
+function parseEmployeeDate(str: string | null | undefined): Date | null {
   if (!str) return null;
+  // ISO: YYYY-MM-DD or ISO datetime
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const d = new Date(str.slice(0, 10)); // strip time if present
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // DD/MM/YY or DD/MM/YYYY
   const parts = str.split('/');
-  if (parts.length !== 3) return null;
-  const [d, m, y] = parts;
-  const full = `20${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-  const date = new Date(full);
-  return isNaN(date.getTime()) ? null : date;
+  if (parts.length === 3) {
+    const [d, m, y] = parts;
+    const year = y.length === 2 ? `20${y}` : y;
+    const date = new Date(`${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`);
+    if (!isNaN(date.getTime())) return date;
+  }
+  // Last resort: native parse
+  const fallback = new Date(str);
+  return isNaN(fallback.getTime()) ? null : fallback;
 }
 
 function generateEidFromName(name: string): string {
@@ -239,9 +286,11 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
       if (data.type === 'newproj') {
         req('client_name', t('required'));
         req('offering_type', t('required'));
-        req('chargeability_pct', t('required'));
-        req('start_date', t('required'));
         req('end_date', t('required'));
+        if ((data.scenario_type ?? 'assumption') !== 'assumption') {
+          req('chargeability_pct', t('required'));
+          req('start_date', t('required'));
+        }
       }
       if (data.type === 'ongoing') {
         req('chargeability_pct', t('required'));
@@ -372,26 +421,10 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     if (!isNewproj && !isNJ) return null;
     if (!selectedEmployee) return null;
 
-    // Effective scenario: show period coverage for entered date range
-    if (isNewproj && scenarioTypeValue === 'effective') {
-      if (!formStartDate || !formEndDate) {
-        return {
-          subtitle: 'Efectivo',
-          projectedPeriods: [],
-          emptyMessage: 'Ingresá fechas de inicio y fin para ver los períodos.',
-        };
-      }
-      const coveredPeriods = periods
-        .filter((p) => p.startDate <= formEndDate && p.endDate >= formStartDate)
-        .map((p) => ({ label: p.label, pct: formChargeabilityPct }));
-      return {
-        subtitle: 'Efectivo',
-        projectedPeriods: coveredPeriods,
-        emptyMessage: 'No hay períodos en el rango seleccionado.',
-      };
-    }
+    // La proyección siempre se calcula desde end_date; start_date no afecta el resultado.
+    if (isNewproj && !formEndDate) return null;
 
-    // Assumption scenario
+    // Assumption scenario (same logic for both assumption and effective)
     let num: 1 | 2 | 3 | 4;
     if (selectedClient === 'ISG PE Assessment') num = 4;
     else if (isNJ) num = 3;
@@ -399,42 +432,36 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     else num = 1;
 
     const ASSUMPTION_LABELS: Record<number, string> = {
-      1: 'Assumption 1 — No ISG (post roll-off)',
-      2: 'Assumption 2 — ISG Ringfenced (post roll-off)',
-      3: 'Assumption 3 — New Joiner (post hire date)',
+      1: 'Assumption 1 — No ISG',
+      2: 'Assumption 2 — ISG Ringfenced',
+      3: 'Assumption 3 — New Joiner',
       4: 'Assumption 4 — ISG PE Assessment',
     };
 
     const refDate = isNJ
-      ? parseDDMMYY(selectedEmployee?.hireDate)
-      : (parseDDMMYY(selectedEmployee?.rollOff) ?? (formEndDate ? new Date(formEndDate) : null));
+      ? parseEmployeeDate(selectedEmployee?.hireDate)
+      : (formEndDate ? new Date(formEndDate) : null);
     if (!refDate) return {
       num, subtitle: ASSUMPTION_LABELS[num], projectedPeriods: [],
-      emptyMessage: 'Seleccioná un empleado para ver la proyección.',
+      emptyMessage: isNJ
+        ? 'Seleccioná un empleado para ver la proyección.'
+        : 'Ingresá la fecha de fin para ver la proyección post roll-off.',
     };
 
-    const startIdx = periods.findIndex((p) => new Date(p.endDate) > refDate);
-    if (startIdx === -1) return {
-      num, subtitle: ASSUMPTION_LABELS[num], projectedPeriods: [],
-      emptyMessage: 'Seleccioná un empleado para ver la proyección.',
-    };
-
-    const projectedPeriods = Array.from({ length: 6 }, (_, i) => {
-      const period = periods[startIdx + i];
-      if (!period) return null;
+    const projectedPeriods = generateAssumptionPeriods(refDate, 6).map(({ label }, i) => {
       const pNum = i + 1;
       let pct: number;
       if (num === 4) pct = 90;
       else if (num === 1 || num === 3) pct = pNum <= 2 ? 0 : 50;
       else pct = pNum === 1 ? 0 : pNum === 2 ? 75 : 100;
-      return { label: period.label, pct };
-    }).filter(Boolean) as { label: string; pct: number }[];
+      return { label, pct };
+    });
 
     return {
       num, subtitle: ASSUMPTION_LABELS[num], projectedPeriods,
       emptyMessage: 'Seleccioná un empleado para ver la proyección.',
     };
-  }, [selectedType, scenarioTypeValue, selectedClient, selectedEmployee, periods, formStartDate, formEndDate, formChargeabilityPct]);
+  }, [selectedType, scenarioTypeValue, selectedClient, selectedEmployee, formStartDate, formEndDate]);
 
 
   const filteredEmployees = (employees ?? []).filter(
@@ -1045,33 +1072,35 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
             {/* Chargeability — newproj and ongoing */}
             {(selectedType === 'newproj' || selectedType === 'ongoing') && (
               <>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[var(--G2)]">{t('chargeabilityLabel')}</label>
-                  <div className="flex items-center h-9 rounded-lg border border-[var(--G5)] bg-white focus-within:border-[var(--P)] focus-within:ring-1 focus-within:ring-[var(--P)] transition-colors overflow-hidden">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.1}
-                      className="flex-1 min-w-0 h-full px-3 text-sm text-[var(--G1)] bg-transparent outline-none placeholder:text-[var(--G4)]"
-                      {...register('chargeability_pct')}
-                      onBlur={(e) => {
-                        let val = e.target.value;
-                        if (val !== '') {
-                          let num = parseFloat(val);
-                          if (isNaN(num)) { val = ''; }
-                          else {
-                            num = Math.round(Math.min(Math.max(num, 0), 100) * 10) / 10;
-                            val = String(num);
+                {!(selectedType === 'newproj' && scenarioTypeValue === 'assumption') && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-[var(--G2)]">{t('chargeabilityLabel')}</label>
+                    <div className="flex items-center h-9 rounded-lg border border-[var(--G5)] bg-white focus-within:border-[var(--P)] focus-within:ring-1 focus-within:ring-[var(--P)] transition-colors overflow-hidden">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        className="flex-1 min-w-0 h-full px-3 text-sm text-[var(--G1)] bg-transparent outline-none placeholder:text-[var(--G4)]"
+                        {...register('chargeability_pct')}
+                        onBlur={(e) => {
+                          let val = e.target.value;
+                          if (val !== '') {
+                            let num = parseFloat(val);
+                            if (isNaN(num)) { val = ''; }
+                            else {
+                              num = Math.round(Math.min(Math.max(num, 0), 100) * 10) / 10;
+                              val = String(num);
+                            }
+                            setValue('chargeability_pct', val, { shouldValidate: true });
                           }
-                          setValue('chargeability_pct', val, { shouldValidate: true });
-                        }
-                      }}
-                    />
-                    <span className="px-2.5 text-sm text-[var(--G3)] border-l border-[var(--G5)] h-full flex items-center bg-[var(--G6)] shrink-0">%</span>
+                        }}
+                      />
+                      <span className="px-2.5 text-sm text-[var(--G3)] border-l border-[var(--G5)] h-full flex items-center bg-[var(--G6)] shrink-0">%</span>
+                    </div>
+                    {errors.chargeability_pct && <p className="text-xs text-[var(--RD)]">{errors.chargeability_pct.message}</p>}
                   </div>
-                  {errors.chargeability_pct && <p className="text-xs text-[var(--RD)]">{errors.chargeability_pct.message}</p>}
-                </div>
+                )}
 
                 {/* Scenario type — Asunción / Efectivo */}
                 <div className="space-y-1.5">
@@ -1087,6 +1116,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                         onClick={() => {
                           setValue('scenario_type', opt.value);
                           if (opt.value === 'effective') setValue('effectivization_date', '');
+                          if (opt.value === 'assumption') setValue('start_date', '');
                         }}
                         className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${
                           (watch('scenario_type') ?? 'assumption') === opt.value
@@ -1110,10 +1140,6 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   />
                 )}
 
-                {/* Period preview — newproj (assumption + effective) */}
-                {selectedType === 'newproj' && assumptionInfo && (
-                  <PeriodPreviewPanel info={assumptionInfo} />
-                )}
               </>
             )}
 
@@ -1128,10 +1154,20 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               />
             )}
 
-            {/* Start + end date in a row — newproj, pto, sick */}
-            {(selectedType === 'newproj' ||
-              selectedType === 'pto' ||
-              selectedType === 'sick') && (
+            {/* Solo fecha de fin — newproj en assumption */}
+            {selectedType === 'newproj' && scenarioTypeValue === 'assumption' && (
+              <DatePicker
+                label="Comienzo de assumption"
+                value={watch('end_date')}
+                onChange={(v) => setValue('end_date', v)}
+                error={errors.end_date?.message}
+              />
+            )}
+
+            {/* Start + end date in a row — newproj efectivo, pto, sick */}
+            {(selectedType === 'pto' ||
+              selectedType === 'sick' ||
+              (selectedType === 'newproj' && scenarioTypeValue === 'effective')) && (
               <div className="grid grid-cols-2 gap-4">
                 <DatePicker
                   label={t('startDateLabel')}
@@ -1147,6 +1183,11 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   minDate={formStartDate ? new Date(formStartDate) : undefined}
                 />
               </div>
+            )}
+
+            {/* Period preview — newproj (assumption + effective) */}
+            {selectedType === 'newproj' && assumptionInfo && (
+              <PeriodPreviewPanel info={assumptionInfo} />
             )}
 
             {/* End date only — ongoing, baja */}
