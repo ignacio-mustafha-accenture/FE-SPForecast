@@ -149,11 +149,11 @@ export function AllView() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const periods       = useForecastStore((s) => s.appState?.periods ?? []);
-  const storeEmps     = useForecastStore((s) => s.appState?.employees ?? []);
-  const allTickets    = useForecastStore((s) => s.appState?.tickets ?? []);
-  const fetchState    = useForecastStore((s) => s.fetchState);
-  const isAdmin       = useAuthStore((s) => s.user?.role === 'admin');
+  const periods = useForecastStore((s) => s.appState?.periods ?? []);
+  const storeEmps = useForecastStore((s) => s.appState?.employees ?? []);
+  const allTickets = useForecastStore((s) => s.appState?.tickets ?? []);
+  const fetchState = useForecastStore((s) => s.fetchState);
+  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const { offset: windowOffset } = useWindowOffset();
 
   const storeEmpMap = useMemo(
@@ -194,11 +194,8 @@ export function AllView() {
   const [rangeStart, setRangeStart] = useState(0);
   const [rangeEnd, setRangeEnd] = useState(0);
   const [rangeAnchor, setRangeAnchor] = useState<number | null>(null);
-
-  // ── holidays state ───────────────────────────────────────────────────────
   const [holidays, setHolidays] = useState<Map<string, Map<string, string>>>(new Map());
 
-  // ── URL filters ──────────────────────────────────────────────────────────
   const q = searchParams.get('q') ?? '';
   const country = searchParams.get('country') ?? '';
   const status = searchParams.get('status') ?? '';
@@ -209,39 +206,32 @@ export function AllView() {
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10));
 
-  // ── te_approver autocomplete state ──────────────────────────────────────
   const [teApprovers, setTeApprovers] = useState<string[]>([]);
   const [teApproverSearch, setTeApproverSearch] = useState('');
   const [showTeApproverDrop, setShowTeApproverDrop] = useState(false);
 
-  // Local state for the search input — decoupled from URL to avoid router.replace on every keystroke.
-  // The URL is only updated after the debounce fires, keeping the input snappy.
   const [localQ, setLocalQ] = useState(q);
   const didMount = useRef(false);
 
-  // Sync URL → local when navigating back/forward (external URL change).
   useEffect(() => { setLocalQ(q); }, [q]);
 
   const debouncedQ = useDebounce(localQ, 300);
 
-  // Push debounced search to URL (skip on first render to avoid spurious navigation).
   useEffect(() => {
     if (!didMount.current) { didMount.current = true; return; }
     const p = new URLSearchParams(searchParams.toString());
     debouncedQ ? p.set('q', debouncedQ) : p.delete('q');
     p.delete('page');
     router.replace(`?${p.toString()}`, { scroll: false });
-  }, [debouncedQ]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedQ]); 
 
-  // ── fetch te_approvers catalog ───────────────────────────────────────────
   useEffect(() => {
     fetch('/api/te-approvers', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((d) => setTeApprovers(d.items ?? []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
-  // ── fetch employees from BE ──────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     setIsFetching(true);
@@ -262,7 +252,6 @@ export function AllView() {
     return () => { cancelled = true; };
   }, [country, debouncedQ, status, offering, teApprover, chgBucket, page, pageSize, refreshKey]);
 
-  // ── fetch holidays ───────────────────────────────────────────────────────
   useEffect(() => {
     const countries = ['AR', 'MX', 'CR'];
     Promise.all(
@@ -282,12 +271,10 @@ export function AllView() {
     });
   }, []);
 
-  // ── view state ───────────────────────────────────────────────────────────
   const [windowAnchor, setWindowAnchor] = useState<Date>(() => startOfDay(new Date()));
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [viewMode, setViewMode] = useState<'daily' | 'forecast'>('daily');
 
-  // ── period index lookup ──────────────────────────────────────────────────
   const getPeriodIdx = useCallback(
     (date: Date): number => {
       for (let i = 0; i < periods.length; i++) {
@@ -298,7 +285,6 @@ export function AllView() {
     [periods],
   );
 
-  // ── derive days, groups, window edges from anchor ────────────────────────
   const { days, dayGroups, windowStart, windowEnd, toolbarLabel, canPrev, canNext, currentPIdx } = useMemo(() => {
     const today = startOfDay(new Date());
 
@@ -343,7 +329,6 @@ export function AllView() {
   const nDays = days.length;
   const colW = DAY_W;
 
-  // ── navigation ───────────────────────────────────────────────────────────
   function navigate(dir: number) {
     setWindowAnchor((prev) => {
       const pIdx = getPeriodIdx(prev);
@@ -353,7 +338,6 @@ export function AllView() {
     });
   }
 
-  // ── derived from BE result ───────────────────────────────────────────────
   const activeCountries = useMemo(() => (country ? country.split(',') : []), [country]);
 
   const paged = useMemo(() => {
@@ -363,15 +347,15 @@ export function AllView() {
       if (!s || s.cp.length <= 1) return e;
       return {
         ...e,
-        cp:             s.cp,
-        slAssumed:      s.slAssumed,
-        hl:             s.hl,
-        chg:            s.chg,
-        sah:            s.sah,
-        chgEffective:   s.chgEffective,
-        chgAssumption:  s.chgAssumption,
-        ppaAdj:         s.ppaAdj,
-        slReal:         s.slReal,
+        cp: s.cp,
+        slAssumed: s.slAssumed,
+        hl: s.hl,
+        chg: s.chg,
+        sah: s.sah,
+        chgEffective: s.chgEffective,
+        chgAssumption: s.chgAssumption,
+        ppaAdj: s.ppaAdj,
+        slReal: s.slReal,
       };
     });
     return enriched;
@@ -380,13 +364,11 @@ export function AllView() {
   const pageCount = result?.pages ?? 1;
   const safePage = result?.page ?? page;
 
-  // ── holiday lookup helper ────────────────────────────────────────────────
   const isHoliday = (date: Date, empCountry: string): string | null => {
     const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return holidays.get(empCountry)?.get(iso) ?? null;
   };
 
-  // ── efectivizar ──────────────────────────────────────────────────────────
   function openEffectivizeModal(emp: Employee) {
     const firstIdx = emp.slAssumed.findIndex((v) => (v ?? 0) > 0);
     const safeStart = firstIdx >= 0 ? firstIdx : 0;
@@ -464,7 +446,6 @@ export function AllView() {
     }
   }
 
-  // ── param helpers ────────────────────────────────────────────────────────
   function setParam(key: string, value: string) {
     const p = new URLSearchParams(searchParams.toString());
     value ? p.set(key, value) : p.delete(key);
@@ -498,23 +479,23 @@ export function AllView() {
   }
 
   const STATUS_OPTIONS = [
-    { value: 'green',      label: t('statusChargeable') },
-    { value: 'yellow',     label: t('statusAtRisk') },
-    { value: 'red',        label: t('statusNotChargeable') },
+    { value: 'green', label: t('statusChargeable') },
+    { value: 'yellow', label: t('statusAtRisk') },
+    { value: 'red', label: t('statusNotChargeable') },
     { value: 'unassigned', label: t('statusUnassigned') },
   ];
 
   const OFFERING_OPTIONS = [
-    { value: 'Tech-led',      label: 'Tech-led' },
+    { value: 'Tech-led', label: 'Tech-led' },
     { value: 'Cost Take Out', label: 'Cost Take Out' },
     { value: 'OM+SPY+Others', label: 'OM+SPY+Others' },
-    { value: 'Internal',      label: 'Internal' },
-    { value: 'CTO',           label: 'CTO' },
+    { value: 'Internal', label: 'Internal' },
+    { value: 'CTO', label: 'CTO' },
   ];
 
   const CHG_BUCKET_OPTIONS = [
-    { value: 'over',  label: '>100%' },
-    { value: 'full',  label: '=100%' },
+    { value: 'over', label: '>100%' },
+    { value: 'full', label: '=100%' },
     { value: 'under', label: '<100%' },
   ];
 
@@ -522,7 +503,6 @@ export function AllView() {
     name.toLowerCase().includes(teApproverSearch.toLowerCase()),
   );
 
-  // ── loading ──────────────────────────────────────────────────────────────
   if (isFetching && !result) {
     return (
       <div className="space-y-4">
@@ -533,12 +513,10 @@ export function AllView() {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-3">
 
-      {/* ── toolbar ───────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap pb-1">
         <span className="text-sm font-semibold text-[var(--G1)] min-w-[200px] tracking-tight">
           {toolbarLabel}
@@ -567,34 +545,30 @@ export function AllView() {
 
         <div className="flex-1" />
 
-        {/* HL / SL toggle */}
         <div className="flex border border-[var(--G5)] rounded-lg overflow-hidden bg-white">
           {(['HL', 'SL'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setParam('chg', mode)}
-              className={`px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                chgType === mode
-                  ? 'bg-[var(--P)] text-white'
-                  : 'text-[var(--G3)] hover:text-[var(--G1)]'
-              }`}
+              className={`px-3.5 py-1.5 text-xs font-medium transition-colors ${chgType === mode
+                ? 'bg-[var(--P)] text-white'
+                : 'text-[var(--G3)] hover:text-[var(--G1)]'
+                }`}
             >
               {t(mode === 'HL' ? 'toggleHL' : 'toggleSL')}
             </button>
           ))}
         </div>
 
-        {/* Diario / Forecast view toggle */}
         <div className="flex border border-[var(--G5)] rounded-lg overflow-hidden bg-white">
           {(['daily', 'forecast'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={`px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === mode
-                  ? 'bg-[var(--P)] text-white'
-                  : 'text-[var(--G3)] hover:text-[var(--G1)]'
-              }`}
+              className={`px-3.5 py-1.5 text-xs font-medium transition-colors ${viewMode === mode
+                ? 'bg-[var(--P)] text-white'
+                : 'text-[var(--G3)] hover:text-[var(--G1)]'
+                }`}
             >
               {mode === 'daily' ? 'Diario' : 'Forecast'}
             </button>
@@ -606,7 +580,6 @@ export function AllView() {
         </Button>
       </div>
 
-      {/* ── filters ───────────────────────────────────────────────────── */}
       <FilterBar
         search={{ value: localQ, onChange: setLocalQ, placeholder: t('searchPlaceholder') }}
         toggleGroups={[
@@ -642,7 +615,6 @@ export function AllView() {
         ]}
       />
 
-      {/* ── T&E Approver filter ──────────────────────────────────────── */}
       <div className="flex items-center gap-2">
         <span className="text-xs text-[var(--G3)] whitespace-nowrap">T&amp;E Approver:</span>
         {teApprover ? (
@@ -702,10 +674,8 @@ export function AllView() {
 
       <p className="text-xs text-[var(--G3)]">{t('countEmployees', { count: result?.total ?? 0 })}</p>
 
-      {/* ── grid / forecast toggle ────────────────────────────────────── */}
       {viewMode === 'forecast' ? (
 
-        /* ── Forecast multi-period table ── */
         <div className={`overflow-x-auto border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
           <table
             style={{
@@ -724,7 +694,6 @@ export function AllView() {
               ])}
             </colgroup>
             <thead>
-              {/* Period label headers */}
               <tr>
                 <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
                   {t('title')}
@@ -733,15 +702,13 @@ export function AllView() {
                   <th
                     key={p.label}
                     colSpan={3}
-                    className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0 ${
-                      i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'
-                    }`}
+                    className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'
+                      }`}
                   >
                     {p.label}
                   </th>
                 ))}
               </tr>
-              {/* CHG | SAH | CHG% sub-headers */}
               <tr>
                 <th className="sticky left-0 z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
                 {periods.map((p, i) => (
@@ -754,7 +721,6 @@ export function AllView() {
               </tr>
             </thead>
             <tbody>
-              {/* Totals summary row */}
               <tr>
                 <td className="sticky left-0 z-10 bg-[#f0f2f7] border-b border-r border-[var(--G5)] px-3 py-2">
                   <span className="text-[11px] font-semibold text-[var(--G1)]">Total</span>
@@ -784,7 +750,6 @@ export function AllView() {
                   );
                 })}
               </tr>
-              {/* Employee rows */}
               {paged.length === 0 ? (
                 <tr>
                   <td colSpan={1 + periods.length * 3} className="text-center text-sm text-[var(--G3)] py-12">
@@ -792,76 +757,76 @@ export function AllView() {
                   </td>
                 </tr>
               ) : paged.map((emp) => {
-                const fRollOn  = parseDDMMYY(emp.rollOn);
+                const fRollOn = parseDDMMYY(emp.rollOn);
                 const fRollOff = parseDDMMYY(emp.rollOff);
                 const fPtoStart = parseDDMMYY(emp.nextPTO);
-                const fPtoEnd   = parseDDMMYY(emp.nextPTOEnd);
-                const fSick     = sickRangesMap.get(emp.id) ?? [];
+                const fPtoEnd = parseDDMMYY(emp.nextPTOEnd);
+                const fSick = sickRangesMap.get(emp.id) ?? [];
                 return (
-                <tr key={emp.id} className="group">
-                  <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-                        style={{ background: avatarColor(emp.id) }}
-                      >
-                        {getInitials(emp.name)}
+                  <tr key={emp.id} className="group">
+                    <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                          style={{ background: avatarColor(emp.id) }}
+                        >
+                          {getInitials(emp.name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="block text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
+                          <span className="block text-[9px] text-[var(--G4)]">{emp.level} · {emp.country}</span>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="block text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
-                        <span className="block text-[9px] text-[var(--G4)]">{emp.level} · {emp.country}</span>
-                      </div>
-                    </div>
-                  </td>
-                  {periods.map((period, i) => {
-                    const sah = emp.sah[i] ?? 0;
-                    const p = chgType === 'HL' ? (emp.cp[i] ?? 0) : (emp.slAssumed[i] ?? 0);
-                    const periodDays = cellsInRange(parseLocalDate(period.startDate), parseLocalDate(period.endDate));
-                    const chgDayCount = periodDays.filter((d) => {
-                      if (d.weekend) return false;
-                      if (chgType === 'HL') {
-                        if (fRollOn  !== null && d.date < fRollOn)  return false;
-                        if (fRollOff !== null && d.date > fRollOff) return false;
-                      }
-                      if (fPtoStart !== null && fPtoEnd !== null && d.date >= fPtoStart && d.date <= fPtoEnd) return false;
-                      if (fSick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
-                      if (isHoliday(d.date, emp.country)) return false;
-                      return true;
-                    }).length;
-                    const totalCHGVal = chgDayCount * 8 * p / 100;
-                    const chgLabel = totalCHGVal % 1 === 0 ? `${Math.round(totalCHGVal)}` : totalCHGVal.toFixed(1);
-                    const cellColor = p >= 80 ? 'text-[var(--GR)]' : p >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
-                    const isCur = i === currentPIdx;
-                    return (
-                      <Fragment key={i}>
-                        <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
-                          <span className={`text-[11px] font-semibold ${cellColor}`}>{chgLabel}</span>
-                        </td>
-                        <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e4edfc]' : 'bg-[#f4f8ff]'}`} style={{ padding: 0 }}>
-                          <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sah)}</span>
-                        </td>
-                        {(() => {
-                          const isClickable = p !== 100 && employeeIdsWithTickets.has(emp.id);
-                          return (
-                            <td
-                              className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
-                              style={{ padding: 0 }}
-                              onClick={isClickable ? () => {
-                                const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
-                                setChgModal({ emp, tickets: empTickets });
-                              } : undefined}
-                            >
-                              <span className={`text-[11px] font-semibold ${cellColor}`}>
-                                {p}%
-                                {isClickable && <span className="ml-0.5 text-[9px] opacity-50">ⓘ</span>}
-                              </span>
-                            </td>
-                          );
-                        })()}
-                      </Fragment>
-                    );
-                  })}
-                </tr>
+                    </td>
+                    {periods.map((period, i) => {
+                      const sah = emp.sah[i] ?? 0;
+                      const p = chgType === 'HL' ? (emp.cp[i] ?? 0) : (emp.slAssumed[i] ?? 0);
+                      const periodDays = cellsInRange(parseLocalDate(period.startDate), parseLocalDate(period.endDate));
+                      const chgDayCount = periodDays.filter((d) => {
+                        if (d.weekend) return false;
+                        if (chgType === 'HL') {
+                          if (fRollOn !== null && d.date < fRollOn) return false;
+                          if (fRollOff !== null && d.date > fRollOff) return false;
+                        }
+                        if (fPtoStart !== null && fPtoEnd !== null && d.date >= fPtoStart && d.date <= fPtoEnd) return false;
+                        if (fSick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
+                        if (isHoliday(d.date, emp.country)) return false;
+                        return true;
+                      }).length;
+                      const totalCHGVal = chgDayCount * 8 * p / 100;
+                      const chgLabel = totalCHGVal % 1 === 0 ? `${Math.round(totalCHGVal)}` : totalCHGVal.toFixed(1);
+                      const cellColor = p >= 80 ? 'text-[var(--GR)]' : p >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
+                      const isCur = i === currentPIdx;
+                      return (
+                        <Fragment key={i}>
+                          <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
+                            <span className={`text-[11px] font-semibold ${cellColor}`}>{chgLabel}</span>
+                          </td>
+                          <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e4edfc]' : 'bg-[#f4f8ff]'}`} style={{ padding: 0 }}>
+                            <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sah)}</span>
+                          </td>
+                          {(() => {
+                            const isClickable = p !== 100 && employeeIdsWithTickets.has(emp.id);
+                            return (
+                              <td
+                                className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                style={{ padding: 0 }}
+                                onClick={isClickable ? () => {
+                                  const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
+                                  setChgModal({ emp, tickets: empTickets });
+                                } : undefined}
+                              >
+                                <span className={`text-[11px] font-semibold ${cellColor}`}>
+                                  {p}%
+                                  {isClickable && <span className="ml-0.5 text-[9px] opacity-50">ⓘ</span>}
+                                </span>
+                              </td>
+                            );
+                          })()}
+                        </Fragment>
+                      );
+                    })}
+                  </tr>
                 );
               })}
             </tbody>
@@ -870,113 +835,110 @@ export function AllView() {
 
       ) : (
 
-        /* ── Daily grid ── */
         <div className={`overflow-x-auto border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
-        <table
-          style={{
-            borderCollapse: 'separate',
-            borderSpacing: 0,
-            tableLayout: 'fixed',
-            width: '100%',
-            minWidth: 172 + nDays * DAY_W + 3 * SUMMARY_W,
-          }}
-        >
-          <colgroup>
-            <col />
-            {days.map((d) => <col key={d.idx} style={{ width: colW }} />)}
-            <col style={{ width: SUMMARY_W }} />
-            <col style={{ width: SUMMARY_W }} />
-            <col style={{ width: SUMMARY_W }} />
-          </colgroup>
-
-          <thead>
-            {/* period group row */}
-            <tr>
-              <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
-                {t('title')}
-              </th>
-              {dayGroups.map((g) => (
-                <th
-                  key={g.key}
-                  colSpan={g.count}
-                  className="bg-[#f4f6f9] text-center text-[11px] font-semibold text-[var(--G3)] py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0"
-                >
-                  {g.label}
-                </th>
-              ))}
-              <th colSpan={3} className="bg-[#f4f6f9] text-center text-[11px] font-semibold text-[var(--G3)] py-2 px-1 tracking-wide border-b border-l border-[var(--G5)]">
-                Resumen
-              </th>
-            </tr>
-
-            {/* day number + dow */}
-            <tr>
-              <th className="sticky left-0 z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
-              {days.map((d) => (
-                <th
-                  key={d.idx}
-                  className={`text-center border-b border-r border-[var(--G5)] last:border-r-0 ${d.weekend ? 'bg-[#fafbfc]' : 'bg-[#f4f6f9]'}`}
-                >
-                  <span className={`block text-xs font-semibold ${d.weekend ? 'text-[var(--G4)]' : 'text-[var(--G1)]'}`}>
-                    {d.num}
-                  </span>
-                  <span className="block text-[9px] text-[var(--G4)] uppercase tracking-wide">
-                    {DOW_ES[d.dow]}
-                  </span>
-                </th>
-              ))}
-              <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG</th>
-              <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">SAH</th>
-              <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG%</th>
-            </tr>
-          </thead>
-
-          <motion.tbody
-            key={`${safePage}-${debouncedQ}-${status}-${country}-${offering}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
-            initial="hidden"
-            animate="visible"
-            variants={TBODY_VARIANTS}
+          <table
+            style={{
+              borderCollapse: 'separate',
+              borderSpacing: 0,
+              tableLayout: 'fixed',
+              width: '100%',
+              minWidth: 172 + nDays * DAY_W + 3 * SUMMARY_W,
+            }}
           >
-            {paged.length === 0 ? (
+            <colgroup>
+              <col />
+              {days.map((d) => <col key={d.idx} style={{ width: colW }} />)}
+              <col style={{ width: SUMMARY_W }} />
+              <col style={{ width: SUMMARY_W }} />
+              <col style={{ width: SUMMARY_W }} />
+            </colgroup>
+
+            <thead>
               <tr>
-                <td colSpan={nDays + 4} className="text-center text-sm text-[var(--G3)] py-12">
-                  Sin empleados
-                </td>
+                <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
+                  {t('title')}
+                </th>
+                {dayGroups.map((g) => (
+                  <th
+                    key={g.key}
+                    colSpan={g.count}
+                    className="bg-[#f4f6f9] text-center text-[11px] font-semibold text-[var(--G3)] py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0"
+                  >
+                    {g.label}
+                  </th>
+                ))}
+                <th colSpan={3} className="bg-[#f4f6f9] text-center text-[11px] font-semibold text-[var(--G3)] py-2 px-1 tracking-wide border-b border-l border-[var(--G5)]">
+                  Resumen
+                </th>
               </tr>
-            ) : (
-              paged.flatMap((emp) => {
-                const isExpanded = !!expanded[emp.id];
-                const pIdx = currentPIdx;
-                const sahForPeriod = emp.sah?.[pIdx] ?? emp.totalHours ?? 80;
-                const dailySAH = 8;
-                const sahDay = Math.round(dailySAH);
-                const rollOnDate  = parseDDMMYY(emp.rollOn);
-                const rollOffDate = parseDDMMYY(emp.rollOff);
-                const ptoStart = parseDDMMYY(emp.nextPTO);
-                const ptoEnd   = parseDDMMYY(emp.nextPTOEnd);
 
-                const chgPct = chgType === 'HL' ? (emp.cp[pIdx] ?? 0) : (emp.slAssumed[pIdx] ?? 0);
-                const dailyCHG = 8 * chgPct / 100;
-                const dailyCHGLabel = dailyCHG % 1 === 0 ? `${dailyCHG}h` : `${dailyCHG.toFixed(1)}h`;
-                const chgDays = days.filter((d) => {
-                  if (d.weekend) return false;
-                  if (chgType === 'HL') {
-                    if (rollOnDate !== null && d.date < rollOnDate) return false;
-                    if (rollOffDate !== null && d.date > rollOffDate) return false;
-                  }
-                  if (ptoStart !== null && ptoEnd !== null && d.date >= ptoStart && d.date <= ptoEnd) return false;
-                  const sick = sickRangesMap.get(emp.id) ?? [];
-                  if (sick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
-                  if (isHoliday(d.date, emp.country)) return false;
-                  return true;
-                }).length;
-                const totalCHGVal = chgDays * dailyCHG;
-                const totalCHGLabel = totalCHGVal % 1 === 0 ? `${totalCHGVal}h` : `${totalCHGVal.toFixed(1)}h`;
-                const summaryColor = chgPct >= 80 ? 'text-[var(--GR)]' : chgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
+              <tr>
+                <th className="sticky left-0 z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                {days.map((d) => (
+                  <th
+                    key={d.idx}
+                    className={`text-center border-b border-r border-[var(--G5)] last:border-r-0 ${d.weekend ? 'bg-[#fafbfc]' : 'bg-[#f4f6f9]'}`}
+                  >
+                    <span className={`block text-xs font-semibold ${d.weekend ? 'text-[var(--G4)]' : 'text-[var(--G1)]'}`}>
+                      {d.num}
+                    </span>
+                    <span className="block text-[9px] text-[var(--G4)] uppercase tracking-wide">
+                      {DOW_ES[d.dow]}
+                    </span>
+                  </th>
+                ))}
+                <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG</th>
+                <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">SAH</th>
+                <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG%</th>
+              </tr>
+            </thead>
 
-                return [
-                  /* person row */
-                  <motion.tr key={emp.id} variants={ROW_VARIANTS} className={`group cursor-pointer select-none${emp.isOnPTO ? ' opacity-50' : ''}`} onClick={() => toggleExpand(emp.id)}>
+            <motion.tbody
+              key={`${safePage}-${debouncedQ}-${status}-${country}-${offering}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
+              initial="hidden"
+              animate="visible"
+              variants={TBODY_VARIANTS}
+            >
+              {paged.length === 0 ? (
+                <tr>
+                  <td colSpan={nDays + 4} className="text-center text-sm text-[var(--G3)] py-12">
+                    Sin empleados
+                  </td>
+                </tr>
+              ) : (
+                paged.flatMap((emp) => {
+                  const isExpanded = !!expanded[emp.id];
+                  const pIdx = currentPIdx;
+                  const sahForPeriod = emp.sah?.[pIdx] ?? emp.totalHours ?? 80;
+                  const dailySAH = 8;
+                  const sahDay = Math.round(dailySAH);
+                  const rollOnDate = parseDDMMYY(emp.rollOn);
+                  const rollOffDate = parseDDMMYY(emp.rollOff);
+                  const ptoStart = parseDDMMYY(emp.nextPTO);
+                  const ptoEnd = parseDDMMYY(emp.nextPTOEnd);
+
+                  const chgPct = chgType === 'HL' ? (emp.cp[pIdx] ?? 0) : (emp.slAssumed[pIdx] ?? 0);
+                  const dailyCHG = 8 * chgPct / 100;
+                  const dailyCHGLabel = dailyCHG % 1 === 0 ? `${dailyCHG}h` : `${dailyCHG.toFixed(1)}h`;
+                  const chgDays = days.filter((d) => {
+                    if (d.weekend) return false;
+                    if (chgType === 'HL') {
+                      if (rollOnDate !== null && d.date < rollOnDate) return false;
+                      if (rollOffDate !== null && d.date > rollOffDate) return false;
+                    }
+                    if (ptoStart !== null && ptoEnd !== null && d.date >= ptoStart && d.date <= ptoEnd) return false;
+                    const sick = sickRangesMap.get(emp.id) ?? [];
+                    if (sick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
+                    if (isHoliday(d.date, emp.country)) return false;
+                    return true;
+                  }).length;
+                  const totalCHGVal = chgDays * dailyCHG;
+                  const totalCHGLabel = totalCHGVal % 1 === 0 ? `${totalCHGVal}h` : `${totalCHGVal.toFixed(1)}h`;
+                  const realChgPct = sahForPeriod > 0 ? Math.round(totalCHGVal / sahForPeriod * 100) : 0;
+                  const summaryColor = realChgPct >= 80 ? 'text-[var(--GR)]' : realChgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
+
+                  return [
+                    <motion.tr key={emp.id} variants={ROW_VARIANTS} className={`group cursor-pointer select-none${emp.isOnPTO ? ' opacity-50' : ''}`} onClick={() => toggleExpand(emp.id)}>
                       <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div
@@ -1026,9 +988,8 @@ export function AllView() {
                         return (
                           <td
                             key={d.idx}
-                            className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${
-                              d.weekend ? 'bg-white' : holidayName ? 'bg-[#efefef]' : isOutOfRange ? 'bg-[#f7f7f7]' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : 'bg-[#fafbfc]'
-                            }`}
+                            className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${d.weekend ? 'bg-white' : holidayName ? 'bg-[#efefef]' : isOutOfRange ? 'bg-[#f7f7f7]' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : 'bg-[#fafbfc]'
+                              }`}
                             style={{ padding: 0 }}
                           >
                             {holidayName && !d.weekend ? (
@@ -1055,227 +1016,224 @@ export function AllView() {
                         <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sahForPeriod)}h</span>
                       </td>
                       <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
-                        <span className={`text-[11px] font-semibold ${summaryColor}`}>{chgPct}%</span>
+                        <span className={`text-[11px] font-semibold ${summaryColor}`}>{realChgPct}%</span>
                       </td>
-                  </motion.tr>,
+                    </motion.tr>,
 
-                  /* expanded: Gantt bar row */
-                  <AnimatePresence key={`${emp.id}-bar-presence`}>
-                    {isExpanded && (
-                      <motion.tr
-                        key={`${emp.id}-bar`}
-                        initial={{ opacity: 0, y: -5 }}
-                        animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' } }}
-                        exit={{ opacity: 0, y: -4, transition: { duration: 0.14, ease: 'easeIn' } }}
-                      >
-                        <td
-                          className="sticky left-0 z-10 bg-white border-b border-r border-[var(--G5)] text-xs text-[var(--G3)] font-medium"
-                          style={{ paddingLeft: 26, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}
+                    <AnimatePresence key={`${emp.id}-bar-presence`}>
+                      {isExpanded && (
+                        <motion.tr
+                          key={`${emp.id}-bar`}
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' } }}
+                          exit={{ opacity: 0, y: -4, transition: { duration: 0.14, ease: 'easeIn' } }}
                         >
-                          {!isRefetching && (
-                            <>
-                              {emp.client ?? '—'}
-                              <span className="ml-1 text-[9px] text-[var(--G4)]">
-                                ({emp.scenarioType === 'effective' ? 'HL' : 'SL'})
-                              </span>
-                            </>
-                          )}
-                        </td>
-                        <td
-                          colSpan={nDays}
-                          className="border-b border-[var(--G5)] bg-white"
-                          style={{ position: 'relative', height: 32, padding: isRefetching ? '6px 8px' : 0 }}
+                          <td
+                            className="sticky left-0 z-10 bg-white border-b border-r border-[var(--G5)] text-xs text-[var(--G3)] font-medium"
+                            style={{ paddingLeft: 26, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}
+                          >
+                            {!isRefetching && (
+                              <>
+                                {emp.client ?? '—'}
+                                <span className="ml-1 text-[9px] text-[var(--G4)]">
+                                  ({emp.scenarioType === 'effective' ? 'HL' : 'SL'})
+                                </span>
+                              </>
+                            )}
+                          </td>
+                          <td
+                            colSpan={nDays}
+                            className="border-b border-[var(--G5)] bg-white"
+                            style={{ position: 'relative', height: 32, padding: isRefetching ? '6px 8px' : 0 }}
+                          >
+                            {isRefetching ? (
+                              <Skeleton className="h-5 w-full rounded-sm" />
+                            ) : (
+                              rollOnDate && rollOffDate && (() => {
+                                const barStart = rollOnDate < windowStart ? windowStart : rollOnDate;
+                                const barEnd = rollOffDate > windowEnd ? windowEnd : rollOffDate;
+                                if (barStart > windowEnd || barEnd < windowStart) return null;
+
+                                const leftDays = Math.round((barStart.getTime() - windowStart.getTime()) / 86_400_000);
+                                const widthDays = Math.round((barEnd.getTime() - barStart.getTime()) / 86_400_000) + 1;
+                                const isHL = emp.scenarioType === 'effective';
+                                const pctIdx = getPeriodIdx(barStart);
+                                const pct = isHL
+                                  ? (emp.cp[pctIdx >= 0 ? pctIdx : 0] ?? 0)
+                                  : (emp.slAssumed[pctIdx >= 0 ? pctIdx : 0] ?? 0);
+
+                                const ptoStart = parseDDMMYY(emp.nextPTO);
+                                const ptoEnd = parseDDMMYY(emp.nextPTOEnd);
+                                const ptoBar = ptoStart && ptoEnd ? (() => {
+                                  const ps = ptoStart < windowStart ? windowStart : ptoStart;
+                                  const pe = ptoEnd > windowEnd ? windowEnd : ptoEnd;
+                                  if (ps > windowEnd || pe < windowStart) return null;
+                                  const ptoLeft = Math.round((ps.getTime() - windowStart.getTime()) / 86_400_000);
+                                  const ptoWidth = Math.round((pe.getTime() - ps.getTime()) / 86_400_000) + 1;
+                                  return (
+                                    <div
+                                      title={`Vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}`}
+                                      style={{
+                                        position: 'absolute',
+                                        top: 6, bottom: 6,
+                                        left: ptoLeft * colW,
+                                        width: Math.max(ptoWidth * colW - 2, 0),
+                                        borderRadius: 6,
+                                        background: '#fef3c7',
+                                        border: '1.5px solid #f59e0b',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: '0 6px',
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        color: '#92400e',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        zIndex: 2,
+                                      }}
+                                    >
+                                      🏖 PTO
+                                    </div>
+                                  );
+                                })() : null;
+
+                                return (
+                                  <>
+                                    <div
+                                      style={{
+                                        position: 'absolute',
+                                        top: 6, bottom: 6,
+                                        left: leftDays * colW,
+                                        width: Math.max(widthDays * colW - 4, 0),
+                                        borderRadius: 6,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: '0 8px',
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        letterSpacing: '-0.01em',
+                                        ...(isHL
+                                          ? { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' }
+                                          : { background: 'transparent', color: '#5a6ea3', border: '1.5px dashed #8aa4d6' }),
+                                      }}
+                                    >
+                                      {pct}% · {emp.client ?? 'Sin proyecto'}
+                                    </div>
+                                    {ptoBar}
+                                  </>
+                                );
+                              })()
+                            )}
+                          </td>
+                          <td className="border-b border-l border-[var(--G5)] bg-white" />
+                          <td className="border-b border-l border-[var(--G5)] bg-white" />
+                          <td className="border-b border-l border-[var(--G5)] bg-white" />
+                        </motion.tr>
+                      )}
+                    </AnimatePresence>,
+
+                    <AnimatePresence key={`${emp.id}-chart-presence`}>
+                      {isExpanded && (
+                        <motion.tr
+                          key={`${emp.id}-chart`}
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut', delay: 0.06 } }}
+                          exit={{ opacity: 0, y: -4, transition: { duration: 0.14, ease: 'easeIn' } }}
                         >
-                          {isRefetching ? (
-                            <Skeleton className="h-5 w-full rounded-sm" />
-                          ) : (
-                            rollOnDate && rollOffDate && (() => {
-                              const barStart = rollOnDate < windowStart ? windowStart : rollOnDate;
-                              const barEnd   = rollOffDate > windowEnd  ? windowEnd  : rollOffDate;
-                              if (barStart > windowEnd || barEnd < windowStart) return null;
-
-                              const leftDays  = Math.round((barStart.getTime() - windowStart.getTime()) / 86_400_000);
-                              const widthDays = Math.round((barEnd.getTime() - barStart.getTime()) / 86_400_000) + 1;
-                              const isHL      = emp.scenarioType === 'effective';
-                              const pctIdx    = getPeriodIdx(barStart);
-                              const pct       = isHL
-                                ? (emp.cp[pctIdx >= 0 ? pctIdx : 0] ?? 0)
-                                : (emp.slAssumed[pctIdx >= 0 ? pctIdx : 0] ?? 0);
-
-                              const ptoStart = parseDDMMYY(emp.nextPTO);
-                              const ptoEnd   = parseDDMMYY(emp.nextPTOEnd);
-                              const ptoBar = ptoStart && ptoEnd ? (() => {
-                                const ps = ptoStart < windowStart ? windowStart : ptoStart;
-                                const pe = ptoEnd   > windowEnd   ? windowEnd   : ptoEnd;
-                                if (ps > windowEnd || pe < windowStart) return null;
-                                const ptoLeft  = Math.round((ps.getTime() - windowStart.getTime()) / 86_400_000);
-                                const ptoWidth = Math.round((pe.getTime() - ps.getTime()) / 86_400_000) + 1;
+                          <td
+                            className="sticky left-0 z-10 bg-white border-b border-r border-[var(--G5)]"
+                            style={{ paddingLeft: 26, paddingRight: 12, paddingTop: 6, paddingBottom: 10, verticalAlign: 'top' }}
+                          >
+                            <span style={{ fontSize: 10, color: 'var(--G4)', fontWeight: 500 }}>Forecast</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); router.push(`/employees/${emp.id}`); }}
+                              style={{ fontSize: 10, color: 'var(--P)', fontWeight: 500, marginTop: 6, display: 'block', textAlign: 'left' }}
+                              className="hover:underline"
+                            >
+                              Ver detalle →
+                            </button>
+                          </td>
+                          <td
+                            colSpan={nDays}
+                            className="border-b border-[var(--G5)] bg-white"
+                            style={{ padding: '6px 16px 10px' }}
+                          >
+                            <div className="flex items-end gap-1.5" style={{ height: 72 }}>
+                              {periods.map((p, i) => {
+                                const hl = emp.cp[i] ?? 0;
+                                const sl = emp.slAssumed[i] ?? 0;
+                                const MAX_H = 48;
+                                const hlH = Math.max(2, Math.round((hl / 100) * MAX_H));
+                                const slH = Math.max(2, Math.round((sl / 100) * MAX_H));
+                                const hlColor: string = hl >= 80 ? 'var(--GR)' : hl >= 50 ? 'var(--YL)' : 'var(--RD)';
                                 return (
                                   <div
-                                    title={`Vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}`}
-                                    style={{
-                                      position: 'absolute',
-                                      top: 6, bottom: 6,
-                                      left: ptoLeft * colW,
-                                      width: Math.max(ptoWidth * colW - 2, 0),
-                                      borderRadius: 6,
-                                      background: '#fef3c7',
-                                      border: '1.5px solid #f59e0b',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      padding: '0 6px',
-                                      fontSize: 10,
-                                      fontWeight: 600,
-                                      color: '#92400e',
-                                      whiteSpace: 'nowrap',
-                                      overflow: 'hidden',
-                                      zIndex: 2,
-                                    }}
+                                    key={p.label}
+                                    className="flex flex-col items-center flex-shrink-0"
+                                    style={{ width: 30, gap: 2 }}
                                   >
-                                    🏖 PTO
-                                  </div>
-                                );
-                              })() : null;
-
-                              return (
-                                <>
-                                  <div
-                                    style={{
-                                      position: 'absolute',
-                                      top: 6, bottom: 6,
-                                      left: leftDays * colW,
-                                      width: Math.max(widthDays * colW - 4, 0),
-                                      borderRadius: 6,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      padding: '0 8px',
-                                      fontSize: 10,
-                                      fontWeight: 600,
-                                      whiteSpace: 'nowrap',
-                                      overflow: 'hidden',
-                                      letterSpacing: '-0.01em',
-                                      ...(isHL
-                                        ? { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' }
-                                        : { background: 'transparent', color: '#5a6ea3', border: '1.5px dashed #8aa4d6' }),
-                                    }}
-                                  >
-                                    {pct}% · {emp.client ?? 'Sin proyecto'}
-                                  </div>
-                                  {ptoBar}
-                                </>
-                              );
-                            })()
-                          )}
-                        </td>
-                        <td className="border-b border-l border-[var(--G5)] bg-white" />
-                        <td className="border-b border-l border-[var(--G5)] bg-white" />
-                        <td className="border-b border-l border-[var(--G5)] bg-white" />
-                      </motion.tr>
-                    )}
-                  </AnimatePresence>,
-
-                  /* chart row: mini bar chart per period */
-                  <AnimatePresence key={`${emp.id}-chart-presence`}>
-                    {isExpanded && (
-                      <motion.tr
-                        key={`${emp.id}-chart`}
-                        initial={{ opacity: 0, y: -5 }}
-                        animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut', delay: 0.06 } }}
-                        exit={{ opacity: 0, y: -4, transition: { duration: 0.14, ease: 'easeIn' } }}
-                      >
-                        <td
-                          className="sticky left-0 z-10 bg-white border-b border-r border-[var(--G5)]"
-                          style={{ paddingLeft: 26, paddingRight: 12, paddingTop: 6, paddingBottom: 10, verticalAlign: 'top' }}
-                        >
-                          <span style={{ fontSize: 10, color: 'var(--G4)', fontWeight: 500 }}>Forecast</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); router.push(`/employees/${emp.id}`); }}
-                            style={{ fontSize: 10, color: 'var(--P)', fontWeight: 500, marginTop: 6, display: 'block', textAlign: 'left' }}
-                            className="hover:underline"
-                          >
-                            Ver detalle →
-                          </button>
-                        </td>
-                        <td
-                          colSpan={nDays}
-                          className="border-b border-[var(--G5)] bg-white"
-                          style={{ padding: '6px 16px 10px' }}
-                        >
-                          <div className="flex items-end gap-1.5" style={{ height: 72 }}>
-                            {periods.map((p, i) => {
-                              const hl = emp.cp[i] ?? 0;
-                              const sl = emp.slAssumed[i] ?? 0;
-                              const MAX_H = 48;
-                              const hlH = Math.max(2, Math.round((hl / 100) * MAX_H));
-                              const slH = Math.max(2, Math.round((sl / 100) * MAX_H));
-                              const hlColor: string = hl >= 80 ? 'var(--GR)' : hl >= 50 ? 'var(--YL)' : 'var(--RD)';
-                              return (
-                                <div
-                                  key={p.label}
-                                  className="flex flex-col items-center flex-shrink-0"
-                                  style={{ width: 30, gap: 2 }}
-                                >
-                                  <span style={{ fontSize: 8, fontWeight: 700, color: hlColor, lineHeight: 1 }}>
-                                    {hl}%
-                                  </span>
-                                  <div className="relative w-full" style={{ height: MAX_H }}>
-                                    {sl > 0 && (
+                                    <span style={{ fontSize: 8, fontWeight: 700, color: hlColor, lineHeight: 1 }}>
+                                      {hl}%
+                                    </span>
+                                    <div className="relative w-full" style={{ height: MAX_H }}>
+                                      {sl > 0 && (
+                                        <motion.div
+                                          initial={{ scaleY: 0 }}
+                                          animate={{ scaleY: 1 }}
+                                          transition={{ delay: 0.08 + i * 0.03, duration: 0.25, ease: 'easeOut' as const }}
+                                          style={{
+                                            transformOrigin: 'bottom',
+                                            position: 'absolute', bottom: 0, left: 0, right: 0,
+                                            height: slH,
+                                            background: 'var(--G5)',
+                                            borderRadius: '3px 3px 0 0',
+                                          }}
+                                        />
+                                      )}
                                       <motion.div
                                         initial={{ scaleY: 0 }}
                                         animate={{ scaleY: 1 }}
-                                        transition={{ delay: 0.08 + i * 0.03, duration: 0.25, ease: 'easeOut' as const }}
+                                        transition={{ delay: 0.11 + i * 0.03, duration: 0.25, ease: 'easeOut' as const }}
                                         style={{
                                           transformOrigin: 'bottom',
-                                          position: 'absolute', bottom: 0, left: 0, right: 0,
-                                          height: slH,
-                                          background: 'var(--G5)',
+                                          position: 'absolute', bottom: 0,
+                                          left: sl > 0 ? 3 : 0, right: sl > 0 ? 3 : 0,
+                                          height: hlH,
+                                          background: hlColor,
                                           borderRadius: '3px 3px 0 0',
+                                          opacity: 0.88,
                                         }}
                                       />
-                                    )}
-                                    <motion.div
-                                      initial={{ scaleY: 0 }}
-                                      animate={{ scaleY: 1 }}
-                                      transition={{ delay: 0.11 + i * 0.03, duration: 0.25, ease: 'easeOut' as const }}
-                                      style={{
-                                        transformOrigin: 'bottom',
-                                        position: 'absolute', bottom: 0,
-                                        left: sl > 0 ? 3 : 0, right: sl > 0 ? 3 : 0,
-                                        height: hlH,
-                                        background: hlColor,
-                                        borderRadius: '3px 3px 0 0',
-                                        opacity: 0.88,
-                                      }}
-                                    />
+                                    </div>
+                                    <span style={{ fontSize: 7, color: 'var(--G4)', lineHeight: 1.2, textAlign: 'center', width: '100%' }}>
+                                      {p.label.split('-').pop()}
+                                    </span>
                                   </div>
-                                  <span style={{ fontSize: 7, color: 'var(--G4)', lineHeight: 1.2, textAlign: 'center', width: '100%' }}>
-                                    {p.label.split('-').pop()}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </td>
-                        <td className="border-b border-l border-[var(--G5)] bg-white" />
-                        <td className="border-b border-l border-[var(--G5)] bg-white" />
-                        <td className="border-b border-l border-[var(--G5)] bg-white" />
-                      </motion.tr>
-                    )}
-                  </AnimatePresence>,
-                ];
-              })
-            )}
-          </motion.tbody>
-        </table>
-      </div>
+                                );
+                              })}
+                            </div>
+                          </td>
+                          <td className="border-b border-l border-[var(--G5)] bg-white" />
+                          <td className="border-b border-l border-[var(--G5)] bg-white" />
+                          <td className="border-b border-l border-[var(--G5)] bg-white" />
+                        </motion.tr>
+                      )}
+                    </AnimatePresence>,
+                  ];
+                })
+              )}
+            </motion.tbody>
+          </table>
+        </div>
 
-      )} {/* end viewMode ternary */}
+      )}
 
-      {/* ── legend (daily only) ───────────────────────────────────────── */}
       {viewMode === 'daily' && (
         <div className="flex gap-4 flex-wrap items-center pt-1">
           {[
-            { style: { background: '#e8effc', border: '1.5px solid #5b8def' },     label: 'Hard Lock (efectivo)' },
+            { style: { background: '#e8effc', border: '1.5px solid #5b8def' }, label: 'Hard Lock (efectivo)' },
             { style: { background: 'transparent', border: '1.5px dashed #8aa4d6' }, label: 'Soft Lock (supuesto)' },
           ].map(({ style, label }) => (
             <div key={label} className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
@@ -1286,7 +1244,6 @@ export function AllView() {
         </div>
       )}
 
-      {/* ── pagination ────────────────────────────────────────────────── */}
       {(result?.total ?? 0) > 0 && (
         <div className={`flex items-center px-1 text-sm text-[var(--G2)] ${pageCount > 1 ? 'justify-between' : 'justify-end'}`}>
           {pageCount > 1 && (
@@ -1336,7 +1293,6 @@ export function AllView() {
         </div>
       )}
 
-      {/* ── efectivizar modal ─────────────────────────────────────────── */}
       <Modal
         open={effectivizeTarget !== null}
         onClose={closeEffectivizeModal}
@@ -1433,7 +1389,6 @@ export function AllView() {
         </div>
       </Modal>
 
-      {/* ── CHG% tickets modal ───────────────────────────────────────── */}
       <Modal
         open={chgModal !== null}
         onClose={() => setChgModal(null)}
