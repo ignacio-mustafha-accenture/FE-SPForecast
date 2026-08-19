@@ -1,42 +1,63 @@
+"""
+create_admin.py
+Upsert de usuarios en la DB configurada en BE-SPForecast/.env
+Uso: python create_admin.py
+"""
 import asyncio
-import bcrypt
 import asyncpg
+import bcrypt
+import os
+import sys
+from dotenv import load_dotenv
 
-DB_HOST = "aws-0-us-east-1.pooler.supabase.com"
-DB_PORT = 5432
-DB_USER = "postgres.zurbiimjoujcocdffdlv"
-DB_PASSWORD = "Forecast989134@@"
-DB_NAME = "postgres"
+# Lee credenciales del .env del backend — funciona desde cualquier directorio
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', 'BE-SPForecast', '.env'))
 
-EMAIL = "ignacio.mustafha@accenture.com"
-PASSWORD = "Maiden39454835@"
-FULL_NAME = "Ignacio Mustafha"
-ROLE = "admin"
+DB = dict(
+    host=os.getenv('DB_HOST'),
+    port=int(os.getenv('DB_PORT', 5432)),
+    user=os.getenv('DB_USER'),
+    password=os.getenv('DB_PASSWORD'),
+    database=os.getenv('DB_NAME'),
+    ssl='require',
+)
 
-async def main():
-    hashed = bcrypt.hashpw(PASSWORD.encode(), bcrypt.gensalt()).decode()
-    print(f"Hash generado OK")
+USERS = [
+    {'email': 'user-manager@yopmail.com',         'full_name': 'User Manager',      'role': 'manager', 'password': 'Password1q2w3e4R?'},
+    {'email': 'user-viewer@yopmail.com',           'full_name': 'User Viewer',       'role': 'viewer',  'password': 'Password1q2w3e4R?'},
+    {'email': 'ignacio.mustafha@accenture.com',    'full_name': 'Ignacio Mustafha',  'role': 'admin',   'password': 'Password1q2w3e4R?'},
+    {'email': 'maria.jose.matar@accenture.com',    'full_name': 'Maria Jose Matar',  'role': 'admin',   'password': 'Password1q2w3e4R?'},
+    {'email': 'cecilia.arato@accenture.com',       'full_name': 'Cecilia Arato',     'role': 'admin',   'password': 'Password1q2w3e4R?'},
+    {'email': 'ezequiel.ferrante@accenture.com',   'full_name': 'Ezequiel Ferrante', 'role': 'admin',   'password': 'Password1q2w3e4R?'},
+    {'email': 'rebeca.finol.gotera@accenture.com', 'full_name': 'Rebeca Finol',      'role': 'admin',   'password': 'Password1q2w3e4R?'},
+    {'email': 'mariano.tanus@accenture.com',       'full_name': 'Mariano Tanus',     'role': 'admin',   'password': 'Password1q2w3e4R?'},
+]
 
-    conn = await asyncpg.connect(
-        host=DB_HOST, port=DB_PORT, user=DB_USER,
-        password=DB_PASSWORD, database=DB_NAME, ssl="require"
-    )
+
+async def main() -> None:
+    if not all([DB['host'], DB['user'], DB['password'], DB['database']]):
+        print('[ERROR] Variables de entorno de DB no encontradas. Verificar BE-SPForecast/.env')
+        sys.exit(1)
+
+    conn = await asyncpg.connect(**DB)
     try:
-        existing = await conn.fetchrow("SELECT id FROM users WHERE email=$1", EMAIL)
-        if existing:
+        for u in USERS:
+            hashed = bcrypt.hashpw(u['password'].encode(), bcrypt.gensalt()).decode()
             await conn.execute(
-                "UPDATE users SET hashed_password=$1, role=$2, is_active=true WHERE email=$3",
-                hashed, ROLE, EMAIL
+                """
+                INSERT INTO users (email, hashed_password, full_name, role, is_active)
+                VALUES ($1, $2, $3, $4, true)
+                ON CONFLICT (email) DO UPDATE SET
+                    hashed_password = EXCLUDED.hashed_password,
+                    full_name       = EXCLUDED.full_name,
+                    role            = EXCLUDED.role,
+                    is_active       = true
+                """,
+                u['email'], hashed, u['full_name'], u['role'],
             )
-            print(f"[OK] Password actualizado para {EMAIL} (role={ROLE})")
-        else:
-            row = await conn.fetchrow(
-                "INSERT INTO users (email, hashed_password, full_name, role, is_active) "
-                "VALUES ($1,$2,$3,$4,true) RETURNING id",
-                EMAIL, hashed, FULL_NAME, ROLE
-            )
-            print(f"[OK] Usuario creado id={row['id']}: {EMAIL} (role={ROLE})")
+            print(f'[OK] upserted: {u["email"]} ({u["role"]})')
     finally:
         await conn.close()
+
 
 asyncio.run(main())
