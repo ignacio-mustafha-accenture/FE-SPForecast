@@ -34,9 +34,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (err instanceof ApiError && err.status === 401) {
       redirect('/login');
     }
-    // Any other failure leaves the store empty and the UI renders "no data",
-    // which is indistinguishable from an empty dataset. Log it so an
-    // unreachable backend is diagnosable from the container logs.
     console.error('[AppLayout] initial server-side fetch failed:', err);
   }
 

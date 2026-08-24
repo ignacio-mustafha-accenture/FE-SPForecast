@@ -26,9 +26,6 @@ import { parseDDMMYY } from '@/src/lib/formatters';
 
 const blockRepo = new HttpChargeabilityBlockRepository();
 
-// Stable fallbacks for the store selectors below. Returning a fresh `[]` makes
-// every snapshot compare unequal by reference, which drives
-// useSyncExternalStore into an infinite render loop whenever appState is null.
 const NO_PERIODS: Period[] = [];
 const NO_EMPLOYEES: Employee[] = [];
 const NO_TICKETS: Ticket[] = [];

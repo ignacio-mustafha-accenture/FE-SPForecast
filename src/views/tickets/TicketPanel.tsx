@@ -19,8 +19,6 @@ import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
 import { useForecastStore } from '@/src/store/StoreProvider';
 
-// Stable fallback: a fresh `[]` from a store selector makes every snapshot
-// compare unequal, looping useSyncExternalStore while appState is null.
 const NO_PERIODS: Period[] = [];
 
 type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
