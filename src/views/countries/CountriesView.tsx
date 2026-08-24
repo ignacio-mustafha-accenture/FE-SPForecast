@@ -20,7 +20,7 @@ const page = {
 
 const section = {
   hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.38, ease: 'easeOut' } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.38, ease: 'easeOut' as const } },
 };
 
 const row = {
@@ -30,7 +30,7 @@ const row = {
 
 const cardItem = {
   hidden: { opacity: 0, x: -24 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.34, ease: 'easeOut' } },
+  show: { opacity: 1, x: 0, transition: { duration: 0.34, ease: 'easeOut' as const } },
 };
 
 const skeletonAnim = {
