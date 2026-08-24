@@ -8,6 +8,12 @@ export interface RawPeriod {
   end_date: string;
 }
 
+export interface RawCalendarPeriod {
+  period_name: string;
+  start_date: string;
+  end_date: string;
+}
+
 export interface RawEmployee {
   EID: string;
   Name: string;
