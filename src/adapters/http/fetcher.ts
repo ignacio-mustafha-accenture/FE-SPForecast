@@ -1,5 +1,13 @@
 import { API_BASE_URL } from '@/src/lib/constants';
 
+// Server-side calls need an absolute URL. It is read from a non-NEXT_PUBLIC
+// variable so the value comes from the container environment at request time —
+// NEXT_PUBLIC_* is inlined during `next build`, which bakes in whatever the
+// build host had (or the localhost fallback) and cannot be overridden on deploy.
+function resolveServerBaseUrl(): string {
+  return process.env.API_BASE_URL ?? API_BASE_URL;
+}
+
 export type ServerCtx = { cookieHeader: string };
 export type ClientCtx = { credentials: 'include' };
 export type FetcherCtx = ServerCtx | ClientCtx;
@@ -33,7 +41,7 @@ export function createFetcher(ctx: FetcherCtx) {
       headers['Cookie'] = ctx.cookieHeader;
     }
 
-    const baseURL = isServerCtx(ctx) ? API_BASE_URL : '';
+    const baseURL = isServerCtx(ctx) ? resolveServerBaseUrl() : '';
     const res = await fetch(`${baseURL}${path}`, {
       ...options,
       headers,

@@ -26,6 +26,13 @@ import { parseDDMMYY } from '@/src/lib/formatters';
 
 const blockRepo = new HttpChargeabilityBlockRepository();
 
+// Stable fallbacks for the store selectors below. Returning a fresh `[]` makes
+// every snapshot compare unequal by reference, which drives
+// useSyncExternalStore into an infinite render loop whenever appState is null.
+const NO_PERIODS: Period[] = [];
+const NO_EMPLOYEES: Employee[] = [];
+const NO_TICKETS: Ticket[] = [];
+
 // ─── animation variants ───────────────────────────────────────────────────────
 
 const TBODY_VARIANTS = {
@@ -149,9 +156,9 @@ export function AllView() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const periods = useForecastStore((s) => s.appState?.periods ?? []);
-  const storeEmps = useForecastStore((s) => s.appState?.employees ?? []);
-  const allTickets = useForecastStore((s) => s.appState?.tickets ?? []);
+  const periods = useForecastStore((s) => s.appState?.periods ?? NO_PERIODS);
+  const storeEmps = useForecastStore((s) => s.appState?.employees ?? NO_EMPLOYEES);
+  const allTickets = useForecastStore((s) => s.appState?.tickets ?? NO_TICKETS);
   const fetchState = useForecastStore((s) => s.fetchState);
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const { offset: windowOffset } = useWindowOffset();
