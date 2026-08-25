@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -180,12 +180,12 @@ export function CountryView({ country }: CountryViewProps) {
       cell: ({ row }) =>
         row.original.offering
           ? <Badge variant="blue">{row.original.offering}</Badge>
-          : <span className="text-[var(--G4)]">—</span>,
+          : <span className="text-[var(--G4)]">ï¿½</span>,
     },
     {
       id: 'daysToAvailable',
       accessorKey: 'daysToAvailable',
-      header: 'Días libres',
+      header: 'DÃ­as libres',
       cell: ({ row }) => {
         const d = row.original.daysToAvailable ?? 0;
         const color = d === 0 ? 'var(--RD)' : d <= 10 ? 'var(--YL)' : 'var(--GR)';
