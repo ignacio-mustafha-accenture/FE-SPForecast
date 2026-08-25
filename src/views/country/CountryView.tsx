@@ -174,6 +174,29 @@ export function CountryView({ country }: CountryViewProps) {
       ),
     },
     {
+      id: 'offering',
+      accessorKey: 'offering',
+      header: 'Offering',
+      cell: ({ row }) =>
+        row.original.offering
+          ? <Badge variant="blue">{row.original.offering}</Badge>
+          : <span className="text-[var(--G4)]">—</span>,
+    },
+    {
+      id: 'daysToAvailable',
+      accessorKey: 'daysToAvailable',
+      header: 'Días libres',
+      cell: ({ row }) => {
+        const d = row.original.daysToAvailable ?? 0;
+        const color = d === 0 ? 'var(--RD)' : d <= 10 ? 'var(--YL)' : 'var(--GR)';
+        return (
+          <span className="font-semibold tabular-nums" style={{ color }}>
+            {d}d
+          </span>
+        );
+      },
+    },
+    {
       id: 'chargeability',
       accessorKey: 'chargeabilityPercent',
       header: t('headerChargeability'),
