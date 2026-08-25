@@ -34,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (err instanceof ApiError && err.status === 401) {
       redirect('/login');
     }
+    console.error('[AppLayout] initial server-side fetch failed:', err);
   }
 
   return (

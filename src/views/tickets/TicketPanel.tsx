@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown } from 'lucide-react';
 
 import type { Ticket, CreateTicketPayload, UpdateTicketPayload } from '@/src/core/domain/ticket';
+import type { Period } from '@/src/core/domain/period';
 import { getClientContainer } from '@/src/application/container';
 import { Modal } from '@/src/components/ui/Modal';
 import { Input } from '@/src/components/ui/Input';
@@ -17,6 +18,8 @@ import { Textarea } from '@/src/components/ui/Textarea';
 import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
 import { useForecastStore } from '@/src/store/StoreProvider';
+
+const NO_PERIODS: Period[] = [];
 
 type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
 
@@ -240,7 +243,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   const prevAutoEidRef = useRef('');
 
   const employees = useForecastStore((s) => s.appState?.employees ?? null);
-  const periods = useForecastStore((s) => s.appState?.periods ?? []);
+  const periods = useForecastStore((s) => s.appState?.periods ?? NO_PERIODS);
 
   useEffect(() => {
     fetch('/api/admin/clients', { credentials: 'include' })
