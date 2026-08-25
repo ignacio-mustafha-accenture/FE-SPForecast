@@ -58,6 +58,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     project: raw.Client || null,
     client: raw.Client || null,
     projectType: raw.ProjectType || null,
+    offering: raw.EmployeeOffering ?? null,
     manager: raw.Manager || null,
     rollOn: raw.RollOn || null,
     rollOff: raw.RollOff || null,

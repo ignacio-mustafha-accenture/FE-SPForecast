@@ -24,6 +24,7 @@ export interface RawEmployee {
   Manager: string;
   TEApprover: string;
   ProjectType: string;
+  EmployeeOffering: string | null;
   Client: string;
   AccountManager: string;
   Office: string;

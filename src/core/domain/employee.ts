@@ -1,17 +1,16 @@
-export type Country = 'AR' | 'MX' | 'CR';
+﻿export type Country = 'AR' | 'MX' | 'CR';
 export type ScenarioType = 'assumption' | 'effective';
-
 export type ChargeabilityStatus = 'green' | 'yellow' | 'red' | 'unassigned' | 'leave';
-
 export interface Employee {
   id: string;
   name: string;
   email: string;
   country: Country;
   level: string;
-  project: string | null;       // client name (alias for drawer compat)
+  project: string | null;
   client: string | null;
   projectType: string | null;
+  offering: string | null;        // offering del empleado (employees.offering)
   manager: string | null;
   rollOn: string | null;
   rollOff: string | null;
