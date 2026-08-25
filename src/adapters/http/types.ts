@@ -1,4 +1,4 @@
-export interface RawPeriod {
+﻿export interface RawPeriod {
   id: string;
   period_name: string;
   label: string;
@@ -46,6 +46,7 @@ export interface RawEmployee {
   HasAssumptionBlocks: boolean;
   IsOnPTO: boolean;
   Ringfenced?: boolean;
+  ISGAligned?: boolean;
   chg: number[];
   sah: number[];
   cp: number[];
