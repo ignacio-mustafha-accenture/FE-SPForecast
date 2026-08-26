@@ -4,8 +4,11 @@ import { HttpEmployeeRepository } from '@/src/adapters/http/HttpEmployeeReposito
 import { HttpPPARepository } from '@/src/adapters/http/HttpPPARepository';
 import { HttpStateRepository } from '@/src/adapters/http/HttpStateRepository';
 import { HttpTicketRepository } from '@/src/adapters/http/HttpTicketRepository';
+import type { FetcherCtx } from '@/src/adapters/http/fetcher';
 
 import { ApplyPPAUseCase } from './use-cases/ApplyPPAUseCase';
+import { ApprovePPAUseCase } from './use-cases/ApprovePPAUseCase';
+import { RejectPPAUseCase } from './use-cases/RejectPPAUseCase';
 import { ApproveTicketUseCase } from './use-cases/ApproveTicketUseCase';
 import { AssignEidUseCase } from './use-cases/AssignEidUseCase';
 import { RejectTicketUseCase } from './use-cases/RejectTicketUseCase';
@@ -43,12 +46,13 @@ export interface AppContainer {
   assignEid: AssignEidUseCase;
   updateEmployee: UpdateEmployeeUseCase;
   applyPPA: ApplyPPAUseCase;
+  approvePPA: ApprovePPAUseCase;
+  rejectPPA: RejectPPAUseCase;
   recalculate: RecalculateUseCase;
   sync: SyncUseCase;
 }
 
-export function createServerContainer(cookieHeader: string): AppContainer {
-  const ctx = { cookieHeader };
+function buildContainer(ctx: FetcherCtx): AppContainer {
   const employeeRepo = new HttpEmployeeRepository(ctx);
   const ticketRepo = new HttpTicketRepository(ctx);
   const ppaRepo = new HttpPPARepository(ctx);
@@ -70,40 +74,22 @@ export function createServerContainer(cookieHeader: string): AppContainer {
     assignEid: new AssignEidUseCase(ticketRepo),
     updateEmployee: new UpdateEmployeeUseCase(employeeRepo),
     applyPPA: new ApplyPPAUseCase(ppaRepo),
+    approvePPA: new ApprovePPAUseCase(ppaRepo),
+    rejectPPA: new RejectPPAUseCase(ppaRepo),
     recalculate: new RecalculateUseCase(new HttpAdminRepository(ctx)),
     sync: new SyncUseCase(new HttpAdminRepository(ctx)),
   };
+}
+
+export function createServerContainer(cookieHeader: string): AppContainer {
+  return buildContainer({ cookieHeader });
 }
 
 let clientContainer: AppContainer | null = null;
 
 export function getClientContainer(): AppContainer {
   if (!clientContainer) {
-    const ctx = { credentials: 'include' as const };
-    const employeeRepo = new HttpEmployeeRepository(ctx);
-    const ticketRepo = new HttpTicketRepository(ctx);
-    const ppaRepo = new HttpPPARepository(ctx);
-    clientContainer = {
-      fetchState: new FetchStateUseCase(new HttpStateRepository(ctx)),
-      getAuthUser: new GetAuthUserUseCase(new HttpAuthRepository(ctx)),
-      getTicketById: new GetTicketByIdUseCase(ticketRepo),
-      login: new LoginUseCase(new HttpAuthRepository(ctx)),
-      logout: new LogoutUseCase(new HttpAuthRepository(ctx)),
-      forgotPassword: new ForgotPasswordUseCase(new HttpAuthRepository(ctx)),
-      resetPassword: new ResetPasswordUseCase(new HttpAuthRepository(ctx)),
-      listEmployees: new ListEmployeesUseCase(employeeRepo),
-      listTickets: new ListTicketsUseCase(ticketRepo),
-      listPPA: new ListPPAUseCase(ppaRepo),
-      createTicket: new CreateTicketUseCase(ticketRepo),
-      updateTicket: new UpdateTicketUseCase(ticketRepo),
-      approveTicket: new ApproveTicketUseCase(ticketRepo),
-      rejectTicket: new RejectTicketUseCase(ticketRepo),
-      assignEid: new AssignEidUseCase(ticketRepo),
-      updateEmployee: new UpdateEmployeeUseCase(employeeRepo),
-      applyPPA: new ApplyPPAUseCase(ppaRepo),
-      recalculate: new RecalculateUseCase(new HttpAdminRepository(ctx)),
-      sync: new SyncUseCase(new HttpAdminRepository(ctx)),
-    };
+    clientContainer = buildContainer({ credentials: 'include' });
   }
   return clientContainer;
 }

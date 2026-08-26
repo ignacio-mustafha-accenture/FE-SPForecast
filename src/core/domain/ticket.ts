@@ -1,4 +1,4 @@
-export type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
+export type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja' | 'ppa';
 export type ScenarioType = 'assumption' | 'effective';
 
 export interface Ticket {

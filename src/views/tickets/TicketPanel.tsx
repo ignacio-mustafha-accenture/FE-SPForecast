@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
@@ -18,7 +18,7 @@ import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
 import { useForecastStore } from '@/src/store/StoreProvider';
 
-type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
+type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja' | 'ppa';
 
 type ScenarioType = 'assumption' | 'effective';
 
@@ -47,6 +47,7 @@ interface TicketPanelProps {
   ticket: Ticket | null;
   onClose: () => void;
   onSuccess?: () => void;
+  onSelectPPA?: () => void;
 }
 
 
@@ -109,14 +110,14 @@ function generateAssumptionPeriods(refDate: Date, count: number): { label: strin
   let half: 1 | 2;
 
   if (day < 15) {
-    // period 1 ends on 15th, which is > day → start here
+    // period 1 ends on 15th, which is > day â†’ start here
     half = 1;
   } else {
-    // period 1 ends on 15 ≤ day → try period 2
+    // period 1 ends on 15 â‰¤ day â†’ try period 2
     half = 2;
     const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     if (lastDay <= day) {
-      // period 2 also doesn't end after refDate (e.g. last day of month) → next month
+      // period 2 also doesn't end after refDate (e.g. last day of month) â†’ next month
       half = 1;
       month++;
       if (month > 11) { month = 0; year++; }
@@ -161,9 +162,9 @@ function generateEidFromName(name: string): string {
   return name
     .trim()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // strip diacritics (á→a, ñ→n, etc.)
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
     .toLowerCase()
-    .replace(/\s+/g, '.'); // spaces → dots
+    .replace(/\s+/g, '.'); // spaces â†’ dots
 }
 
 type PeriodPreviewInfo = {
@@ -177,7 +178,7 @@ function PeriodPreviewPanel({ info }: { info: PeriodPreviewInfo }) {
     <div className="rounded-lg border border-[var(--PBG)] bg-[var(--PBG)] p-3 space-y-2.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-[var(--P)]">
-          Proyección de cargabilidad
+          ProyecciÃ³n de cargabilidad
         </span>
         <span className="text-[10px] text-[var(--PD)] font-medium">
           {info.subtitle}
@@ -209,7 +210,7 @@ function PeriodPreviewPanel({ info }: { info: PeriodPreviewInfo }) {
   );
 }
 
-export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelProps) {
+export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: TicketPanelProps) {
   const t = useTranslations('ticketPanel');
   const tTickets = useTranslations('tickets');
   const toast = useToast();
@@ -258,7 +259,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
 
   const schema = z
     .object({
-      type: z.enum(['newproj', 'ongoing', 'pto', 'sick', 'nj', 'baja']),
+      type: z.enum(['newproj', 'ongoing', 'pto', 'sick', 'nj', 'baja', 'ppa']),
       eid: z.string().optional(),
       client_name: z.string().optional(),
       offering_type: z.string().optional(),
@@ -331,6 +332,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     { value: 'sick', label: tTickets('typeSick') },
     { value: 'nj', label: tTickets('typeNJ') },
     { value: 'baja', label: tTickets('typeBaja') },
+    { value: 'ppa', label: 'PPA' },
   ];
 
   const {
@@ -421,7 +423,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     if (!isNewproj && !isNJ) return null;
     if (!selectedEmployee) return null;
 
-    // La proyección siempre se calcula desde end_date; start_date no afecta el resultado.
+    // La proyecciÃ³n siempre se calcula desde end_date; start_date no afecta el resultado.
     if (isNewproj && !formEndDate) return null;
 
     // Assumption scenario (same logic for both assumption and effective)
@@ -432,10 +434,10 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     else num = 1;
 
     const ASSUMPTION_LABELS: Record<number, string> = {
-      1: 'Assumption 1 — No ISG',
-      2: 'Assumption 2 — ISG Ringfenced',
-      3: 'Assumption 3 — New Joiner',
-      4: 'Assumption 4 — ISG PE Assessment',
+      1: 'Assumption 1 â€” No ISG',
+      2: 'Assumption 2 â€” ISG Ringfenced',
+      3: 'Assumption 3 â€” New Joiner',
+      4: 'Assumption 4 â€” ISG PE Assessment',
     };
 
     const refDate = isNJ
@@ -444,8 +446,8 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     if (!refDate) return {
       num, subtitle: ASSUMPTION_LABELS[num], projectedPeriods: [],
       emptyMessage: isNJ
-        ? 'Seleccioná un empleado para ver la proyección.'
-        : 'Ingresá la fecha de fin para ver la proyección post roll-off.',
+        ? 'SeleccionÃ¡ un empleado para ver la proyecciÃ³n.'
+        : 'IngresÃ¡ la fecha de fin para ver la proyecciÃ³n post roll-off.',
     };
 
     const projectedPeriods = generateAssumptionPeriods(refDate, 6).map(({ label }, i) => {
@@ -459,7 +461,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
 
     return {
       num, subtitle: ASSUMPTION_LABELS[num], projectedPeriods,
-      emptyMessage: 'Seleccioná un empleado para ver la proyección.',
+      emptyMessage: 'SeleccionÃ¡ un empleado para ver la proyecciÃ³n.',
     };
   }, [selectedType, scenarioTypeValue, selectedClient, selectedEmployee, formStartDate, formEndDate]);
 
@@ -587,7 +589,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
   return (
     <Modal open={open} onClose={onClose} title={ticket ? t('editTitle') : t('createTitle')}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Type selector — always visible */}
+        {/* Type selector â€” always visible */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-[var(--G2)]">{t('typeLabel')}</label>
           <div className="relative">
@@ -622,8 +624,13 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   <li
                     key={o.value}
                     onMouseDown={() => {
-                      setValue('type', o.value as TicketType);
-                      setShowTypeDrop(false);
+                      if (o.value === 'ppa') {
+                        setShowTypeDrop(false);
+                        onSelectPPA?.();
+                      } else {
+                        setValue('type', o.value as TicketType);
+                        setShowTypeDrop(false);
+                      }
                     }}
                     className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
                       i === typeNav.idx
@@ -651,7 +658,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
             transition={{ duration: 0.18 }}
             className="space-y-4"
           >
-            {/* EID — all types except nj */}
+            {/* EID â€” all types except nj */}
             {selectedType !== 'nj' && (
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-[var(--G2)]">{t('eidLabel')}</label>
@@ -763,7 +770,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                         className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showClDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
                       >
                         <span className={`flex-1 ${watch('cl') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
-                          {CL_OPTIONS.find((o) => o.value === watch('cl'))?.label ?? '—'}
+                          {CL_OPTIONS.find((o) => o.value === watch('cl'))?.label ?? 'â€”'}
                         </span>
                         <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
                       </button>
@@ -802,7 +809,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                         className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showLocationDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
                       >
                         <span className={`flex-1 ${watch('location') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
-                          {LOCATION_OPTIONS.find((o) => o.value === watch('location'))?.label ?? '—'}
+                          {LOCATION_OPTIONS.find((o) => o.value === watch('location'))?.label ?? 'â€”'}
                         </span>
                         <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
                       </button>
@@ -921,7 +928,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               </>
             )}
 
-            {/* Client + Offering — newproj only */}
+            {/* Client + Offering â€” newproj only */}
             {selectedType === 'newproj' && (
               <>
                 <div className="space-y-1.5">
@@ -1034,7 +1041,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                       className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showOfferingDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
                     >
                       <span className={`flex-1 ${watch('offering_type') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
-                        {OFFERING_OPTIONS.find((o) => o.value === watch('offering_type'))?.label ?? '—'}
+                        {OFFERING_OPTIONS.find((o) => o.value === watch('offering_type'))?.label ?? 'â€”'}
                       </span>
                       <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
                     </button>
@@ -1069,7 +1076,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               </>
             )}
 
-            {/* Chargeability — newproj and ongoing */}
+            {/* Chargeability â€” newproj and ongoing */}
             {(selectedType === 'newproj' || selectedType === 'ongoing') && (
               <>
                 {!(selectedType === 'newproj' && scenarioTypeValue === 'assumption') && (
@@ -1102,7 +1109,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   </div>
                 )}
 
-                {/* Scenario type — Asunción / Efectivo */}
+                {/* Scenario type â€” AsunciÃ³n / Efectivo */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[var(--G2)]">Escenario</label>
                   <div className="flex gap-2">
@@ -1130,10 +1137,10 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   </div>
                 </div>
 
-                {/* Effectivization date — required for assumption tickets */}
+                {/* Effectivization date â€” required for assumption tickets */}
                 {(watch('scenario_type') ?? 'assumption') === 'assumption' && !ticket && (
                   <DatePicker
-                    label="Fecha límite de confirmación"
+                    label="Fecha lÃ­mite de confirmaciÃ³n"
                     value={watch('effectivization_date')}
                     onChange={(v) => setValue('effectivization_date', v, { shouldValidate: true })}
                     error={errors.effectivization_date?.message}
@@ -1143,7 +1150,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               </>
             )}
 
-            {/* Hours — sick only */}
+            {/* Hours â€” sick only */}
             {selectedType === 'sick' && (
               <Input
                 label={t('hoursLabel')}
@@ -1154,7 +1161,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               />
             )}
 
-            {/* Solo fecha de fin — newproj en assumption */}
+            {/* Solo fecha de fin â€” newproj en assumption */}
             {selectedType === 'newproj' && scenarioTypeValue === 'assumption' && (
               <DatePicker
                 label="Comienzo de assumption"
@@ -1164,7 +1171,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               />
             )}
 
-            {/* Start + end date in a row — newproj efectivo, pto, sick */}
+            {/* Start + end date in a row â€” newproj efectivo, pto, sick */}
             {(selectedType === 'pto' ||
               selectedType === 'sick' ||
               (selectedType === 'newproj' && scenarioTypeValue === 'effective')) && (
@@ -1185,12 +1192,12 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               </div>
             )}
 
-            {/* Period preview — newproj (assumption + effective) */}
+            {/* Period preview â€” newproj (assumption + effective) */}
             {selectedType === 'newproj' && assumptionInfo && (
               <PeriodPreviewPanel info={assumptionInfo} />
             )}
 
-            {/* End date only — ongoing, baja */}
+            {/* End date only â€” ongoing, baja */}
             {(selectedType === 'ongoing' || selectedType === 'baja') && (
               <DatePicker
                 label={
@@ -1202,12 +1209,12 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
               />
             )}
 
-            {/* Period preview — nj only (newproj already shown inside its section) */}
+            {/* Period preview â€” nj only (newproj already shown inside its section) */}
             {selectedType === 'nj' && assumptionInfo && (
               <PeriodPreviewPanel info={assumptionInfo} />
             )}
 
-            {/* Comments — all types */}
+            {/* Comments â€” all types */}
             {selectedType !== undefined && (
               <Textarea
                 label={t('commentsLabel')}
@@ -1230,3 +1237,4 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     </Modal>
   );
 }
+

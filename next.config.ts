@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://forecast-backend-dev.yellowsea-99dbc30d.eastus.azurecontainerapps.io/api/:path*',
+        destination: 'http://localhost:8000/api/:path*',
       },
     ];
   },

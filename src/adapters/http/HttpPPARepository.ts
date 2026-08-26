@@ -43,4 +43,15 @@ export class HttpPPARepository implements IPPARepository {
       }),
     });
   }
+
+  async approve(ppaId: string): Promise<void> {
+    await this.fetch<void>(`/api/ppa/${ppaId}/approve`, { method: 'POST' });
+  }
+
+  async reject(ppaId: string, reason: string): Promise<void> {
+    await this.fetch<void>(`/api/ppa/${ppaId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
 }
