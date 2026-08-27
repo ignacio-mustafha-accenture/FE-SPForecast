@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,16 +14,7 @@ import { Input } from '@/src/components/ui/Input';
 import { Textarea } from '@/src/components/ui/Textarea';
 import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
-
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const ALL_PERIODS = MONTHS.flatMap((m) => [`${m}-P1`, `${m}-P2`]);
-
-function currentPeriodIndex(): number {
-  const now = new Date();
-  return now.getMonth() * 2 + (now.getDate() <= 15 ? 0 : 1);
-}
-
-const AVAILABLE_PERIODS = ALL_PERIODS.slice(currentPeriodIndex());
+import { usePeriods } from '@/src/hooks/usePeriods';
 
 type PPAFormData = {
   eid: string;
@@ -71,6 +62,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
   const toListRef = useRef<HTMLUListElement>(null);
 
   const employees = useForecastStore((s) => s.appState?.employees ?? null);
+  const { periods } = usePeriods(open);
+  const periodNames = useMemo(() => periods.map((p) => p.name), [periods]);
 
   const schema = z.object({
     eid: z.string().min(1, t('required')),
@@ -104,8 +97,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
   const selectedTo = watch('toPeriod') ?? '';
 
   const eidNav = useDropdownNav(eidListRef, filteredEmployees.length, showEidDrop);
-  const fromNav = useDropdownNav(fromListRef, AVAILABLE_PERIODS.length, showFromDrop);
-  const toNav = useDropdownNav(toListRef, AVAILABLE_PERIODS.length, showToDrop);
+  const fromNav = useDropdownNav(fromListRef, periodNames.length, showFromDrop);
+  const toNav = useDropdownNav(toListRef, periodNames.length, showToDrop);
 
   function handleClose() {
     reset();
@@ -204,7 +197,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
                 onClick={() => { setShowFromDrop((v) => !v); setShowToDrop(false); }}
                 onBlur={() => setTimeout(() => setShowFromDrop(false), 150)}
                 onKeyDown={(e) => fromNav.onKey(e,
-                  (i) => { setValue('fromPeriod', AVAILABLE_PERIODS[i]); setShowFromDrop(false); },
+                  (i) => { setValue('fromPeriod', periodNames[i]); setShowFromDrop(false); },
                   () => setShowFromDrop(false),
                 )}
                 className="flex items-center gap-2 w-full px-3 py-2 border border-[var(--G5)] rounded-lg bg-white text-sm text-left focus:outline-none focus:border-[var(--P)] transition-colors"
@@ -217,7 +210,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
               {errors.fromPeriod && <p className="text-xs text-red-500 mt-1">{errors.fromPeriod.message}</p>}
               {showFromDrop && (
                 <ul ref={fromListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full">
-                  {AVAILABLE_PERIODS.map((p, i) => (
+                  {periodNames.map((p, i) => (
                     <li
                       key={p}
                       onMouseDown={() => { setValue('fromPeriod', p); setShowFromDrop(false); }}
@@ -246,7 +239,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
                 onClick={() => { setShowToDrop((v) => !v); setShowFromDrop(false); }}
                 onBlur={() => setTimeout(() => setShowToDrop(false), 150)}
                 onKeyDown={(e) => toNav.onKey(e,
-                  (i) => { setValue('toPeriod', AVAILABLE_PERIODS[i]); setShowToDrop(false); },
+                  (i) => { setValue('toPeriod', periodNames[i]); setShowToDrop(false); },
                   () => setShowToDrop(false),
                 )}
                 className="flex items-center gap-2 w-full px-3 py-2 border border-[var(--G5)] rounded-lg bg-white text-sm text-left focus:outline-none focus:border-[var(--P)] transition-colors"
@@ -259,7 +252,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
               {errors.toPeriod && <p className="text-xs text-red-500 mt-1">{errors.toPeriod.message}</p>}
               {showToDrop && (
                 <ul ref={toListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full">
-                  {AVAILABLE_PERIODS.map((p, i) => (
+                  {periodNames.map((p, i) => (
                     <li
                       key={p}
                       onMouseDown={() => { setValue('toPeriod', p); setShowToDrop(false); }}

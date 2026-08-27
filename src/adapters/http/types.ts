@@ -1,9 +1,15 @@
-export interface RawPeriod {
+xport interface RawPeriod {
   id: string;
   period_name: string;
   label: string;
   sah: number;
   isCurrent: boolean;
+  start_date: string;
+  end_date: string;
+}
+
+export interface RawCalendarPeriod {
+  period_name: string;
   start_date: string;
   end_date: string;
 }
@@ -18,6 +24,7 @@ export interface RawEmployee {
   Manager: string;
   TEApprover: string;
   ProjectType: string;
+  EmployeeOffering: string | null;
   Client: string;
   AccountManager: string;
   Office: string;
@@ -39,6 +46,7 @@ export interface RawEmployee {
   HasAssumptionBlocks: boolean;
   IsOnPTO: boolean;
   Ringfenced?: boolean;
+  ISGAligned?: boolean;
   chg: number[];
   sah: number[];
   cp: number[];

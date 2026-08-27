@@ -1,6 +1,7 @@
 import { HttpAdminRepository } from '@/src/adapters/http/HttpAdminRepository';
 import { HttpAuthRepository } from '@/src/adapters/http/HttpAuthRepository';
 import { HttpEmployeeRepository } from '@/src/adapters/http/HttpEmployeeRepository';
+import { HttpPeriodRepository } from '@/src/adapters/http/HttpPeriodRepository';
 import { HttpPPARepository } from '@/src/adapters/http/HttpPPARepository';
 import { HttpStateRepository } from '@/src/adapters/http/HttpStateRepository';
 import { HttpTicketRepository } from '@/src/adapters/http/HttpTicketRepository';
@@ -18,6 +19,7 @@ import { ForgotPasswordUseCase } from './use-cases/ForgotPasswordUseCase';
 import { GetAuthUserUseCase } from './use-cases/GetAuthUserUseCase';
 import { GetTicketByIdUseCase } from './use-cases/GetTicketByIdUseCase';
 import { ListEmployeesUseCase } from './use-cases/ListEmployeesUseCase';
+import { ListPeriodsUseCase } from './use-cases/ListPeriodsUseCase';
 import { ListPPAUseCase } from './use-cases/ListPPAUseCase';
 import { ListTicketsUseCase } from './use-cases/ListTicketsUseCase';
 import { LoginUseCase } from './use-cases/LoginUseCase';
@@ -39,6 +41,7 @@ export interface AppContainer {
   listEmployees: ListEmployeesUseCase;
   listTickets: ListTicketsUseCase;
   listPPA: ListPPAUseCase;
+  listPeriods: ListPeriodsUseCase;
   createTicket: CreateTicketUseCase;
   updateTicket: UpdateTicketUseCase;
   approveTicket: ApproveTicketUseCase;
@@ -67,6 +70,7 @@ function buildContainer(ctx: FetcherCtx): AppContainer {
     listEmployees: new ListEmployeesUseCase(employeeRepo),
     listTickets: new ListTicketsUseCase(ticketRepo),
     listPPA: new ListPPAUseCase(ppaRepo),
+    listPeriods: new ListPeriodsUseCase(new HttpPeriodRepository(ctx)),
     createTicket: new CreateTicketUseCase(ticketRepo),
     updateTicket: new UpdateTicketUseCase(ticketRepo),
     approveTicket: new ApproveTicketUseCase(ticketRepo),

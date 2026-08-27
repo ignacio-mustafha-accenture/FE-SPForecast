@@ -1,4 +1,4 @@
-import type { AppState, CountrySummary } from '@/src/core/domain/app-state';
+mport type { AppState, CountrySummary } from '@/src/core/domain/app-state';
 import type { Country, Employee, ScenarioType as EmployeeScenarioType } from '@/src/core/domain/employee';
 import type { Period } from '@/src/core/domain/period';
 import type { PPALog } from '@/src/core/domain/ppa';
@@ -58,6 +58,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     project: raw.Client || null,
     client: raw.Client || null,
     projectType: raw.ProjectType || null,
+    offering: raw.EmployeeOffering ?? null,
     manager: raw.Manager || null,
     rollOn: raw.RollOn || null,
     rollOff: raw.RollOff || null,
@@ -90,6 +91,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     hasAssumptionBlocks: raw.HasAssumptionBlocks ?? ((raw.chg_pct_sl?.[0] ?? 0) > 0),
     isOnPTO: raw.IsOnPTO ?? false,
     ringfenced: raw.Ringfenced ?? false,
+    isgAligned: raw.ISGAligned ?? false,
   };
 }
 
@@ -182,7 +184,7 @@ export function mapRawAppState(raw: RawAppState, windowOffset: number): AppState
   const employeeMap = new Map(employees.map((e) => [e.id, e]));
 
   return {
-    period: currentPeriod ? mapRawPeriod(currentPeriod, windowOffset) : { label: '—', startDate: '', endDate: '', windowOffset },
+    period: currentPeriod ? mapRawPeriod(currentPeriod, windowOffset) : { label: '-', startDate: '', endDate: '', windowOffset },
     periods: allPeriods,
     employees,
     tickets: (raw.tickets ?? []).map((t) => mapRawTicket(t, employeeMap)),
