@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import type { Period } from '@/src/core/domain/period';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -87,7 +88,10 @@ function useDropdownNav(
   return { idx, onKey };
 }
 
+const NO_PERIODS: Period[] = [];
+
 const CL_OPTIONS = ['8', '9', '10', '11', '12', '13'].map((v) => ({ value: v, label: v }));
+
 const LOCATION_OPTIONS = [
   { value: 'Argentina', label: 'Argentina' },
   { value: 'Mexico', label: 'Mexico' },
@@ -241,7 +245,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
   const prevAutoEidRef = useRef('');
 
   const employees = useForecastStore((s) => s.appState?.employees ?? null);
-  const periods = useForecastStore((s) => s.appState?.periods ?? []);
+  const periods = useForecastStore((s) => s.appState?.periods ?? NO_PERIODS);
 
   useEffect(() => {
     fetch('/api/admin/clients', { credentials: 'include' })
