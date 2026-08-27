@@ -13,7 +13,7 @@ export interface EmployeeFilter {
   page?: number;
   pageSize?: number;
   offering?: string;
-  teApprover?: string;
+  teApprover?: string;`n  level?: string;
   chgBucket?: string;
 }
 
