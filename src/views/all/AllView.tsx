@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
 import { useToast } from '@/src/hooks/useToast';
@@ -130,6 +130,14 @@ interface DayGroup {
   key: string;
   label: string;
   count: number;
+}
+
+function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
+  if (isHL) return { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' };
+  if (emp.client === 'ISG PE Assessment') return { background: '#fef9c3', color: '#854d0e', border: '1.5px dashed #eab308' };
+  if (emp.newJoiner) return { background: '#f8fafc', color: '#64748b', border: '1.5px dashed #94a3b8' };
+  if (emp.isgAligned && emp.ringfenced) return { background: '#fff7ed', color: '#9a3412', border: '1.5px dashed #f97316' };
+  return { background: '#fef2f2', color: '#991b1b', border: '1.5px dashed #f87171' };
 }
 
 function cellsInRange(from: Date, to: Date): DayCell[] {
@@ -1120,7 +1128,7 @@ export function AllView() {
                                         letterSpacing: '-0.01em',
                                         ...(isHL
                                           ? { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' }
-                                          : { background: 'transparent', color: '#5a6ea3', border: '1.5px dashed #8aa4d6' }),
+                                          ...getBarStyle(emp, isHL),
                                       }}
                                     >
                                       {pct}% · {emp.client ?? 'Sin proyecto'}

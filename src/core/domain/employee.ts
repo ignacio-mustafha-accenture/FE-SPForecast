@@ -40,4 +40,5 @@ export interface Employee {
   hasAssumptionBlocks: boolean;
   isOnPTO: boolean;
   ringfenced: boolean;
+  isgAligned: boolean;
 }
