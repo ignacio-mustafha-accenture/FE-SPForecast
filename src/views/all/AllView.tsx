@@ -1269,7 +1269,7 @@ export function AllView() {
                 disabled={safePage <= 1}
                 className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
               >
-                ← Anterior
+                ← Anterior
               </button>
               <span className="whitespace-nowrap">
                 Página {safePage} de {pageCount}
