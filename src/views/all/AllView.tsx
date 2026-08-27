@@ -303,7 +303,7 @@ export function AllView() {
 
   const [windowAnchor, setWindowAnchor] = useState<Date>(() => startOfDay(new Date()));
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [viewMode, setViewMode] = useState<'daily' | 'forecast'>('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'forecast'>('forecast');
 
   const getPeriodIdx = useCallback(
     (date: Date): number => {
