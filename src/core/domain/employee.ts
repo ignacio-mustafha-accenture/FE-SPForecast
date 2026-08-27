@@ -2,6 +2,7 @@
 export type ScenarioType = 'assumption' | 'effective';
 export type ChargeabilityStatus = 'green' | 'yellow' | 'red' | 'unassigned' | 'leave';
 export interface Employee {
+  isgAligned: boolean;
   id: string;
   name: string;
   email: string;

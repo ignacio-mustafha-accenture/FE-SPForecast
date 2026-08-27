@@ -30,7 +30,6 @@ const NO_PERIODS: Period[] = [];
 const NO_EMPLOYEES: Employee[] = [];
 const NO_TICKETS: Ticket[] = [];
 
-// ─── animation variants ───────────────────────────────────────────────────────
 
 const TBODY_VARIANTS = {
   hidden: {},
@@ -42,7 +41,6 @@ const ROW_VARIANTS = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' as const } },
 };
 
-// ─── constants ────────────────────────────────────────────────────────────────
 
 const DAY_W = 40;
 const SUMMARY_W = 60;
@@ -53,7 +51,6 @@ const AVATAR_PALETTE = [
   '#7c5cff', '#0ea5b5', '#12a86f', '#e0872a', '#e05c8a', '#5c9ae0', '#c05cc0',
 ];
 
-// ─── ticket modal constants ───────────────────────────────────────────────────
 
 const TYPE_LABELS: Record<string, string> = {
   newproj: 'Nuevo proyecto',
@@ -85,7 +82,6 @@ const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'neutral'> = {
   Rejected: 'red',
 };
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
 
 function avatarColor(id: string): string {
   let h = 0;
@@ -117,6 +113,21 @@ function parseLocalDate(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+// ─── assumption bar style ─────────────────────────────────────────────────────
+// Matches Excel color legend:
+//   effective (HL)        → blue solid      (Hard Lock)
+//   ISG PE Assessment     → yellow dashed   (Assumption 4)
+//   ISG Ringfenced        → orange dashed   (Assumption 2)
+//   New Joiner            → gray dashed     (Assumption 3)
+//   No ISG non-ringfenced → red dashed      (Assumption 1)
+
+function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
+  if (isHL) return { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' };
+  if (emp.client === 'ISG PE Assessment') return { background: '#fef9c3', color: '#854d0e', border: '1.5px dashed #eab308' };
+  if (emp.newJoiner) return { background: '#f8fafc', color: '#64748b', border: '1.5px dashed #94a3b8' };
+  if (emp.isgAligned && emp.ringfenced) return { background: '#fff7ed', color: '#9a3412', border: '1.5px dashed #f97316' };
+  return { background: '#fef2f2', color: '#991b1b', border: '1.5px dashed #f87171' };
+}
 
 interface DayCell {
   idx: number;
@@ -153,7 +164,6 @@ function cellsInRange(from: Date, to: Date): DayCell[] {
   return cells;
 }
 
-// ─── component ───────────────────────────────────────────────────────────────
 
 export function AllView() {
   const t = useTranslations('all');
@@ -189,16 +199,12 @@ export function AllView() {
     return map;
   }, [allTickets]);
 
-  // ── BE pagination state ──────────────────────────────────────────────────
   const [result, setResult] = useState<Page<Employee> | null>(null);
   const [isFetching, setIsFetching] = useState(true);
   const [isRefetching, setIsRefetching] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // ── efectivizar modal state ──────────────────────────────────────────────
   const [effectivizeTarget, setEffectivizeTarget] = useState<{ eid: string; name: string } | null>(null);
-
-  // ── CHG% tickets modal state ─────────────────────────────────────────────
   const [chgModal, setChgModal] = useState<{ emp: Employee; tickets: Ticket[] } | null>(null);
   const [effectivizePct, setEffectivizePct] = useState('');
   const [isEffectivizing, setIsEffectivizing] = useState(false);
@@ -235,13 +241,13 @@ export function AllView() {
     debouncedQ ? p.set('q', debouncedQ) : p.delete('q');
     p.delete('page');
     router.replace(`?${p.toString()}`, { scroll: false });
-  }, [debouncedQ]); 
+  }, [debouncedQ]);
 
   useEffect(() => {
     fetch('/api/te-approvers', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((d) => setTeApprovers(d.items ?? []))
-      .catch(() => { });
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -525,7 +531,6 @@ export function AllView() {
     );
   }
 
-
   return (
     <div className="space-y-3">
 
@@ -714,8 +719,7 @@ export function AllView() {
                   <th
                     key={p.label}
                     colSpan={3}
-                    className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'
-                      }`}
+                    className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'}`}
                   >
                     {p.label}
                   </th>
@@ -1000,8 +1004,9 @@ export function AllView() {
                         return (
                           <td
                             key={d.idx}
-                            className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${d.weekend ? 'bg-white' : holidayName ? 'bg-[#efefef]' : isOutOfRange ? 'bg-[#f7f7f7]' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : 'bg-[#fafbfc]'
-                              }`}
+                            className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${
+                              d.weekend ? 'bg-white' : holidayName ? 'bg-[#efefef]' : isOutOfRange ? 'bg-[#f7f7f7]' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : 'bg-[#fafbfc]'
+                            }`}
                             style={{ padding: 0 }}
                           >
                             {holidayName && !d.weekend ? (
@@ -1126,9 +1131,7 @@ export function AllView() {
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         letterSpacing: '-0.01em',
-                                        ...(isHL
-                                          ? { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' }
-                                          ...getBarStyle(emp, isHL),
+                                        ...getBarStyle(emp, isHL),
                                       }}
                                     >
                                       {pct}% · {emp.client ?? 'Sin proyecto'}
@@ -1246,7 +1249,10 @@ export function AllView() {
         <div className="flex gap-4 flex-wrap items-center pt-1">
           {[
             { style: { background: '#e8effc', border: '1.5px solid #5b8def' }, label: 'Hard Lock (efectivo)' },
-            { style: { background: 'transparent', border: '1.5px dashed #8aa4d6' }, label: 'Soft Lock (supuesto)' },
+            { style: { background: '#fef2f2', border: '1.5px dashed #f87171' }, label: 'Assumption 1 – No ISG' },
+            { style: { background: '#fff7ed', border: '1.5px dashed #f97316' }, label: 'Assumption 2 – ISG Ringfenced' },
+            { style: { background: '#f8fafc', border: '1.5px dashed #94a3b8' }, label: 'Assumption 3 – New Joiner' },
+            { style: { background: '#fef9c3', border: '1.5px dashed #eab308' }, label: 'Assumption 4 – ISG PE Assessment' },
           ].map(({ style, label }) => (
             <div key={label} className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
               <div className="w-6 h-[13px] rounded-[3px]" style={style} />

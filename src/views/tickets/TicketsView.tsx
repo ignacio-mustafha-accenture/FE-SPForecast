@@ -20,6 +20,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Modal } from '@/src/components/ui/Modal';
 
 import { TicketPanel } from './TicketPanel';
+import { PPAPanel } from '../ppa/PPAPanel';
 
 const typeVariant: Record<string, 'green' | 'blue' | 'yellow' | 'red' | 'neutral' | 'purple'> = {
   newproj: 'green',
@@ -28,13 +29,20 @@ const typeVariant: Record<string, 'green' | 'blue' | 'yellow' | 'red' | 'neutral
   sick: 'yellow',
   nj: 'red',
   baja: 'red',
+  ppa: 'purple',
 };
 
 const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'neutral'> = {
   Open: 'yellow',
   Approved: 'green',
   Rejected: 'red',
+  pending: 'yellow',
+  approved: 'green',
+  rejected: 'red',
 };
+
+// Qué panel abrir: null = cerrado, 'ticket' = TicketPanel, 'ppa' = PPAPanel
+type PanelKind = null | 'ticket' | 'ppa';
 
 export function TicketsView() {
   const t = useTranslations('tickets');
@@ -59,13 +67,13 @@ export function TicketsView() {
 
   const [result, setResult] = useState<Page<Ticket> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelKind, setPanelKind] = useState<PanelKind>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+  const [rejectTargetIsPPA, setRejectTargetIsPPA] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectSaving, setRejectSaving] = useState(false);
 
@@ -76,6 +84,7 @@ export function TicketsView() {
     sick: t('typeSick'),
     nj: t('typeNJ'),
     baja: t('typeBaja'),
+    ppa: 'PPA',
   };
 
   const STATUS_OPTIONS = [
@@ -88,6 +97,9 @@ export function TicketsView() {
     Open: t('statusOpen'),
     Approved: t('statusApproved'),
     Rejected: t('statusRejected'),
+    pending: t('statusOpen'),
+    approved: t('statusApproved'),
+    rejected: t('statusRejected'),
   };
 
   const TYPE_OPTIONS = [
@@ -97,12 +109,17 @@ export function TicketsView() {
     { value: 'sick', label: t('typeSick') },
     { value: 'nj', label: t('typeNJ') },
     { value: 'baja', label: t('typeBaja') },
+    { value: 'ppa', label: 'PPA' },
   ];
 
-  async function handleApprove(id: string) {
+  async function handleApprove(id: string, isPPA: boolean) {
     setApprovingId(id);
     try {
-      await getClientContainer().approveTicket.execute(id);
+      if (isPPA) {
+        await getClientContainer().approvePPA.execute(id);
+      } else {
+        await getClientContainer().approveTicket.execute(id);
+      }
       toast.success(t('toastApproved'));
       setRefreshKey((k) => k + 1);
     } catch {
@@ -113,8 +130,9 @@ export function TicketsView() {
     fetchState(windowOffset).catch(console.error);
   }
 
-  function openRejectModal(id: string) {
+  function openRejectModal(id: string, isPPA: boolean) {
     setRejectTargetId(id);
+    setRejectTargetIsPPA(isPPA);
     setRejectReason('');
     setRejectModalOpen(true);
   }
@@ -123,7 +141,11 @@ export function TicketsView() {
     if (!rejectTargetId || !rejectReason.trim()) return;
     setRejectSaving(true);
     try {
-      await getClientContainer().rejectTicket.execute(rejectTargetId, rejectReason.trim());
+      if (rejectTargetIsPPA) {
+        await getClientContainer().rejectPPA.execute(rejectTargetId, rejectReason.trim());
+      } else {
+        await getClientContainer().rejectTicket.execute(rejectTargetId, rejectReason.trim());
+      }
       toast.success(t('toastRejected'));
       setRefreshKey((k) => k + 1);
       setRejectModalOpen(false);
@@ -206,12 +228,14 @@ export function TicketsView() {
     header: t('columnActions'),
     cell: ({ row }) => {
       if (approvingId === row.original.id) return <Skeleton className="h-7 w-32" />;
-      return row.original.status === 'Open' ? (
+      const isPPA = row.original.type === 'ppa';
+      const isOpen = row.original.status === 'Open' || row.original.status === 'pending';
+      return isOpen ? (
         <div className="flex items-center gap-1.5">
           <Button
             variant="approve-outline"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); handleApprove(row.original.id); }}
+            onClick={(e) => { e.stopPropagation(); handleApprove(row.original.id, isPPA); }}
           >
             <Check size={13} strokeWidth={2.5} />
             {t('approve')}
@@ -219,7 +243,7 @@ export function TicketsView() {
           <Button
             variant="reject-outline"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); openRejectModal(row.original.id); }}
+            onClick={(e) => { e.stopPropagation(); openRejectModal(row.original.id, isPPA); }}
           >
             <X size={13} strokeWidth={2.5} />
             {t('reject')}
@@ -233,7 +257,6 @@ export function TicketsView() {
 
   useEffect(() => {
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     getClientContainer()
       .listTickets.execute({
@@ -283,7 +306,7 @@ export function TicketsView() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-[var(--BK)]">{t('title')}</h1>
-        <Button onClick={() => setPanelOpen(true)}>
+        <Button onClick={() => setPanelKind('ticket')}>
           {t('newTicket')}
         </Button>
       </div>
@@ -320,14 +343,27 @@ export function TicketsView() {
               }
             : undefined
         }
-        onRowClick={(ticket) => router.push(`/tickets/${ticket.id}`)}
+        onRowClick={(ticket) => {
+          if (ticket.type !== 'ppa') router.push(`/tickets/${ticket.id}`);
+        }}
       />
+
+      {/* TicketPanel — al seleccionar PPA como tipo, cierra y abre PPAPanel */}
       <TicketPanel
-        open={panelOpen}
+        open={panelKind === 'ticket'}
         ticket={null}
-        onClose={() => setPanelOpen(false)}
+        onClose={() => setPanelKind(null)}
         onSuccess={() => setRefreshKey((k) => k + 1)}
+        onSelectPPA={() => setPanelKind('ppa')}
       />
+
+      {/* PPAPanel — se abre cuando el tipo PPA es seleccionado */}
+      <PPAPanel
+        open={panelKind === 'ppa'}
+        onClose={() => setPanelKind(null)}
+        onCreated={() => { setPanelKind(null); setRefreshKey((k) => k + 1); }}
+      />
+
       <Modal
         open={rejectModalOpen}
         onClose={() => setRejectModalOpen(false)}

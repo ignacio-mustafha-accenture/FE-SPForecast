@@ -21,7 +21,7 @@ import { useForecastStore } from '@/src/store/StoreProvider';
 
 const NO_PERIODS: Period[] = [];
 
-type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja';
+type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja' | 'ppa';
 
 type ScenarioType = 'assumption' | 'effective';
 
@@ -50,6 +50,7 @@ interface TicketPanelProps {
   ticket: Ticket | null;
   onClose: () => void;
   onSuccess?: () => void;
+  onSelectPPA?: () => void;
 }
 
 
@@ -164,7 +165,7 @@ function generateEidFromName(name: string): string {
   return name
     .trim()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // strip diacritics (á→a, ñ→n, etc.)
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
     .toLowerCase()
     .replace(/\s+/g, '.'); // spaces → dots
 }
@@ -212,7 +213,7 @@ function PeriodPreviewPanel({ info }: { info: PeriodPreviewInfo }) {
   );
 }
 
-export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelProps) {
+export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: TicketPanelProps) {
   const t = useTranslations('ticketPanel');
   const tTickets = useTranslations('tickets');
   const toast = useToast();
@@ -261,7 +262,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
 
   const schema = z
     .object({
-      type: z.enum(['newproj', 'ongoing', 'pto', 'sick', 'nj', 'baja']),
+      type: z.enum(['newproj', 'ongoing', 'pto', 'sick', 'nj', 'baja', 'ppa']),
       eid: z.string().optional(),
       client_name: z.string().optional(),
       offering_type: z.string().optional(),
@@ -334,6 +335,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     { value: 'sick', label: tTickets('typeSick') },
     { value: 'nj', label: tTickets('typeNJ') },
     { value: 'baja', label: tTickets('typeBaja') },
+    { value: 'ppa', label: 'PPA' },
   ];
 
   const {
@@ -625,8 +627,13 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
                   <li
                     key={o.value}
                     onMouseDown={() => {
-                      setValue('type', o.value as TicketType);
-                      setShowTypeDrop(false);
+                      if (o.value === 'ppa') {
+                        setShowTypeDrop(false);
+                        onSelectPPA?.();
+                      } else {
+                        setValue('type', o.value as TicketType);
+                        setShowTypeDrop(false);
+                      }
                     }}
                     className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
                       i === typeNav.idx
@@ -1233,3 +1240,4 @@ export function TicketPanel({ open, ticket, onClose, onSuccess }: TicketPanelPro
     </Modal>
   );
 }
+
