@@ -1,5 +1,6 @@
 ﻿'use client';
 
+// @ts-ignore React is available at runtime, but this project does not include its type declarations.
 import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
 import { useToast } from '@/src/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
