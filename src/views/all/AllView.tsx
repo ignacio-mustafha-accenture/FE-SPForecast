@@ -26,10 +26,10 @@ import { parseDDMMYY } from '@/src/lib/formatters';
 
 const blockRepo = new HttpChargeabilityBlockRepository();
 
+
 const NO_PERIODS: Period[] = [];
 const NO_EMPLOYEES: Employee[] = [];
 const NO_TICKETS: Ticket[] = [];
-
 
 const TBODY_VARIANTS = {
   hidden: {},
@@ -41,7 +41,6 @@ const ROW_VARIANTS = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' as const } },
 };
 
-
 const DAY_W = 40;
 const SUMMARY_W = 60;
 
@@ -50,7 +49,6 @@ const DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const AVATAR_PALETTE = [
   '#7c5cff', '#0ea5b5', '#12a86f', '#e0872a', '#e05c8a', '#5c9ae0', '#c05cc0',
 ];
-
 
 const TYPE_LABELS: Record<string, string> = {
   newproj: 'Nuevo proyecto',
@@ -82,7 +80,6 @@ const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'neutral'> = {
   Rejected: 'red',
 };
 
-
 function avatarColor(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffffff;
@@ -113,14 +110,12 @@ function parseLocalDate(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
-// ─── assumption bar style ─────────────────────────────────────────────────────
-// Matches Excel color legend:
-//   effective (HL)        → blue solid      (Hard Lock)
-//   ISG PE Assessment     → yellow dashed   (Assumption 4)
-//   ISG Ringfenced        → orange dashed   (Assumption 2)
-//   New Joiner            → gray dashed     (Assumption 3)
-//   No ISG non-ringfenced → red dashed      (Assumption 1)
-
+// Estilo de barra segun escenario. Coincide con la leyenda de colores del Excel:
+//   effective (HL)        -> azul solido    (Hard Lock)
+//   ISG PE Assessment     -> amarillo punteado (Assumption 4)
+//   ISG Ringfenced        -> naranja punteado  (Assumption 2)
+//   New Joiner            -> gris punteado     (Assumption 3)
+//   No ISG non-ringfenced -> rojo punteado     (Assumption 1)
 function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
   if (isHL) return { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' };
   if (emp.client === 'ISG PE Assessment') return { background: '#fef9c3', color: '#854d0e', border: '1.5px dashed #eab308' };
@@ -163,7 +158,6 @@ function cellsInRange(from: Date, to: Date): DayCell[] {
   }
   return cells;
 }
-
 
 export function AllView() {
   const t = useTranslations('all');
@@ -310,10 +304,10 @@ export function AllView() {
       const cells = cellsInRange(today, new Date(today.getTime() + 13 * 86_400_000));
       return {
         days: cells,
-        dayGroups: [{ key: 'loading', label: '…', count: cells.length }],
+        dayGroups: [{ key: 'loading', label: '...', count: cells.length }],
         windowStart: today,
         windowEnd: endOfDay(cells[cells.length - 1].date),
-        toolbarLabel: '—',
+        toolbarLabel: '-',
         canPrev: false,
         canNext: false,
         currentPIdx: 0,
@@ -330,7 +324,7 @@ export function AllView() {
     const first = cells[0];
     const last = cells[cells.length - 1];
     const fmt = (d: Date) => d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
-    const label = `${p.label} · ${fmt(first.date)} – ${fmt(last.date)}`;
+    const label = `${p.label} - ${fmt(first.date)} a ${fmt(last.date)}`;
 
     return {
       days: cells,
@@ -485,7 +479,7 @@ export function AllView() {
     const rows = paged.map((e) => ({
       EID: e.id,
       Nombre: e.name,
-      País: e.country,
+      Pais: e.country,
       CL: e.level,
       Cliente: e.client ?? '',
       'Roll On': e.rollOn ?? '',
@@ -504,11 +498,12 @@ export function AllView() {
   ];
 
   const OFFERING_OPTIONS = [
-    { value: 'Tech-led', label: 'Tech-led' },
-    { value: 'Cost Take Out', label: 'Cost Take Out' },
-    { value: 'OM+SPY+Others', label: 'OM+SPY+Others' },
-    { value: 'Internal', label: 'Internal' },
-    { value: 'CTO', label: 'CTO' },
+    { value: 'SO',     label: 'SO' },
+    { value: 'PR',     label: 'PR' },
+    { value: 'Tools',  label: 'Tools' },
+    { value: 'S4',     label: 'S4' },
+    { value: 'Ariba',  label: 'Ariba' },
+    { value: 'Oracle', label: 'Oracle' },
   ];
 
   const CHG_BUCKET_OPTIONS = [
@@ -618,7 +613,7 @@ export function AllView() {
             onToggle: (v) => setParam('status', status === v ? '' : v),
           },
           {
-            label: 'Proyecto',
+            label: 'Offering',
             options: OFFERING_OPTIONS,
             active: offering ? [offering] : [],
             onToggle: (v) => setParam('offering', offering === v ? '' : v),
@@ -790,7 +785,7 @@ export function AllView() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="block text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
-                          <span className="block text-[9px] text-[var(--G4)]">{emp.level} · {emp.country}</span>
+                          <span className="block text-[9px] text-[var(--G4)]">{emp.level} - {emp.projectType ?? emp.country}</span>
                         </div>
                       </div>
                     </td>
@@ -834,7 +829,7 @@ export function AllView() {
                               >
                                 <span className={`text-[11px] font-semibold ${cellColor}`}>
                                   {p}%
-                                  {isClickable && <span className="ml-0.5 text-[9px] opacity-50">ⓘ</span>}
+                                  {isClickable && <span className="ml-0.5 text-[9px] opacity-50">i</span>}
                                 </span>
                               </td>
                             );
@@ -968,14 +963,14 @@ export function AllView() {
                               <span className="text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
                               {emp.isOnPTO && (
                                 <span
-                                  title={emp.nextPTO && emp.nextPTOEnd ? `En vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}` : 'En vacaciones'}
+                                  title={emp.nextPTO && emp.nextPTOEnd ? `En vacaciones: ${emp.nextPTO} a ${emp.nextPTOEnd}` : 'En vacaciones'}
                                   className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 cursor-default select-none flex-shrink-0"
                                 >
                                   PTO
                                 </span>
                               )}
                             </div>
-                            <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/día · {emp.country}</div>
+                            <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/dia - {emp.projectType ?? emp.country}</div>
                           </div>
                           {isAdmin && ((emp.chgAssumption?.[0] ?? 0) > 0 || (emp.chgAssumption?.[1] ?? 0) > 0) && (
                             <button
@@ -1010,7 +1005,7 @@ export function AllView() {
                             style={{ padding: 0 }}
                           >
                             {holidayName && !d.weekend ? (
-                              <span className="text-[13px] leading-none" title={holidayName}>🌴</span>
+                              <span className="text-[10px] font-semibold text-[var(--G4)]" title={holidayName}>FER</span>
                             ) : isOutOfRange ? (
                               <span className="block text-[11px] font-semibold leading-tight text-[var(--G4)]">0h</span>
                             ) : effectivePto ? (
@@ -1051,7 +1046,7 @@ export function AllView() {
                           >
                             {!isRefetching && (
                               <>
-                                {emp.client ?? '—'}
+                                {emp.client ?? '-'}
                                 <span className="ml-1 text-[9px] text-[var(--G4)]">
                                   ({emp.scenarioType === 'effective' ? 'HL' : 'SL'})
                                 </span>
@@ -1079,17 +1074,17 @@ export function AllView() {
                                   ? (emp.cp[pctIdx >= 0 ? pctIdx : 0] ?? 0)
                                   : (emp.slAssumed[pctIdx >= 0 ? pctIdx : 0] ?? 0);
 
-                                const ptoStart = parseDDMMYY(emp.nextPTO);
-                                const ptoEnd = parseDDMMYY(emp.nextPTOEnd);
-                                const ptoBar = ptoStart && ptoEnd ? (() => {
-                                  const ps = ptoStart < windowStart ? windowStart : ptoStart;
-                                  const pe = ptoEnd > windowEnd ? windowEnd : ptoEnd;
+                                const barPtoStart = parseDDMMYY(emp.nextPTO);
+                                const barPtoEnd = parseDDMMYY(emp.nextPTOEnd);
+                                const ptoBar = barPtoStart && barPtoEnd ? (() => {
+                                  const ps = barPtoStart < windowStart ? windowStart : barPtoStart;
+                                  const pe = barPtoEnd > windowEnd ? windowEnd : barPtoEnd;
                                   if (ps > windowEnd || pe < windowStart) return null;
                                   const ptoLeft = Math.round((ps.getTime() - windowStart.getTime()) / 86_400_000);
                                   const ptoWidth = Math.round((pe.getTime() - ps.getTime()) / 86_400_000) + 1;
                                   return (
                                     <div
-                                      title={`Vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}`}
+                                      title={`Vacaciones: ${emp.nextPTO} a ${emp.nextPTOEnd}`}
                                       style={{
                                         position: 'absolute',
                                         top: 6, bottom: 6,
@@ -1109,7 +1104,7 @@ export function AllView() {
                                         zIndex: 2,
                                       }}
                                     >
-                                      🏖 PTO
+                                      PTO
                                     </div>
                                   );
                                 })() : null;
@@ -1134,7 +1129,7 @@ export function AllView() {
                                         ...getBarStyle(emp, isHL),
                                       }}
                                     >
-                                      {pct}% · {emp.client ?? 'Sin proyecto'}
+                                      {pct}% - {emp.client ?? 'Sin proyecto'}
                                     </div>
                                     {ptoBar}
                                   </>
@@ -1167,7 +1162,7 @@ export function AllView() {
                               style={{ fontSize: 10, color: 'var(--P)', fontWeight: 500, marginTop: 6, display: 'block', textAlign: 'left' }}
                               className="hover:underline"
                             >
-                              Ver detalle →
+                              Ver detalle
                             </button>
                           </td>
                           <td
@@ -1249,10 +1244,10 @@ export function AllView() {
         <div className="flex gap-4 flex-wrap items-center pt-1">
           {[
             { style: { background: '#e8effc', border: '1.5px solid #5b8def' }, label: 'Hard Lock (efectivo)' },
-            { style: { background: '#fef2f2', border: '1.5px dashed #f87171' }, label: 'Assumption 1 – No ISG' },
-            { style: { background: '#fff7ed', border: '1.5px dashed #f97316' }, label: 'Assumption 2 – ISG Ringfenced' },
-            { style: { background: '#f8fafc', border: '1.5px dashed #94a3b8' }, label: 'Assumption 3 – New Joiner' },
-            { style: { background: '#fef9c3', border: '1.5px dashed #eab308' }, label: 'Assumption 4 – ISG PE Assessment' },
+            { style: { background: '#fef2f2', border: '1.5px dashed #f87171' }, label: 'Assumption 1 - No ISG' },
+            { style: { background: '#fff7ed', border: '1.5px dashed #f97316' }, label: 'Assumption 2 - ISG Ringfenced' },
+            { style: { background: '#f8fafc', border: '1.5px dashed #94a3b8' }, label: 'Assumption 3 - New Joiner' },
+            { style: { background: '#fef9c3', border: '1.5px dashed #eab308' }, label: 'Assumption 4 - ISG PE Assessment' },
           ].map(({ style, label }) => (
             <div key={label} className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
               <div className="w-6 h-[13px] rounded-[3px]" style={style} />
@@ -1275,10 +1270,10 @@ export function AllView() {
                 disabled={safePage <= 1}
                 className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
               >
-                ← Anterior
+                Anterior
               </button>
               <span className="whitespace-nowrap">
-                Página {safePage} de {pageCount}
+                Pagina {safePage} de {pageCount}
                 <span className="text-[var(--G3)] ml-1">({result?.total ?? 0} resultados)</span>
               </span>
               <button
@@ -1290,7 +1285,7 @@ export function AllView() {
                 disabled={safePage >= pageCount}
                 className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
               >
-                Siguiente →
+                Siguiente
               </button>
             </div>
           )}
@@ -1305,7 +1300,7 @@ export function AllView() {
             className="border border-[var(--G5)] rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-[var(--P)]"
           >
             {[10, 25, 50, 100].map((s) => (
-              <option key={s} value={s}>{s} por página</option>
+              <option key={s} value={s}>{s} por pagina</option>
             ))}
           </select>
         </div>
@@ -1337,11 +1332,11 @@ export function AllView() {
           <div className="space-y-4 mb-6">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-[var(--G2)]">Períodos</label>
+                <label className="text-xs font-medium text-[var(--G2)]">Periodos</label>
                 <span className="text-xs text-[var(--G4)]">
                   {rangeStart === rangeEnd
                     ? periods[rangeStart]?.label
-                    : `${periods[rangeStart]?.label} → ${periods[rangeEnd]?.label}`}
+                    : `${periods[rangeStart]?.label} a ${periods[rangeEnd]?.label}`}
                 </span>
               </div>
               <div className="flex">
@@ -1369,7 +1364,7 @@ export function AllView() {
               </div>
               <p className="mt-1.5 text-[10px] text-[var(--G4)]">
                 {rangeAnchor !== null
-                  ? 'Click en otro período para completar el rango'
+                  ? 'Click en otro periodo para completar el rango'
                   : 'Click para seleccionar desde, click de nuevo para hasta'}
               </p>
             </div>
@@ -1402,7 +1397,7 @@ export function AllView() {
             onClick={handleEffectivize}
             disabled={isEffectivizing || effectivizePct === '' || isNaN(parseFloat(effectivizePct))}
           >
-            {isEffectivizing ? 'Procesando…' : 'Hacer efectivo'}
+            {isEffectivizing ? 'Procesando...' : 'Hacer efectivo'}
           </Button>
         </div>
       </Modal>
@@ -1428,7 +1423,7 @@ export function AllView() {
                     {STATUS_LABELS[ticket.status] ?? ticket.status}
                   </Badge>
                   <Badge variant="neutral" className="text-[10px]">
-                    {ticket.scenarioType === 'assumption' ? 'Estimación' : 'Efectivo'}
+                    {ticket.scenarioType === 'assumption' ? 'Estimacion' : 'Efectivo'}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
@@ -1466,7 +1461,7 @@ export function AllView() {
                   className="text-[11px] text-[var(--P)] hover:underline mt-1"
                   onClick={() => { router.push(`/tickets/${ticket.id}`); setChgModal(null); }}
                 >
-                  Ver detalle completo →
+                  Ver detalle completo
                 </button>
               </div>
             ))}

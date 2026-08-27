@@ -1,4 +1,4 @@
-mport type { AppState, CountrySummary } from '@/src/core/domain/app-state';
+﻿mport type { AppState, CountrySummary } from '@/src/core/domain/app-state';
 import type { Country, Employee, ScenarioType as EmployeeScenarioType } from '@/src/core/domain/employee';
 import type { Period } from '@/src/core/domain/period';
 import type { PPALog } from '@/src/core/domain/ppa';
@@ -11,7 +11,7 @@ import type { RawAppState, RawEmployee, RawPeriod, RawPPALog, RawTicket, RawUser
 const COUNTRY_MAP: Record<string, Country> = {
   argentina: 'AR',
   'costa rica': 'CR',
-  méxico: 'MX',
+  mÃ©xico: 'MX',
   mexico: 'MX',
 };
 
@@ -21,8 +21,8 @@ function mapCountry(raw: string): Country {
 
 function normalizeKey(s: string): string {
   return s.toLowerCase()
-    .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i')
-    .replace(/ó/g, 'o').replace(/ú/g, 'u');
+    .replace(/Ã¡/g, 'a').replace(/Ã©/g, 'e').replace(/Ã­/g, 'i')
+    .replace(/Ã³/g, 'o').replace(/Ãº/g, 'u');
 }
 
 function buildCountryTargetMap(targets: RawTargets): Record<Country, number> {
@@ -31,7 +31,7 @@ function buildCountryTargetMap(targets: RawTargets): Record<Country, number> {
   const lookups: Record<string, Country> = {
     argentina: 'AR',
     mexico: 'MX',
-    méxico: 'MX',
+    mÃ©xico: 'MX',
     'costa rica': 'CR',
   };
   for (const [key, value] of Object.entries(targets)) {
@@ -91,7 +91,11 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     hasAssumptionBlocks: raw.HasAssumptionBlocks ?? ((raw.chg_pct_sl?.[0] ?? 0) > 0),
     isOnPTO: raw.IsOnPTO ?? false,
     ringfenced: raw.Ringfenced ?? false,
+<<<<<<< HEAD
     isgAligned: raw.ISGAligned ?? false,
+=======
+    isgAligned: false, // This field is not present in the raw data, defaulting to false
+>>>>>>> 71f3af5 (feat: offering taxonomy filters, assumption colors, forecast view default, navigation fix)
   };
 }
 
