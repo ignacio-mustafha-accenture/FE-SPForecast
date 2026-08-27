@@ -47,7 +47,7 @@ const ROW_VARIANTS = {
 const DAY_W = 40;
 const SUMMARY_W = 60;
 
-const DOW_ES = ['dom', 'lun', 'mar', 'miÃ©', 'jue', 'vie', 'sÃ¡b'];
+const DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 const AVATAR_PALETTE = [
   '#7c5cff', '#0ea5b5', '#12a86f', '#e0872a', '#e05c8a', '#5c9ae0', '#c05cc0',
@@ -304,10 +304,10 @@ export function AllView() {
       const cells = cellsInRange(today, new Date(today.getTime() + 13 * 86_400_000));
       return {
         days: cells,
-        dayGroups: [{ key: 'loading', label: 'â€¦', count: cells.length }],
+        dayGroups: [{ key: 'loading', label: '…', count: cells.length }],
         windowStart: today,
         windowEnd: endOfDay(cells[cells.length - 1].date),
-        toolbarLabel: 'â€”',
+        toolbarLabel: '—',
         canPrev: false,
         canNext: false,
         currentPIdx: 0,
@@ -324,7 +324,7 @@ export function AllView() {
     const first = cells[0];
     const last = cells[cells.length - 1];
     const fmt = (d: Date) => d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
-    const label = `${p.label} Â· ${fmt(first.date)} â€“ ${fmt(last.date)}`;
+    const label = `${p.label} · ${fmt(first.date)} – ${fmt(last.date)}`;
 
     return {
       days: cells,
@@ -479,7 +479,7 @@ export function AllView() {
     const rows = paged.map((e) => ({
       EID: e.id,
       Nombre: e.name,
-      PaÃ­s: e.country,
+      País: e.country,
       CL: e.level,
       Cliente: e.client ?? '',
       'Roll On': e.rollOn ?? '',
@@ -786,7 +786,7 @@ export function AllView() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="block text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
-                          <span className="block text-[9px] text-[var(--G4)]">{emp.level} Â· {emp.country}</span>
+                          <span className="block text-[9px] text-[var(--G4)]">{emp.level} · {emp.country}</span>
                         </div>
                       </div>
                     </td>
@@ -964,14 +964,14 @@ export function AllView() {
                               <span className="text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
                               {emp.isOnPTO && (
                                 <span
-                                  title={emp.nextPTO && emp.nextPTOEnd ? `En vacaciones: ${emp.nextPTO} â€“ ${emp.nextPTOEnd}` : 'En vacaciones'}
+                                  title={emp.nextPTO && emp.nextPTOEnd ? `En vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}` : 'En vacaciones'}
                                   className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 cursor-default select-none flex-shrink-0"
                                 >
                                   PTO
                                 </span>
                               )}
                             </div>
-                            <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/dÃ­a Â· {emp.country}</div>
+                            <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/día · {emp.country}</div>
                           </div>
                           {isAdmin && ((emp.chgAssumption?.[0] ?? 0) > 0 || (emp.chgAssumption?.[1] ?? 0) > 0) && (
                             <button
@@ -1046,7 +1046,7 @@ export function AllView() {
                           >
                             {!isRefetching && (
                               <>
-                                {emp.client ?? 'â€”'}
+                                {emp.client ?? '—'}
                                 <span className="ml-1 text-[9px] text-[var(--G4)]">
                                   ({emp.scenarioType === 'effective' ? 'HL' : 'SL'})
                                 </span>
@@ -1084,7 +1084,7 @@ export function AllView() {
                                   const ptoWidth = Math.round((pe.getTime() - ps.getTime()) / 86_400_000) + 1;
                                   return (
                                     <div
-                                      title={`Vacaciones: ${emp.nextPTO} â€“ ${emp.nextPTOEnd}`}
+                                      title={`Vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}`}
                                       style={{
                                         position: 'absolute',
                                         top: 6, bottom: 6,
@@ -1131,7 +1131,7 @@ export function AllView() {
                                           ...getBarStyle(emp, isHL),
                                       }}
                                     >
-                                      {pct}% Â· {emp.client ?? 'Sin proyecto'}
+                                      {pct}% · {emp.client ?? 'Sin proyecto'}
                                     </div>
                                     {ptoBar}
                                   </>
@@ -1164,7 +1164,7 @@ export function AllView() {
                               style={{ fontSize: 10, color: 'var(--P)', fontWeight: 500, marginTop: 6, display: 'block', textAlign: 'left' }}
                               className="hover:underline"
                             >
-                              Ver detalle â†’
+                              Ver detalle →
                             </button>
                           </td>
                           <td
@@ -1269,10 +1269,10 @@ export function AllView() {
                 disabled={safePage <= 1}
                 className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
               >
-                â† Anterior
+                ← Anterior
               </button>
               <span className="whitespace-nowrap">
-                PÃ¡gina {safePage} de {pageCount}
+                Página {safePage} de {pageCount}
                 <span className="text-[var(--G3)] ml-1">({result?.total ?? 0} resultados)</span>
               </span>
               <button
@@ -1284,7 +1284,7 @@ export function AllView() {
                 disabled={safePage >= pageCount}
                 className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
               >
-                Siguiente â†’
+                Siguiente →
               </button>
             </div>
           )}
@@ -1299,7 +1299,7 @@ export function AllView() {
             className="border border-[var(--G5)] rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-[var(--P)]"
           >
             {[10, 25, 50, 100].map((s) => (
-              <option key={s} value={s}>{s} por pÃ¡gina</option>
+              <option key={s} value={s}>{s} por página</option>
             ))}
           </select>
         </div>
@@ -1331,11 +1331,11 @@ export function AllView() {
           <div className="space-y-4 mb-6">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-[var(--G2)]">PerÃ­odos</label>
+                <label className="text-xs font-medium text-[var(--G2)]">Períodos</label>
                 <span className="text-xs text-[var(--G4)]">
                   {rangeStart === rangeEnd
                     ? periods[rangeStart]?.label
-                    : `${periods[rangeStart]?.label} â†’ ${periods[rangeEnd]?.label}`}
+                    : `${periods[rangeStart]?.label} → ${periods[rangeEnd]?.label}`}
                 </span>
               </div>
               <div className="flex">
@@ -1363,7 +1363,7 @@ export function AllView() {
               </div>
               <p className="mt-1.5 text-[10px] text-[var(--G4)]">
                 {rangeAnchor !== null
-                  ? 'Click en otro perÃ­odo para completar el rango'
+                  ? 'Click en otro período para completar el rango'
                   : 'Click para seleccionar desde, click de nuevo para hasta'}
               </p>
             </div>
@@ -1396,7 +1396,7 @@ export function AllView() {
             onClick={handleEffectivize}
             disabled={isEffectivizing || effectivizePct === '' || isNaN(parseFloat(effectivizePct))}
           >
-            {isEffectivizing ? 'Procesandoâ€¦' : 'Hacer efectivo'}
+            {isEffectivizing ? 'Procesando…' : 'Hacer efectivo'}
           </Button>
         </div>
       </Modal>
@@ -1422,7 +1422,7 @@ export function AllView() {
                     {STATUS_LABELS[ticket.status] ?? ticket.status}
                   </Badge>
                   <Badge variant="neutral" className="text-[10px]">
-                    {ticket.scenarioType === 'assumption' ? 'EstimaciÃ³n' : 'Efectivo'}
+                    {ticket.scenarioType === 'assumption' ? 'Estimación' : 'Efectivo'}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
@@ -1460,7 +1460,7 @@ export function AllView() {
                   className="text-[11px] text-[var(--P)] hover:underline mt-1"
                   onClick={() => { router.push(`/tickets/${ticket.id}`); setChgModal(null); }}
                 >
-                  Ver detalle completo â†’
+                  Ver detalle completo →
                 </button>
               </div>
             ))}
