@@ -124,6 +124,24 @@ function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
   return { background: '#fef2f2', color: '#991b1b', border: '1.5px dashed #f87171' };
 }
 
+type AssumptionKind = 'effective' | 'isgAssessment' | 'newJoiner' | 'isgRingfenced' | 'noIsg';
+
+function assumptionKind(emp: Employee): AssumptionKind {
+  if (emp.scenarioType === 'effective') return 'effective';
+  if (emp.client === 'ISG PE Assessment') return 'isgAssessment';
+  if (emp.newJoiner) return 'newJoiner';
+  if (emp.isgAligned && emp.ringfenced) return 'isgRingfenced';
+  return 'noIsg';
+}
+
+const ROW_TONE: Record<AssumptionKind, string> = {
+  effective:     'bg-white',
+  isgAssessment: 'bg-[#fefce8]',
+  newJoiner:     'bg-[#f8fafc]',
+  isgRingfenced: 'bg-[#e0f2fe]',
+  noIsg:         'bg-[#fef2f2]',
+};
+
 interface DayCell {
   idx: number;
   date: Date;
@@ -744,7 +762,7 @@ export function AllView() {
                     return s + Math.round((e.sah[i] ?? 0) * p / 100);
                   }, 0);
                   const avgPct = totalSah > 0 ? Math.round(totalChg / totalSah * 100) : 0;
-                  const sumColor = avgPct >= 80 ? 'text-[var(--GR)]' : avgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
+                  const sumColor = 'text-[var(--G1)]';
                   const isCur = i === currentPIdx;
                   return (
                     <Fragment key={i}>
@@ -773,9 +791,10 @@ export function AllView() {
                 const fPtoStart = parseDDMMYY(emp.nextPTO);
                 const fPtoEnd = parseDDMMYY(emp.nextPTOEnd);
                 const fSick = sickRangesMap.get(emp.id) ?? [];
+                const rowTone = ROW_TONE[assumptionKind(emp)];
                 return (
-                  <tr key={emp.id} className="group">
-                    <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
+                  <tr key={emp.id} className={`group ${rowTone}`}>
+                    <td className={`sticky left-0 z-10 border-b border-r border-[var(--G5)] px-3 py-2 ${rowTone}`}>
                       <div className="flex items-center gap-2">
                         <div
                           className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -806,7 +825,7 @@ export function AllView() {
                       }).length;
                       const totalCHGVal = chgDayCount * 8 * p / 100;
                       const chgLabel = totalCHGVal % 1 === 0 ? `${Math.round(totalCHGVal)}` : totalCHGVal.toFixed(1);
-                      const cellColor = p >= 80 ? 'text-[var(--GR)]' : p >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
+                      const cellColor = 'text-[var(--G1)]';
                       const isCur = i === currentPIdx;
                       return (
                         <Fragment key={i}>
@@ -950,7 +969,7 @@ export function AllView() {
 
                   return [
                     <motion.tr key={emp.id} variants={ROW_VARIANTS} className={`group cursor-pointer select-none${emp.isOnPTO ? ' opacity-50' : ''}`} onClick={() => toggleExpand(emp.id)}>
-                      <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
+                      <td className={`sticky left-0 z-10 border-b border-r border-[var(--G5)] px-3 py-2 ${rowTone}`}>
                         <div className="flex items-center gap-2">
                           <div
                             className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
