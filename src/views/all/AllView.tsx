@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'rea
 import { useToast } from '@/src/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type { Employee } from '@/src/core/domain/employee';
@@ -25,7 +25,6 @@ import { exportToXlsx } from '@/src/lib/excel';
 import { parseDDMMYY } from '@/src/lib/formatters';
 
 const blockRepo = new HttpChargeabilityBlockRepository();
-
 
 const NO_PERIODS: Period[] = [];
 const NO_EMPLOYEES: Employee[] = [];
@@ -80,6 +79,13 @@ const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'neutral'> = {
   Rejected: 'red',
 };
 
+// SAH normales por país (horas disponibles por período ~4 semanas)
+const SAH_BY_COUNTRY: Record<string, number> = {
+  AR: 176,
+  MX: 176,
+  CR: 176,
+};
+
 function avatarColor(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffffff;
@@ -110,12 +116,6 @@ function parseLocalDate(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
-// Estilo de barra segun escenario. Coincide con la leyenda de colores del Excel:
-//   effective (HL)        -> azul solido    (Hard Lock)
-//   ISG PE Assessment     -> amarillo punteado (Assumption 4)
-//   ISG Ringfenced        -> naranja punteado  (Assumption 2)
-//   New Joiner            -> gris punteado     (Assumption 3)
-//   No ISG non-ringfenced -> rojo punteado     (Assumption 1)
 function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
   if (isHL) return { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' };
   if (emp.client === 'ISG PE Assessment') return { background: '#fef9c3', color: '#854d0e', border: '1.5px dashed #eab308' };
@@ -155,6 +155,9 @@ interface DayGroup {
   label: string;
   count: number;
 }
+
+type SortField = 'name' | 'days2avail' | 'chgPct' | null;
+type SortDir = 'asc' | 'desc';
 
 function cellsInRange(from: Date, to: Date): DayCell[] {
   const cells: DayCell[] = [];
@@ -218,10 +221,15 @@ export function AllView() {
   const [rangeAnchor, setRangeAnchor] = useState<number | null>(null);
   const [holidays, setHolidays] = useState<Map<string, Map<string, string>>>(new Map());
 
+  // Sort state
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
   const q = searchParams.get('q') ?? '';
   const country = searchParams.get('country') ?? '';
   const status = searchParams.get('status') ?? '';
   const offering = searchParams.get('offering') ?? '';
+  const level = searchParams.get('level') ?? '';
   const teApprover = searchParams.get('te_approver') ?? '';
   const chgBucket = searchParams.get('chg_bucket') ?? '';
   const chgType = (searchParams.get('chg') === 'SL' ? 'SL' : 'HL') as 'HL' | 'SL';
@@ -265,6 +273,7 @@ export function AllView() {
         page,
         pageSize,
         offering: offering || undefined,
+        level: level || undefined,
         teApprover: teApprover || undefined,
         chgBucket: chgBucket || undefined,
       })
@@ -272,7 +281,7 @@ export function AllView() {
       .catch(console.error)
       .finally(() => { if (!cancelled) { setIsFetching(false); setIsRefetching(false); } });
     return () => { cancelled = true; };
-  }, [country, debouncedQ, status, offering, teApprover, chgBucket, page, pageSize, refreshKey]);
+  }, [country, debouncedQ, status, offering, level, teApprover, chgBucket, page, pageSize, refreshKey]);
 
   useEffect(() => {
     const countries = ['AR', 'MX', 'CR'];
@@ -383,6 +392,54 @@ export function AllView() {
     return enriched;
   }, [result?.items, storeEmpMap]);
 
+  // Días hasta roll off (Days to Availability) por empleado
+  const days2AvailMap = useMemo(() => {
+    const today = startOfDay(new Date());
+    const map = new Map<string, number>();
+    for (const emp of paged) {
+      const rollOff = parseDDMMYY(emp.rollOff);
+      if (!rollOff) { map.set(emp.id, 0); continue; }
+      const diff = Math.ceil((rollOff.getTime() - today.getTime()) / 86_400_000);
+      map.set(emp.id, Math.max(0, diff));
+    }
+    return map;
+  }, [paged]);
+
+  // Sorted paged list
+  const sortedPaged = useMemo(() => {
+    if (!sortField) return paged;
+    return [...paged].sort((a, b) => {
+      let va = 0, vb = 0;
+      if (sortField === 'name') {
+        const cmp = a.name.localeCompare(b.name);
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+      if (sortField === 'days2avail') {
+        va = days2AvailMap.get(a.id) ?? 0;
+        vb = days2AvailMap.get(b.id) ?? 0;
+      }
+      if (sortField === 'chgPct') {
+        va = chgType === 'HL' ? (a.cp[currentPIdx] ?? 0) : (a.slAssumed[currentPIdx] ?? 0);
+        vb = chgType === 'HL' ? (b.cp[currentPIdx] ?? 0) : (b.slAssumed[currentPIdx] ?? 0);
+      }
+      return sortDir === 'asc' ? va - vb : vb - va;
+    });
+  }, [paged, sortField, sortDir, days2AvailMap, chgType, currentPIdx]);
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }
+
+  function SortIcon({ field }: { field: SortField }) {
+    if (sortField !== field) return <ArrowUpDown size={10} className="opacity-40" />;
+    return sortDir === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />;
+  }
+
   const pageCount = result?.pages ?? 1;
   const safePage = result?.page ?? page;
 
@@ -486,7 +543,7 @@ export function AllView() {
   }
 
   function handleExport() {
-    const rows = paged.map((e) => ({
+    const rows = sortedPaged.map((e) => ({
       EID: e.id,
       Nombre: e.name,
       Pais: e.country,
@@ -494,8 +551,10 @@ export function AllView() {
       Cliente: e.client ?? '',
       'Roll On': e.rollOn ?? '',
       'Roll Off': e.rollOff ?? '',
+      'Days to Availability': days2AvailMap.get(e.id) ?? 0,
       ...Object.fromEntries(periods.map((p, i) => [`CHG% HL ${p.label}`, e.cp[i] ?? 0])),
       ...Object.fromEntries(periods.map((p, i) => [`CHG% SL ${p.label}`, e.slAssumed[i] ?? 0])),
+      ...Object.fromEntries(periods.map((p, i) => [`CHG Neto ${p.label}`, (e.cp[i] ?? 0) + (e.slAssumed[i] ?? 0)])),
     }));
     exportToXlsx(rows, 'todos-empleados-forecast');
   }
@@ -514,6 +573,14 @@ export function AllView() {
     { value: 'S4',     label: 'S4' },
     { value: 'Ariba',  label: 'Ariba' },
     { value: 'Oracle', label: 'Oracle' },
+  ];
+
+  const LEVEL_OPTIONS = [
+    { value: '9',  label: '9' },
+    { value: '10', label: '10' },
+    { value: '11', label: '11' },
+    { value: '12', label: '12' },
+    { value: '13', label: '13' },
   ];
 
   const CHG_BUCKET_OPTIONS = [
@@ -629,6 +696,12 @@ export function AllView() {
             onToggle: (v) => setParam('offering', offering === v ? '' : v),
           },
           {
+            label: 'Level',
+            options: LEVEL_OPTIONS,
+            active: level ? [level] : [],
+            onToggle: (v) => setParam('level', level === v ? '' : v),
+          },
+          {
             label: 'CHG%',
             options: CHG_BUCKET_OPTIONS,
             active: chgBucket ? [chgBucket] : [],
@@ -704,26 +777,38 @@ export function AllView() {
               borderCollapse: 'separate',
               borderSpacing: 0,
               tableLayout: 'fixed',
-              minWidth: 200 + periods.length * 170,
+              minWidth: 240 + periods.length * 185,
             }}
           >
             <colgroup>
+              {/* Nombre */}
               <col style={{ width: 200 }} />
+              {/* Days2Avail */}
+              <col style={{ width: 60 }} />
               {periods.flatMap((_, i) => [
                 <col key={`fc-chg-${i}`} style={{ width: 55 }} />,
                 <col key={`fc-sah-${i}`} style={{ width: 55 }} />,
-                <col key={`fc-pct-${i}`} style={{ width: 60 }} />,
+                <col key={`fc-pct-${i}`} style={{ width: 55 }} />,
+                <col key={`fc-neto-${i}`} style={{ width: 60 }} />,
               ])}
             </colgroup>
             <thead>
               <tr>
                 <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
-                  {t('title')}
+                  <button className="flex items-center gap-1 hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('name')}>
+                    {t('title')} <SortIcon field="name" />
+                  </button>
+                </th>
+                {/* Days to Availability header */}
+                <th className="bg-[#f4f6f9] text-center text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] px-1 py-2 whitespace-nowrap">
+                  <button className="flex items-center gap-1 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('days2avail')}>
+                    D2A <SortIcon field="days2avail" />
+                  </button>
                 </th>
                 {periods.map((p, i) => (
                   <th
                     key={p.label}
-                    colSpan={3}
+                    colSpan={4}
                     className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'}`}
                   >
                     {p.label}
@@ -732,21 +817,30 @@ export function AllView() {
               </tr>
               <tr>
                 <th className="sticky left-0 z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th className="bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
                 {periods.map((p, i) => (
                   <Fragment key={p.label}>
                     <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG</th>
                     <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#dce8fc]' : 'bg-[#f4f6f9]'}`}>SAH</th>
-                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG%</th>
+                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>
+                      <button className="flex items-center gap-0.5 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('chgPct')}>
+                        CHG% <SortIcon field="chgPct" />
+                      </button>
+                    </th>
+                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>Neto</th>
                   </Fragment>
                 ))}
               </tr>
             </thead>
             <tbody>
+              {/* Fila totales */}
               <tr>
                 <td className="sticky left-0 z-10 bg-[#f0f2f7] border-b border-r border-[var(--G5)] px-3 py-2">
                   <span className="text-[11px] font-semibold text-[var(--G1)]">Total</span>
                   <span className="block text-[9px] text-[var(--G3)]">{paged.length} empleados</span>
                 </td>
+                {/* D2A total — vacío en fila totales */}
+                <td className="bg-[#f0f2f7] border-b border-r border-[var(--G5)]" />
                 {periods.map((_, i) => {
                   const totalSah = paged.reduce((s, e) => s + (e.sah[i] ?? 0), 0);
                   const totalChg = paged.reduce((s, e) => {
@@ -754,7 +848,13 @@ export function AllView() {
                     return s + Math.round((e.sah[i] ?? 0) * p / 100);
                   }, 0);
                   const avgPct = totalSah > 0 ? Math.round(totalChg / totalSah * 100) : 0;
-                  const sumColor = 'text-[var(--G1)]';
+                  // CHG Neto total = suma HL + SL en horas
+                  const totalNeto = paged.reduce((s, e) => {
+                    const hlPct = e.cp[i] ?? 0;
+                    const slPct = e.slAssumed[i] ?? 0;
+                    const sah = e.sah[i] ?? 0;
+                    return s + Math.round(sah * hlPct / 100) + Math.round(sah * slPct / 100);
+                  }, 0);
                   const isCur = i === currentPIdx;
                   return (
                     <Fragment key={i}>
@@ -764,26 +864,34 @@ export function AllView() {
                       <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#c8d8f4]' : 'bg-[#e8effc]'}`} style={{ padding: 0 }}>
                         <span className="text-[11px] font-semibold text-[#2f5bb7]">{Math.round(totalSah)}</span>
                       </td>
-                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'} last:border-r-0`} style={{ padding: 0 }}>
-                        <span className={`text-[11px] font-semibold ${sumColor}`}>{avgPct}%</span>
+                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'}`} style={{ padding: 0 }}>
+                        <span className="text-[11px] font-semibold text-[var(--G1)]">{avgPct}%</span>
+                      </td>
+                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'}`} style={{ padding: 0 }}>
+                        <span className="text-[11px] font-semibold text-[var(--G1)]">{totalNeto}</span>
                       </td>
                     </Fragment>
                   );
                 })}
               </tr>
+
               {paged.length === 0 ? (
                 <tr>
-                  <td colSpan={1 + periods.length * 3} className="text-center text-sm text-[var(--G3)] py-12">
+                  <td colSpan={2 + periods.length * 4} className="text-center text-sm text-[var(--G3)] py-12">
                     Sin empleados
                   </td>
                 </tr>
-              ) : paged.map((emp) => {
+              ) : sortedPaged.map((emp) => {
                 const fRollOn = parseDDMMYY(emp.rollOn);
                 const fRollOff = parseDDMMYY(emp.rollOff);
                 const fPtoStart = parseDDMMYY(emp.nextPTO);
                 const fPtoEnd = parseDDMMYY(emp.nextPTOEnd);
                 const fSick = sickRangesMap.get(emp.id) ?? [];
                 const rowTone = ROW_TONE[assumptionKind(emp)];
+                const d2a = days2AvailMap.get(emp.id) ?? 0;
+                const d2aColor = d2a <= 14 ? 'text-[var(--RD)]' : d2a <= 30 ? 'text-[var(--YL)]' : 'text-[var(--GR)]';
+                // Offering label: último segmento del offering o projectType
+                const offeringLabel = emp.offering ?? emp.projectType ?? emp.country ?? '';
                 return (
                   <tr key={emp.id} className={`group ${rowTone}`}>
                     <td className={`sticky left-0 z-10 border-b border-r border-[var(--G5)] px-3 py-2 ${rowTone}`}>
@@ -796,12 +904,23 @@ export function AllView() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="block text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
-                          <span className="block text-[9px] text-[var(--G4)]">{emp.level} - {emp.projectType ?? emp.country}</span>
+                          <span className="block text-[9px] text-[var(--G4)]">{emp.level} · {offeringLabel}</span>
                         </div>
                       </div>
                     </td>
+                    {/* Days to Availability */}
+                    <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${rowTone}`} style={{ padding: 0 }}>
+                      {fRollOff ? (
+                        <span className={`text-[11px] font-semibold ${d2aColor}`}>{d2a}d</span>
+                      ) : (
+                        <span className="text-[11px] text-[var(--G4)]">—</span>
+                      )}
+                    </td>
                     {periods.map((period, i) => {
                       const sah = emp.sah[i] ?? 0;
+                      // SAH normal por país para este período
+                      const normalSah = SAH_BY_COUNTRY[emp.country] ?? 176;
+                      const sahDisplay = sah > 0 ? sah : normalSah;
                       const p = chgType === 'HL' ? (emp.cp[i] ?? 0) : (emp.slAssumed[i] ?? 0);
                       const periodDays = cellsInRange(parseLocalDate(period.startDate), parseLocalDate(period.endDate));
                       const chgDayCount = periodDays.filter((d) => {
@@ -817,6 +936,10 @@ export function AllView() {
                       }).length;
                       const totalCHGVal = chgDayCount * 8 * p / 100;
                       const chgLabel = totalCHGVal % 1 === 0 ? `${Math.round(totalCHGVal)}` : totalCHGVal.toFixed(1);
+                      // CHG Neto = CHG HL + CHG SL
+                      const hlPct = emp.cp[i] ?? 0;
+                      const slPct = emp.slAssumed[i] ?? 0;
+                      const netoVal = Math.round(sahDisplay * hlPct / 100) + Math.round(sahDisplay * slPct / 100);
                       const cellColor = 'text-[var(--G1)]';
                       const isCur = i === currentPIdx;
                       return (
@@ -825,13 +948,13 @@ export function AllView() {
                             <span className={`text-[11px] font-semibold ${cellColor}`}>{chgLabel}</span>
                           </td>
                           <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e4edfc]' : 'bg-[#f4f8ff]'}`} style={{ padding: 0 }}>
-                            <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sah)}</span>
+                            <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sahDisplay)}</span>
                           </td>
                           {(() => {
                             const isClickable = p !== 100 && employeeIdsWithTickets.has(emp.id);
                             return (
                               <td
-                                className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
                                 style={{ padding: 0 }}
                                 onClick={isClickable ? () => {
                                   const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
@@ -845,6 +968,10 @@ export function AllView() {
                               </td>
                             );
                           })()}
+                          {/* CHG Neto */}
+                          <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
+                            <span className={`text-[11px] font-semibold ${cellColor}`}>{netoVal}</span>
+                          </td>
                         </Fragment>
                       );
                     })}
@@ -878,7 +1005,9 @@ export function AllView() {
             <thead>
               <tr>
                 <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
-                  {t('title')}
+                  <button className="flex items-center gap-1 hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('name')}>
+                    {t('title')} <SortIcon field="name" />
+                  </button>
                 </th>
                 {dayGroups.map((g) => (
                   <th
@@ -911,12 +1040,16 @@ export function AllView() {
                 ))}
                 <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG</th>
                 <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">SAH</th>
-                <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG%</th>
+                <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">
+                  <button className="flex items-center gap-0.5 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('chgPct')}>
+                    CHG% <SortIcon field="chgPct" />
+                  </button>
+                </th>
               </tr>
             </thead>
 
             <motion.tbody
-              key={`${safePage}-${debouncedQ}-${status}-${country}-${offering}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
+              key={`${safePage}-${debouncedQ}-${status}-${country}-${offering}-${level}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
               initial="hidden"
               animate="visible"
               variants={TBODY_VARIANTS}
@@ -928,7 +1061,7 @@ export function AllView() {
                   </td>
                 </tr>
               ) : (
-                paged.flatMap((emp) => {
+                sortedPaged.flatMap((emp) => {
                   const isExpanded = !!expanded[emp.id];
                   const pIdx = currentPIdx;
                   const sahForPeriod = emp.sah?.[pIdx] ?? emp.totalHours ?? 80;
@@ -938,6 +1071,7 @@ export function AllView() {
                   const rollOffDate = parseDDMMYY(emp.rollOff);
                   const ptoStart = parseDDMMYY(emp.nextPTO);
                   const ptoEnd = parseDDMMYY(emp.nextPTOEnd);
+                  const rowTone = ROW_TONE[assumptionKind(emp)];
 
                   const chgPct = chgType === 'HL' ? (emp.cp[pIdx] ?? 0) : (emp.slAssumed[pIdx] ?? 0);
                   const dailyCHG = 8 * chgPct / 100;
@@ -959,9 +1093,12 @@ export function AllView() {
                   const realChgPct = sahForPeriod > 0 ? Math.round(totalCHGVal / sahForPeriod * 100) : 0;
                   const summaryColor = realChgPct >= 80 ? 'text-[var(--GR)]' : realChgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
 
+                  // Offering label para vista diario
+                  const offeringLabel = emp.offering ?? emp.projectType ?? emp.country ?? '';
+
                   return [
-                    <motion.tr key={emp.id} variants={ROW_VARIANTS} className={`group cursor-pointer select-none${emp.isOnPTO ? ' opacity-50' : ''}`} onClick={() => toggleExpand(emp.id)}>
-                      <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
+                    <motion.tr key={emp.id} variants={ROW_VARIANTS} className={`group cursor-pointer select-none ${rowTone}${emp.isOnPTO ? ' opacity-50' : ''}`} onClick={() => toggleExpand(emp.id)}>
+                      <td className={`sticky left-0 z-10 border-b border-r border-[var(--G5)] px-3 py-2 ${rowTone}`}>
                         <div className="flex items-center gap-2">
                           <div
                             className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -981,7 +1118,7 @@ export function AllView() {
                                 </span>
                               )}
                             </div>
-                            <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/dia - {emp.projectType ?? emp.country}</div>
+                            <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/dia · {offeringLabel}</div>
                           </div>
                           {isAdmin && ((emp.chgAssumption?.[0] ?? 0) > 0 || (emp.chgAssumption?.[1] ?? 0) > 0) && (
                             <button
