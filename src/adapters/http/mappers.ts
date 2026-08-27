@@ -1,4 +1,4 @@
-﻿import type { AppState, CountrySummary } from '@/src/core/domain/app-state';
+mport type { AppState, CountrySummary } from '@/src/core/domain/app-state';
 import type { Country, Employee, ScenarioType as EmployeeScenarioType } from '@/src/core/domain/employee';
 import type { Period } from '@/src/core/domain/period';
 import type { PPALog } from '@/src/core/domain/ppa';

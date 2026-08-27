@@ -30,7 +30,7 @@ const NO_PERIODS: Period[] = [];
 const NO_EMPLOYEES: Employee[] = [];
 const NO_TICKETS: Ticket[] = [];
 
-// â”€â”€â”€ animation variants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── animation variants ───────────────────────────────────────────────────────
 
 const TBODY_VARIANTS = {
   hidden: {},
@@ -42,7 +42,7 @@ const ROW_VARIANTS = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' as const } },
 };
 
-// â”€â”€â”€ constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── constants ────────────────────────────────────────────────────────────────
 
 const DAY_W = 40;
 const SUMMARY_W = 60;
@@ -53,7 +53,7 @@ const AVATAR_PALETTE = [
   '#7c5cff', '#0ea5b5', '#12a86f', '#e0872a', '#e05c8a', '#5c9ae0', '#c05cc0',
 ];
 
-// â”€â”€â”€ ticket modal constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ticket modal constants ───────────────────────────────────────────────────
 
 const TYPE_LABELS: Record<string, string> = {
   newproj: 'Nuevo proyecto',
@@ -85,7 +85,7 @@ const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'neutral'> = {
   Rejected: 'red',
 };
 
-// â”€â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── helpers ─────────────────────────────────────────────────────────────────
 
 function avatarColor(id: string): string {
   let h = 0;
@@ -153,7 +153,7 @@ function cellsInRange(from: Date, to: Date): DayCell[] {
   return cells;
 }
 
-// â”€â”€â”€ component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── component ───────────────────────────────────────────────────────────────
 
 export function AllView() {
   const t = useTranslations('all');
@@ -189,16 +189,16 @@ export function AllView() {
     return map;
   }, [allTickets]);
 
-  // â”€â”€ BE pagination state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── BE pagination state ──────────────────────────────────────────────────
   const [result, setResult] = useState<Page<Employee> | null>(null);
   const [isFetching, setIsFetching] = useState(true);
   const [isRefetching, setIsRefetching] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // â”€â”€ efectivizar modal state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── efectivizar modal state ──────────────────────────────────────────────
   const [effectivizeTarget, setEffectivizeTarget] = useState<{ eid: string; name: string } | null>(null);
 
-  // â”€â”€ CHG% tickets modal state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── CHG% tickets modal state ─────────────────────────────────────────────
   const [chgModal, setChgModal] = useState<{ emp: Employee; tickets: Ticket[] } | null>(null);
   const [effectivizePct, setEffectivizePct] = useState('');
   const [isEffectivizing, setIsEffectivizing] = useState(false);
@@ -830,7 +830,7 @@ export function AllView() {
                               >
                                 <span className={`text-[11px] font-semibold ${cellColor}`}>
                                   {p}%
-                                  {isClickable && <span className="ml-0.5 text-[9px] opacity-50">â“˜</span>}
+                                  {isClickable && <span className="ml-0.5 text-[9px] opacity-50">ⓘ</span>}
                                 </span>
                               </td>
                             );
@@ -1005,7 +1005,7 @@ export function AllView() {
                             style={{ padding: 0 }}
                           >
                             {holidayName && !d.weekend ? (
-                              <span className="text-[13px] leading-none" title={holidayName}>ðŸŒ´</span>
+                              <span className="text-[13px] leading-none" title={holidayName}>🌴</span>
                             ) : isOutOfRange ? (
                               <span className="block text-[11px] font-semibold leading-tight text-[var(--G4)]">0h</span>
                             ) : effectivePto ? (
@@ -1104,7 +1104,7 @@ export function AllView() {
                                         zIndex: 2,
                                       }}
                                     >
-                                      ðŸ– PTO
+                                      🏖 PTO
                                     </div>
                                   );
                                 })() : null;

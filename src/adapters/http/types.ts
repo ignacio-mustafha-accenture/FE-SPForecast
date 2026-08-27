@@ -1,4 +1,4 @@
-﻿export interface RawPeriod {
+xport interface RawPeriod {
   id: string;
   period_name: string;
   label: string;
