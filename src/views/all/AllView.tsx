@@ -156,18 +156,8 @@ interface DayGroup {
   count: number;
 }
 
-<<<<<<< HEAD
-function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
-  if (isHL) return { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' };
-  if (emp.client === 'ISG PE Assessment') return { background: '#fef9c3', color: '#854d0e', border: '1.5px dashed #eab308' };
-  if (emp.newJoiner) return { background: '#f8fafc', color: '#64748b', border: '1.5px dashed #94a3b8' };
-  if (emp.isgAligned && emp.ringfenced) return { background: '#fff7ed', color: '#9a3412', border: '1.5px dashed #f97316' };
-  return { background: '#fef2f2', color: '#991b1b', border: '1.5px dashed #f87171' };
-}
-=======
 type SortField = 'name' | 'days2avail' | 'chgPct' | null;
 type SortDir = 'asc' | 'desc';
->>>>>>> 3b0bff0 (feat: colores assumption, CHG neto, D2A, offering label, filtro level, sort)
 
 function cellsInRange(from: Date, to: Date): DayCell[] {
   const cells: DayCell[] = [];
