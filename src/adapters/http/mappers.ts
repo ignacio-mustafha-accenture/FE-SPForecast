@@ -69,15 +69,20 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     nextPTOHours: raw.NextPTOHours ?? null,
     newJoiner: raw.NewJoiner ?? false,
     charge: hasClient,
-    chg: raw.chg ?? [],
-    sah: raw.sah ?? [],
-    cp: raw.cp ?? [],
-    chgEffective: raw.chg_hl ?? [],
-    chgAssumption: raw.chg_sl ?? [],
-    ppaAdj: raw.chg_cascadeadas ?? [],
-    slReal: raw.absence_hours ?? [],
-    slAssumed: raw.chg_pct_sl ?? [],
-    hl: raw.chg_pct_hl ?? [],
+    chg:            raw.chg             ?? [],
+    chgNeto:        raw.chg_neto        ?? [],
+    chgHl:          raw.chg_hl          ?? [],
+    chgSl:          raw.chg_sl          ?? [],
+    chgPctHl:       raw.chg_pct_hl      ?? [],
+    chgPctSl:       raw.chg_pct_sl      ?? [],
+    sah:            raw.sah             ?? [],
+    cp:             raw.cp              ?? [],
+    chgEffective:   raw.chg_hl          ?? [],
+    chgAssumption:  raw.chg_sl          ?? [],
+    ppaAdj:         raw.chg_cascadeadas ?? [],
+    slReal:         raw.absence_hours   ?? [],
+    slAssumed:      raw.chg_pct_sl      ?? [],
+    hl:             raw.chg_pct_hl      ?? [],
     chargeabilityStatus: getEmployeeStatus(cp0, target, hasClient, isTerminated),
     chargeabilityPercent: cp0 / 100,
     availableHours: Math.max(0, sah0 - chg0),
@@ -90,7 +95,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     hasAssumptionBlocks: raw.HasAssumptionBlocks ?? ((raw.chg_pct_sl?.[0] ?? 0) > 0),
     isOnPTO: raw.IsOnPTO ?? false,
     ringfenced: raw.Ringfenced ?? false,
-    isgAligned: false, // This field is not present in the raw data, defaulting to false
+    isgAligned: false,
   };
 }
 
@@ -183,7 +188,7 @@ export function mapRawAppState(raw: RawAppState, windowOffset: number): AppState
   const employeeMap = new Map(employees.map((e) => [e.id, e]));
 
   return {
-    period: currentPeriod ? mapRawPeriod(currentPeriod, windowOffset) : { label: '—', startDate: '', endDate: '', windowOffset },
+    period: currentPeriod ? mapRawPeriod(currentPeriod, windowOffset) : { label: '–', startDate: '', endDate: '', windowOffset },
     periods: allPeriods,
     employees,
     tickets: (raw.tickets ?? []).map((t) => mapRawTicket(t, employeeMap)),

@@ -1,6 +1,5 @@
 ﻿'use client';
 
-// @ts-ignore React is available at runtime, but this project does not include its type declarations.
 import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
 import { useToast } from '@/src/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -376,13 +375,18 @@ export function AllView() {
     const items = result?.items ?? [];
     const enriched = items.map((e) => {
       const s = storeEmpMap.get(e.id);
-      if (!s || s.cp.length <= 1) return e;
+      if (!s) return e;
       return {
         ...e,
         cp: s.cp,
         slAssumed: s.slAssumed,
         hl: s.hl,
         chg: s.chg,
+        chgNeto: s.chgNeto,
+        chgHl: s.chgHl,
+        chgSl: s.chgSl,
+        chgPctHl: s.chgPctHl,
+        chgPctSl: s.chgPctSl,
         sah: s.sah,
         chgEffective: s.chgEffective,
         chgAssumption: s.chgAssumption,
@@ -834,48 +838,6 @@ export function AllView() {
               </tr>
             </thead>
             <tbody>
-              {/* Fila totales */}
-              <tr>
-                <td className="sticky left-0 z-10 bg-[#f0f2f7] border-b border-r border-[var(--G5)] px-3 py-2">
-                  <span className="text-[11px] font-semibold text-[var(--G1)]">Total</span>
-                  <span className="block text-[9px] text-[var(--G3)]">{paged.length} empleados</span>
-                </td>
-                {/* D2A total — vacío en fila totales */}
-                <td className="bg-[#f0f2f7] border-b border-r border-[var(--G5)]" />
-                {periods.map((_, i) => {
-                  const totalSah = paged.reduce((s, e) => s + (e.sah[i] ?? 0), 0);
-                  const totalChg = paged.reduce((s, e) => {
-                    const p = chgType === 'HL' ? (e.cp[i] ?? 0) : (e.slAssumed[i] ?? 0);
-                    return s + Math.round((e.sah[i] ?? 0) * p / 100);
-                  }, 0);
-                  const avgPct = totalSah > 0 ? Math.round(totalChg / totalSah * 100) : 0;
-                  // CHG Neto total = suma HL + SL en horas
-                  const totalNeto = paged.reduce((s, e) => {
-                    const hlPct = e.cp[i] ?? 0;
-                    const slPct = e.slAssumed[i] ?? 0;
-                    const sah = e.sah[i] ?? 0;
-                    return s + Math.round(sah * hlPct / 100) + Math.round(sah * slPct / 100);
-                  }, 0);
-                  const isCur = i === currentPIdx;
-                  return (
-                    <Fragment key={i}>
-                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'}`} style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[var(--G1)]">{totalChg}</span>
-                      </td>
-                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#c8d8f4]' : 'bg-[#e8effc]'}`} style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[#2f5bb7]">{Math.round(totalSah)}</span>
-                      </td>
-                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'}`} style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[var(--G1)]">{avgPct}%</span>
-                      </td>
-                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'}`} style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[var(--G1)]">{totalNeto}</span>
-                      </td>
-                    </Fragment>
-                  );
-                })}
-              </tr>
-
               {paged.length === 0 ? (
                 <tr>
                   <td colSpan={2 + periods.length * 4} className="text-center text-sm text-[var(--G3)] py-12">
@@ -919,28 +881,18 @@ export function AllView() {
                     </td>
                     {periods.map((period, i) => {
                       const sah = emp.sah[i] ?? 0;
-                      // SAH normal por país para este período
                       const normalSah = SAH_BY_COUNTRY[emp.country] ?? 176;
                       const sahDisplay = sah > 0 ? sah : normalSah;
                       const p = chgType === 'HL' ? (emp.cp[i] ?? 0) : (emp.slAssumed[i] ?? 0);
-                      const periodDays = cellsInRange(parseLocalDate(period.startDate), parseLocalDate(period.endDate));
-                      const chgDayCount = periodDays.filter((d) => {
-                        if (d.weekend) return false;
-                        if (chgType === 'HL') {
-                          if (fRollOn !== null && d.date < fRollOn) return false;
-                          if (fRollOff !== null && d.date > fRollOff) return false;
-                        }
-                        if (fPtoStart !== null && fPtoEnd !== null && d.date >= fPtoStart && d.date <= fPtoEnd) return false;
-                        if (fSick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
-                        if (isHoliday(d.date, emp.country)) return false;
-                        return true;
-                      }).length;
-                      const totalCHGVal = chgDayCount * 8 * p / 100;
-                      const chgLabel = totalCHGVal % 1 === 0 ? `${Math.round(totalCHGVal)}` : totalCHGVal.toFixed(1);
-                      // CHG Neto = CHG HL + CHG SL
-                      const hlPct = emp.cp[i] ?? 0;
-                      const slPct = emp.slAssumed[i] ?? 0;
-                      const netoVal = Math.round(sahDisplay * hlPct / 100) + Math.round(sahDisplay * slPct / 100);
+                      // CHG: usar valores reales del backend (igual que vista Diaria)
+                      const chgRaw = chgType === 'HL'
+                        ? (emp.chgHl?.[i] ?? emp.chgEffective?.[i] ?? 0)
+                        : (emp.chgSl?.[i] ?? emp.chgAssumption?.[i] ?? 0);
+                      const chgLabel = chgRaw % 1 === 0 ? `${Math.round(chgRaw)}` : chgRaw.toFixed(1);
+                      // CHG Neto: chg_hl + chg_sl del backend
+                      const netoVal = emp.chgNeto?.[i] != null
+                        ? Math.round(emp.chgNeto[i])
+                        : Math.round(sahDisplay * (emp.cp[i] ?? 0) / 100) + Math.round(sahDisplay * (emp.slAssumed[i] ?? 0) / 100);
                       const cellColor = 'text-[var(--G1)]';
                       const isCur = i === currentPIdx;
                       return (
