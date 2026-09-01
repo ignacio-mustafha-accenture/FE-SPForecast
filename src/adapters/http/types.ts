@@ -48,14 +48,15 @@ export interface RawEmployee {
   Ringfenced?: boolean;
   ISGAligned?: boolean;
   chg: number[];
+  chg_neto: number[];
+  chg_hl: number[];
+  chg_sl: number[];
+  chg_pct_hl: number[];
+  chg_pct_sl: number[];
   sah: number[];
   cp: number[];
   absence_hours: number[];
   chg_cascadeadas: number[];
-  chg_hl: number[];
-  chg_sl: number[];
-  chg_pct_sl: number[];
-  chg_pct_hl: number[];
 }
 
 export interface RawTicket {

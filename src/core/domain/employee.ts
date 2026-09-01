@@ -2,7 +2,6 @@
 export type ScenarioType = 'assumption' | 'effective';
 export type ChargeabilityStatus = 'green' | 'yellow' | 'red' | 'unassigned' | 'leave';
 export interface Employee {
-  isgAligned: boolean;
   id: string;
   name: string;
   email: string;
@@ -11,7 +10,7 @@ export interface Employee {
   project: string | null;
   client: string | null;
   projectType: string | null;
-  offering: string | null;        // offering del empleado (employees.offering)
+  offering: string | null;
   manager: string | null;
   rollOn: string | null;
   rollOff: string | null;
@@ -24,6 +23,11 @@ export interface Employee {
   newJoiner: boolean;
   charge: boolean;
   chg: number[];
+  chgNeto: number[];
+  chgHl: number[];
+  chgSl: number[];
+  chgPctHl: number[];
+  chgPctSl: number[];
   sah: number[];
   cp: number[];
   chgEffective: number[];
