@@ -1,10 +1,10 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
 import { useToast } from '@/src/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type { Employee } from '@/src/core/domain/employee';
@@ -30,7 +30,6 @@ const NO_PERIODS: Period[] = [];
 const NO_EMPLOYEES: Employee[] = [];
 const NO_TICKETS: Ticket[] = [];
 
-
 const TBODY_VARIANTS = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.03, delayChildren: 0.05 } },
@@ -41,7 +40,6 @@ const ROW_VARIANTS = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' as const } },
 };
 
-
 const DAY_W = 40;
 const SUMMARY_W = 60;
 
@@ -50,7 +48,6 @@ const DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 const AVATAR_PALETTE = [
   '#7c5cff', '#0ea5b5', '#12a86f', '#e0872a', '#e05c8a', '#5c9ae0', '#c05cc0',
 ];
-
 
 const TYPE_LABELS: Record<string, string> = {
   newproj: 'Nuevo proyecto',
@@ -82,6 +79,20 @@ const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'neutral'> = {
   Rejected: 'red',
 };
 
+// Colores por subtipo de assumption, segun la leyenda del Excel
+// (hoja 'Forecast Update', celdas B93:B96)
+const ASSUMPTION_CELL: Record<string, { bg: string; fg: string; label: string }> = {
+  isg_assessment: { bg: '#fff2cc', fg: '#9c5700', label: 'Assumption ISG Assessment' },
+  no_r:           { bg: '#ffcccc', fg: '#c00000', label: 'Assumption No R' },
+  r:              { bg: '#dbe5f1', fg: '#1f4e79', label: 'Assumption R' },
+};
+
+// SAH normales por país (horas disponibles por período ~4 semanas)
+const SAH_BY_COUNTRY: Record<string, number> = {
+  AR: 176,
+  MX: 176,
+  CR: 176,
+};
 
 function avatarColor(id: string): string {
   let h = 0;
@@ -113,14 +124,6 @@ function parseLocalDate(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
-// ─── assumption bar style ─────────────────────────────────────────────────────
-// Matches Excel color legend:
-//   effective (HL)        → blue solid      (Hard Lock)
-//   ISG PE Assessment     → yellow dashed   (Assumption 4)
-//   ISG Ringfenced        → orange dashed   (Assumption 2)
-//   New Joiner            → gray dashed     (Assumption 3)
-//   No ISG non-ringfenced → red dashed      (Assumption 1)
-
 function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
   if (isHL) return { background: '#e8effc', color: '#2f5bb7', border: '1.5px solid #5b8def' };
   if (emp.client === 'ISG PE Assessment') return { background: '#fef9c3', color: '#854d0e', border: '1.5px dashed #eab308' };
@@ -128,6 +131,25 @@ function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
   if (emp.isgAligned && emp.ringfenced) return { background: '#fff7ed', color: '#9a3412', border: '1.5px dashed #f97316' };
   return { background: '#fef2f2', color: '#991b1b', border: '1.5px dashed #f87171' };
 }
+
+type AssumptionKind = 'effective' | 'isgAssessment' | 'newJoiner' | 'isgRingfenced' | 'noIsg';
+
+function assumptionKind(emp: Employee): AssumptionKind {
+  // ISG Ringfenced es un atributo a nivel PERSONA: manda sobre el resto
+  if (emp.isgAligned && emp.ringfenced) return 'isgRingfenced';
+  if (emp.scenarioType === 'effective') return 'effective';
+  if (emp.client === 'ISG PE Assessment') return 'isgAssessment';
+  if (emp.newJoiner) return 'newJoiner';
+  return 'noIsg';
+}
+
+const ROW_TONE: Record<AssumptionKind, string> = {
+  effective:     'bg-white',
+  isgAssessment: 'bg-[#fefce8]',
+  newJoiner:     'bg-[#f8fafc]',
+  isgRingfenced: 'bg-[#e0f2fe]',
+  noIsg:         'bg-[#fef2f2]',
+};
 
 interface DayCell {
   idx: number;
@@ -143,6 +165,9 @@ interface DayGroup {
   count: number;
 }
 
+type SortField = 'name' | 'days2avail' | 'chgPct' | null;
+type SortDir = 'asc' | 'desc';
+
 function cellsInRange(from: Date, to: Date): DayCell[] {
   const cells: DayCell[] = [];
   const cur = startOfDay(new Date(from));
@@ -155,7 +180,6 @@ function cellsInRange(from: Date, to: Date): DayCell[] {
   }
   return cells;
 }
-
 
 export function AllView() {
   const t = useTranslations('all');
@@ -206,13 +230,20 @@ export function AllView() {
   const [rangeAnchor, setRangeAnchor] = useState<number | null>(null);
   const [holidays, setHolidays] = useState<Map<string, Map<string, string>>>(new Map());
 
+  // Sort state
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
   const q = searchParams.get('q') ?? '';
   const country = searchParams.get('country') ?? '';
   const status = searchParams.get('status') ?? '';
   const offering = searchParams.get('offering') ?? '';
+  const level = searchParams.get('level') ?? '';
   const teApprover = searchParams.get('te_approver') ?? '';
   const chgBucket = searchParams.get('chg_bucket') ?? '';
-  const chgType = (searchParams.get('chg') === 'SL' ? 'SL' : 'HL') as 'HL' | 'SL';
+  const chgParam = searchParams.get('chg');
+  // Bug 9: default CHG Neto al ingresar (antes defaulteaba a HL)
+  const chgType = (chgParam === 'HL' ? 'HL' : chgParam === 'SL' ? 'SL' : 'NETO') as 'HL' | 'SL' | 'NETO';
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10));
 
@@ -253,6 +284,7 @@ export function AllView() {
         page,
         pageSize,
         offering: offering || undefined,
+        level: level || undefined,
         teApprover: teApprover || undefined,
         chgBucket: chgBucket || undefined,
       })
@@ -260,7 +292,7 @@ export function AllView() {
       .catch(console.error)
       .finally(() => { if (!cancelled) { setIsFetching(false); setIsRefetching(false); } });
     return () => { cancelled = true; };
-  }, [country, debouncedQ, status, offering, teApprover, chgBucket, page, pageSize, refreshKey]);
+  }, [country, debouncedQ, status, offering, level, teApprover, chgBucket, page, pageSize, refreshKey]);
 
   useEffect(() => {
     const countries = ['AR', 'MX', 'CR'];
@@ -283,7 +315,7 @@ export function AllView() {
 
   const [windowAnchor, setWindowAnchor] = useState<Date>(() => startOfDay(new Date()));
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [viewMode, setViewMode] = useState<'daily' | 'forecast'>('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'forecast'>('forecast');
 
   const getPeriodIdx = useCallback(
     (date: Date): number => {
@@ -302,10 +334,10 @@ export function AllView() {
       const cells = cellsInRange(today, new Date(today.getTime() + 13 * 86_400_000));
       return {
         days: cells,
-        dayGroups: [{ key: 'loading', label: '…', count: cells.length }],
+        dayGroups: [{ key: 'loading', label: '...', count: cells.length }],
         windowStart: today,
         windowEnd: endOfDay(cells[cells.length - 1].date),
-        toolbarLabel: '—',
+        toolbarLabel: '-',
         canPrev: false,
         canNext: false,
         currentPIdx: 0,
@@ -322,7 +354,7 @@ export function AllView() {
     const first = cells[0];
     const last = cells[cells.length - 1];
     const fmt = (d: Date) => d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
-    const label = `${p.label} · ${fmt(first.date)} – ${fmt(last.date)}`;
+    const label = `${p.label} - ${fmt(first.date)} a ${fmt(last.date)}`;
 
     return {
       days: cells,
@@ -354,22 +386,82 @@ export function AllView() {
     const items = result?.items ?? [];
     const enriched = items.map((e) => {
       const s = storeEmpMap.get(e.id);
-      if (!s || s.cp.length <= 1) return e;
+      if (!s) return e;
       return {
         ...e,
-        cp: s.cp,
-        slAssumed: s.slAssumed,
-        hl: s.hl,
-        chg: s.chg,
-        sah: s.sah,
-        chgEffective: s.chgEffective,
-        chgAssumption: s.chgAssumption,
-        ppaAdj: s.ppaAdj,
-        slReal: s.slReal,
+        cp: s.cp.length > 0 ? s.cp : e.cp,
+        slAssumed: s.slAssumed.length > 0 ? s.slAssumed : e.slAssumed,
+        hl: s.hl.length > 0 ? s.hl : e.hl,
+        chg: s.chg.length > 0 ? s.chg : e.chg,
+        sah: s.sah.length > 0 ? s.sah : e.sah,
+        chgEffective: s.chgEffective.length > 0 ? s.chgEffective : e.chgEffective,
+        chgAssumption: s.chgAssumption.length > 0 ? s.chgAssumption : e.chgAssumption,
+        ppaAdj: s.ppaAdj.length > 0 ? s.ppaAdj : e.ppaAdj,
+        slReal: s.slReal.length > 0 ? s.slReal : e.slReal,
+        chgNeto: s.chgNeto ?? e.chgNeto,
+        chgHl: s.chgHl ?? e.chgHl,
+        chgSl: s.chgSl ?? e.chgSl,
+        chgPctHl: s.chgPctHl ?? e.chgPctHl,
+        chgPctSl: s.chgPctSl ?? e.chgPctSl,
+        assumptionKind: s.assumptionKind ?? e.assumptionKind,
       };
     });
     return enriched;
   }, [result?.items, storeEmpMap]);
+
+  // Días hasta roll off (Days to Availability) por empleado
+  const days2AvailMap = useMemo(() => {
+    const today = startOfDay(new Date());
+    const map = new Map<string, number>();
+    for (const emp of paged) {
+      const rollOff = parseDDMMYY(emp.rollOff);
+      if (!rollOff) { map.set(emp.id, 0); continue; }
+      const diff = Math.ceil((rollOff.getTime() - today.getTime()) / 86_400_000);
+      map.set(emp.id, Math.max(0, diff));
+    }
+    return map;
+  }, [paged]);
+
+  // Sorted paged list
+  const sortedPaged = useMemo(() => {
+    if (!sortField) return paged;
+    return [...paged].sort((a, b) => {
+      let va = 0, vb = 0;
+      if (sortField === 'name') {
+        const cmp = a.name.localeCompare(b.name);
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+      if (sortField === 'days2avail') {
+        va = days2AvailMap.get(a.id) ?? 0;
+        vb = days2AvailMap.get(b.id) ?? 0;
+      }
+      if (sortField === 'chgPct') {
+        const pctOf = (x: Employee) => {
+          if (chgType === 'HL') return x.cp[currentPIdx] ?? 0;
+          if (chgType === 'SL') return x.slAssumed[currentPIdx] ?? 0;
+          const sahX = x.sah[currentPIdx] ?? 0;
+          return sahX > 0 ? ((x.chgNeto?.[currentPIdx] ?? 0) / sahX) * 100 : 0;
+        };
+        va = pctOf(a);
+        vb = pctOf(b);
+      }
+      return sortDir === 'asc' ? va - vb : vb - va;
+    });
+  }, [paged, sortField, sortDir, days2AvailMap, chgType, currentPIdx]);
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }
+
+  function SortIcon({ field }: { field: SortField }) {
+    if (sortField !== field) return <ArrowUpDown size={10} className="opacity-40" />;
+    return sortDir === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />;
+  }
 
   const pageCount = result?.pages ?? 1;
   const safePage = result?.page ?? page;
@@ -474,16 +566,19 @@ export function AllView() {
   }
 
   function handleExport() {
-    const rows = paged.map((e) => ({
+    const rows = sortedPaged.map((e) => ({
       EID: e.id,
       Nombre: e.name,
-      País: e.country,
+      Pais: e.country,
       CL: e.level,
       Cliente: e.client ?? '',
       'Roll On': e.rollOn ?? '',
       'Roll Off': e.rollOff ?? '',
+      'Days to Availability': days2AvailMap.get(e.id) ?? 0,
       ...Object.fromEntries(periods.map((p, i) => [`CHG% HL ${p.label}`, e.cp[i] ?? 0])),
       ...Object.fromEntries(periods.map((p, i) => [`CHG% SL ${p.label}`, e.slAssumed[i] ?? 0])),
+      ...Object.fromEntries(periods.map((p, i) => [`CHG Neto ${p.label}`, e.chgNeto?.[i] ?? 0])),
+      ...Object.fromEntries(periods.map((p, i) => [`Assumption ${p.label}`, e.assumptionKind?.[i] ?? ''])),
     }));
     exportToXlsx(rows, 'todos-empleados-forecast');
   }
@@ -496,11 +591,20 @@ export function AllView() {
   ];
 
   const OFFERING_OPTIONS = [
-    { value: 'Tech-led', label: 'Tech-led' },
-    { value: 'Cost Take Out', label: 'Cost Take Out' },
-    { value: 'OM+SPY+Others', label: 'OM+SPY+Others' },
-    { value: 'Internal', label: 'Internal' },
-    { value: 'CTO', label: 'CTO' },
+    { value: 'SO',     label: 'SO' },
+    { value: 'PR',     label: 'PR' },
+    { value: 'Tools',  label: 'Tools' },
+    { value: 'S4',     label: 'S4' },
+    { value: 'Ariba',  label: 'Ariba' },
+    { value: 'Oracle', label: 'Oracle' },
+  ];
+
+  const LEVEL_OPTIONS = [
+    { value: '9',  label: '9' },
+    { value: '10', label: '10' },
+    { value: '11', label: '11' },
+    { value: '12', label: '12' },
+    { value: '13', label: '13' },
   ];
 
   const CHG_BUCKET_OPTIONS = [
@@ -555,7 +659,7 @@ export function AllView() {
         <div className="flex-1" />
 
         <div className="flex border border-[var(--G5)] rounded-lg overflow-hidden bg-white">
-          {(['HL', 'SL'] as const).map((mode) => (
+          {(['HL', 'SL', 'NETO'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setParam('chg', mode)}
@@ -564,7 +668,7 @@ export function AllView() {
                 : 'text-[var(--G3)] hover:text-[var(--G1)]'
                 }`}
             >
-              {t(mode === 'HL' ? 'toggleHL' : 'toggleSL')}
+              {mode === 'NETO' ? 'CHG Neto' : t(mode === 'HL' ? 'toggleHL' : 'toggleSL')}
             </button>
           ))}
         </div>
@@ -604,16 +708,16 @@ export function AllView() {
             multi: true,
           },
           {
-            label: t('filterStatus'),
-            options: STATUS_OPTIONS,
-            active: status ? [status] : [],
-            onToggle: (v) => setParam('status', status === v ? '' : v),
-          },
-          {
-            label: 'Proyecto',
+            label: 'Offering',
             options: OFFERING_OPTIONS,
             active: offering ? [offering] : [],
             onToggle: (v) => setParam('offering', offering === v ? '' : v),
+          },
+          {
+            label: 'Level',
+            options: LEVEL_OPTIONS,
+            active: level ? [level] : [],
+            onToggle: (v) => setParam('level', level === v ? '' : v),
           },
           {
             label: 'CHG%',
@@ -649,7 +753,7 @@ export function AllView() {
               className="px-2.5 py-0.5 text-xs border border-[var(--G5)] rounded-md bg-white text-[var(--G1)] placeholder-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] w-32"
             />
             {showTeApproverDrop && (teApproversFiltered.length > 0 || teApproverSearch.length > 0) && (
-              <ul className="absolute z-10 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto min-w-[180px] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)]">
+              <ul className="absolute z-50 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto min-w-[180px] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)]">
                 {teApproversFiltered.map((name) => (
                   <li
                     key={name}
@@ -691,88 +795,94 @@ export function AllView() {
               borderCollapse: 'separate',
               borderSpacing: 0,
               tableLayout: 'fixed',
-              minWidth: 200 + periods.length * 170,
+              minWidth: 260 + periods.length * 234,
             }}
           >
             <colgroup>
+              {/* Nombre */}
               <col style={{ width: 200 }} />
+              {/* Days2Avail */}
+              <col style={{ width: 60 }} />
               {periods.flatMap((_, i) => [
-                <col key={`fc-chg-${i}`} style={{ width: 55 }} />,
-                <col key={`fc-sah-${i}`} style={{ width: 55 }} />,
-                <col key={`fc-pct-${i}`} style={{ width: 60 }} />,
+                <col key={`fc-chg-${i}`} style={{ width: 78 }} />,
+                <col key={`fc-sah-${i}`} style={{ width: 78 }} />,
+                <col key={`fc-pct-${i}`} style={{ width: 78 }} />,
               ])}
             </colgroup>
             <thead>
               <tr>
                 <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
-                  {t('title')}
+                  <button className="flex items-center gap-1 hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('name')}>
+                    {t('title')} <SortIcon field="name" />
+                  </button>
+                </th>
+                {/* Days to Availability header */}
+                <th className="bg-[#f4f6f9] text-center text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r-2 border-[var(--G5)] px-1 py-2 whitespace-nowrap">
+                  <button className="flex items-center gap-1 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('days2avail')}>
+                    D2A <SortIcon field="days2avail" />
+                  </button>
                 </th>
                 {periods.map((p, i) => (
                   <th
                     key={p.label}
                     colSpan={3}
-                    className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'}`}
+                    style={{ maxWidth: 234 }}
+                    className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide overflow-hidden border-b border-r border-l-2 border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'}`}
                   >
                     {p.label}
+                    <span className="block text-[9px] font-normal text-[var(--G4)] mt-0.5">
+                      {[['AR', 'Argentina'], ['MX', 'Mexico'], ['CR', 'Costa Rica']]
+                        .map(([code, full]) => {
+                          const v = p.sahByCountry?.[full] ?? p.sahByCountry?.[code];
+                          return v != null ? `${code} ${Math.round(v)}` : null;
+                        })
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
                   </th>
                 ))}
               </tr>
               <tr>
                 <th className="sticky left-0 z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th className="bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
                 {periods.map((p, i) => (
                   <Fragment key={p.label}>
-                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG</th>
+                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-l-2 border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG</th>
                     <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#dce8fc]' : 'bg-[#f4f6f9]'}`}>SAH</th>
-                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG%</th>
+                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>
+                      <button className="flex items-center gap-0.5 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('chgPct')}>
+                        CHG% <SortIcon field="chgPct" />
+                      </button>
+                    </th>
                   </Fragment>
                 ))}
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="sticky left-0 z-10 bg-[#f0f2f7] border-b border-r border-[var(--G5)] px-3 py-2">
-                  <span className="text-[11px] font-semibold text-[var(--G1)]">Total</span>
-                  <span className="block text-[9px] text-[var(--G3)]">{paged.length} empleados</span>
-                </td>
-                {periods.map((_, i) => {
-                  const totalSah = paged.reduce((s, e) => s + (e.sah[i] ?? 0), 0);
-                  const totalChg = paged.reduce((s, e) => {
-                    const p = chgType === 'HL' ? (e.cp[i] ?? 0) : (e.slAssumed[i] ?? 0);
-                    return s + Math.round((e.sah[i] ?? 0) * p / 100);
-                  }, 0);
-                  const avgPct = totalSah > 0 ? Math.round(totalChg / totalSah * 100) : 0;
-                  const sumColor = avgPct >= 80 ? 'text-[var(--GR)]' : avgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
-                  const isCur = i === currentPIdx;
-                  return (
-                    <Fragment key={i}>
-                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'}`} style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[var(--G1)]">{totalChg}</span>
-                      </td>
-                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#c8d8f4]' : 'bg-[#e8effc]'}`} style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[#2f5bb7]">{Math.round(totalSah)}</span>
-                      </td>
-                      <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e0e8f8]' : 'bg-[#f0f2f7]'} last:border-r-0`} style={{ padding: 0 }}>
-                        <span className={`text-[11px] font-semibold ${sumColor}`}>{avgPct}%</span>
-                      </td>
-                    </Fragment>
-                  );
-                })}
-              </tr>
+
               {paged.length === 0 ? (
                 <tr>
-                  <td colSpan={1 + periods.length * 3} className="text-center text-sm text-[var(--G3)] py-12">
+                  <td colSpan={2 + periods.length * 3} className="text-center text-sm text-[var(--G3)] py-12">
                     Sin empleados
                   </td>
                 </tr>
-              ) : paged.map((emp) => {
+              ) : sortedPaged.map((emp) => {
                 const fRollOn = parseDDMMYY(emp.rollOn);
                 const fRollOff = parseDDMMYY(emp.rollOff);
                 const fPtoStart = parseDDMMYY(emp.nextPTO);
                 const fPtoEnd = parseDDMMYY(emp.nextPTOEnd);
                 const fSick = sickRangesMap.get(emp.id) ?? [];
+                const rowTone = ROW_TONE[assumptionKind(emp)];
+                const d2a = days2AvailMap.get(emp.id) ?? 0;
+                const d2aColor = d2a <= 14 ? 'text-[var(--RD)]' : d2a <= 30 ? 'text-[var(--YL)]' : 'text-[var(--GR)]';
+                // Offering label: último segmento del offering o projectType
+                const offeringLabel = emp.projectType ?? emp.country ?? '';
+                const clientLabel = emp.client && emp.client.trim() && emp.client.trim().toLowerCase() !== 'unassigned'
+                  ? emp.client
+                  : 'Sin proyecto';
                 return (
-                  <tr key={emp.id} className="group">
-                    <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
+                  <tr key={emp.id} className={`group ${rowTone}`}>
+                    <td className={`sticky left-0 z-10 border-b border-r border-[var(--G5)] px-3 py-2 ${rowTone}`}>
                       <div className="flex items-center gap-2">
                         <div
                           className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -782,51 +892,82 @@ export function AllView() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="block text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
-                          <span className="block text-[9px] text-[var(--G4)]">{emp.level} · {emp.country}</span>
+                          <span className="block text-[9px] text-[var(--G4)] truncate" title={clientLabel}>
+                            {emp.level} · {offeringLabel} · {clientLabel}
+                          </span>
                         </div>
                       </div>
                     </td>
+                    {/* Days to Availability */}
+                    <td className={`border-b border-r-2 border-[var(--G5)] text-center h-[34px] ${rowTone}`} style={{ padding: 0 }}>
+                      {fRollOff ? (
+                        <span className={`text-[11px] font-semibold ${d2aColor}`}>{d2a}d</span>
+                      ) : (
+                        <span className="text-[11px] text-[var(--G4)]">—</span>
+                      )}
+                    </td>
                     {periods.map((period, i) => {
                       const sah = emp.sah[i] ?? 0;
-                      const p = chgType === 'HL' ? (emp.cp[i] ?? 0) : (emp.slAssumed[i] ?? 0);
-                      const periodDays = cellsInRange(parseLocalDate(period.startDate), parseLocalDate(period.endDate));
-                      const chgDayCount = periodDays.filter((d) => {
-                        if (d.weekend) return false;
-                        if (chgType === 'HL') {
-                          if (fRollOn !== null && d.date < fRollOn) return false;
-                          if (fRollOff !== null && d.date > fRollOff) return false;
-                        }
-                        if (fPtoStart !== null && fPtoEnd !== null && d.date >= fPtoStart && d.date <= fPtoEnd) return false;
-                        if (fSick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
-                        if (isHoliday(d.date, emp.country)) return false;
-                        return true;
-                      }).length;
-                      const totalCHGVal = chgDayCount * 8 * p / 100;
-                      const chgLabel = totalCHGVal % 1 === 0 ? `${Math.round(totalCHGVal)}` : totalCHGVal.toFixed(1);
-                      const cellColor = p >= 80 ? 'text-[var(--GR)]' : p >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
+                      // SAH normal por país para este período
+                      const normalSah = SAH_BY_COUNTRY[emp.country] ?? 176;
+                      const sahDisplay = sah > 0 ? sah : normalSah;
+                      // CHG Neto = chg_hl + chg_sl del backend
+                      const netoVal = emp.chgNeto?.[i] != null
+                        ? emp.chgNeto[i]
+                        : (emp.chgHl?.[i] ?? 0) + (emp.chgSl?.[i] ?? 0);
+
+                      // CHG y CHG% segun el modo elegido en el toggle
+                      const chgRaw = chgType === 'HL'
+                        ? (emp.chgHl?.[i] ?? emp.chgEffective?.[i] ?? 0)
+                        : chgType === 'SL'
+                          ? (emp.chgSl?.[i] ?? emp.chgAssumption?.[i] ?? 0)
+                          : netoVal;
+                      const chgLabel = chgRaw % 1 === 0 ? `${Math.round(chgRaw)}` : chgRaw.toFixed(1);
+
+                      const hlPctReal = sah > 0
+                        ? Math.round(((emp.chgHl?.[i] ?? 0) / sah) * 10000) / 100
+                        : 0;
+                      const p = chgType === 'HL'
+                        ? hlPctReal
+                        : chgType === 'SL'
+                          ? (emp.slAssumed[i] ?? 0)
+                          : (sah > 0 ? Math.round((netoVal / sah) * 10000) / 100 : 0);
+
+                      // Color de celda segun el subtipo de assumption del Excel
+                      // Bug 4: si cargable = 0, no colorear (blanco = Hard Lock)
+                      const aKind = chgRaw > 0 ? (emp.assumptionKind?.[i] ?? null) : null;
+                      const aStyle = aKind ? ASSUMPTION_CELL[aKind as keyof typeof ASSUMPTION_CELL] : undefined;
+                      const cellBg = aStyle ? { background: aStyle.bg } : undefined;
+                      const cellTitle = aStyle ? aStyle.label : undefined;
+                      const cellColor = 'text-[var(--G1)]';
                       const isCur = i === currentPIdx;
                       return (
                         <Fragment key={i}>
-                          <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
-                            <span className={`text-[11px] font-semibold ${cellColor}`}>{chgLabel}</span>
+                          <td
+                            title={cellTitle}
+                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[34px] ${aStyle ? '' : isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`}
+                            style={{ padding: 0, ...cellBg }}
+                          >
+                            <span className="text-[11px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>{chgLabel}</span>
                           </td>
-                          <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#e4edfc]' : 'bg-[#f4f8ff]'}`} style={{ padding: 0 }}>
-                            <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sah)}</span>
+                          <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
+                            <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sahDisplay)}</span>
                           </td>
                           {(() => {
                             const isClickable = p !== 100 && employeeIdsWithTickets.has(emp.id);
                             return (
                               <td
-                                className={`border-b border-r border-[var(--G5)] text-center h-[34px] last:border-r-0 ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
-                                style={{ padding: 0 }}
+                                title={cellTitle}
+                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[34px] ${aStyle ? '' : isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                style={{ padding: 0, ...cellBg }}
                                 onClick={isClickable ? () => {
                                   const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
                                   setChgModal({ emp, tickets: empTickets });
                                 } : undefined}
                               >
-                                <span className={`text-[11px] font-semibold ${cellColor}`}>
+                                <span className="text-[11px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>
                                   {p}%
-                                  {isClickable && <span className="ml-0.5 text-[9px] opacity-50">ⓘ</span>}
+                                  {isClickable && <span className="ml-0.5 text-[9px] opacity-50">i</span>}
                                 </span>
                               </td>
                             );
@@ -864,7 +1005,9 @@ export function AllView() {
             <thead>
               <tr>
                 <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
-                  {t('title')}
+                  <button className="flex items-center gap-1 hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('name')}>
+                    {t('title')} <SortIcon field="name" />
+                  </button>
                 </th>
                 {dayGroups.map((g) => (
                   <th
@@ -897,12 +1040,16 @@ export function AllView() {
                 ))}
                 <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG</th>
                 <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">SAH</th>
-                <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">CHG%</th>
+                <th className="bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-l border-[var(--G5)]">
+                  <button className="flex items-center gap-0.5 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('chgPct')}>
+                    CHG% <SortIcon field="chgPct" />
+                  </button>
+                </th>
               </tr>
             </thead>
 
             <motion.tbody
-              key={`${safePage}-${debouncedQ}-${status}-${country}-${offering}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
+              key={`${safePage}-${debouncedQ}-${status}-${country}-${offering}-${level}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
               initial="hidden"
               animate="visible"
               variants={TBODY_VARIANTS}
@@ -914,7 +1061,7 @@ export function AllView() {
                   </td>
                 </tr>
               ) : (
-                paged.flatMap((emp) => {
+                sortedPaged.flatMap((emp) => {
                   const isExpanded = !!expanded[emp.id];
                   const pIdx = currentPIdx;
                   const sahForPeriod = emp.sah?.[pIdx] ?? emp.totalHours ?? 80;
@@ -924,30 +1071,42 @@ export function AllView() {
                   const rollOffDate = parseDDMMYY(emp.rollOff);
                   const ptoStart = parseDDMMYY(emp.nextPTO);
                   const ptoEnd = parseDDMMYY(emp.nextPTOEnd);
+                  const rowTone = ROW_TONE[assumptionKind(emp)];
 
-                  const chgPct = chgType === 'HL' ? (emp.cp[pIdx] ?? 0) : (emp.slAssumed[pIdx] ?? 0);
+                  const chgPct = chgType === 'HL'
+                    ? (emp.cp[pIdx] ?? 0)
+                    : chgType === 'SL'
+                      ? (emp.slAssumed[pIdx] ?? 0)
+                      : (sahForPeriod > 0 ? Math.round(((emp.chgNeto?.[pIdx] ?? 0) / sahForPeriod) * 10000) / 100 : 0);
                   const dailyCHG = 8 * chgPct / 100;
                   const dailyCHGLabel = dailyCHG % 1 === 0 ? `${dailyCHG}h` : `${dailyCHG.toFixed(1)}h`;
-                  const chgDays = days.filter((d) => {
+
+                  // Bug 3: usar valores del backend para el resumen (compatible con PPAs)
+                  // No recalcular CHG desde horas/día, sino tomar los valores reales del período
+                  const summaryCHG = chgType === 'HL'
+                    ? (emp.chgHl?.[pIdx] ?? 0)
+                    : chgType === 'SL'
+                      ? (emp.chgSl?.[pIdx] ?? 0)
+                      : (emp.chgNeto?.[pIdx] ?? 0);
+
+                  // Bug 2: SAH ajustado por días de vacaciones dentro del período visible
+                  const ptoDaysInWindow = days.filter((d) => {
                     if (d.weekend) return false;
-                    if (chgType === 'HL') {
-                      if (rollOnDate !== null && d.date < rollOnDate) return false;
-                      if (rollOffDate !== null && d.date > rollOffDate) return false;
-                    }
-                    if (ptoStart !== null && ptoEnd !== null && d.date >= ptoStart && d.date <= ptoEnd) return false;
-                    const sick = sickRangesMap.get(emp.id) ?? [];
-                    if (sick.some((r) => d.date >= r.start && d.date <= r.end)) return false;
                     if (isHoliday(d.date, emp.country)) return false;
-                    return true;
+                    return ptoStart !== null && ptoEnd !== null && d.date >= ptoStart && d.date <= ptoEnd;
                   }).length;
-                  const totalCHGVal = chgDays * dailyCHG;
-                  const totalCHGLabel = totalCHGVal % 1 === 0 ? `${totalCHGVal}h` : `${totalCHGVal.toFixed(1)}h`;
-                  const realChgPct = sahForPeriod > 0 ? Math.round(totalCHGVal / sahForPeriod * 100) : 0;
+                  const adjustedSAH = Math.max(0, sahForPeriod - ptoDaysInWindow * 8);
+
+                  const totalCHGLabel = summaryCHG % 1 === 0 ? `${Math.round(summaryCHG)}h` : `${summaryCHG.toFixed(1)}h`;
+                  const realChgPct = adjustedSAH > 0 ? Math.round((summaryCHG / adjustedSAH) * 100) : 0;
                   const summaryColor = realChgPct >= 80 ? 'text-[var(--GR)]' : realChgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
 
+                  // Offering label para vista diario
+                  const offeringLabel = emp.projectType ?? emp.country ?? '';
+
                   return [
-                    <motion.tr key={emp.id} variants={ROW_VARIANTS} className={`group cursor-pointer select-none${emp.isOnPTO ? ' opacity-50' : ''}`} onClick={() => toggleExpand(emp.id)}>
-                      <td className="sticky left-0 z-10 bg-[#fafbfc] border-b border-r border-[var(--G5)] px-3 py-2">
+                    <motion.tr key={emp.id} variants={ROW_VARIANTS} className={`group cursor-pointer select-none ${rowTone}${emp.isOnPTO ? ' opacity-50' : ''}`} onClick={() => toggleExpand(emp.id)}>
+                      <td className={`sticky left-0 z-10 border-b border-r border-[var(--G5)] px-3 py-2 ${rowTone}`}>
                         <div className="flex items-center gap-2">
                           <div
                             className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -960,14 +1119,14 @@ export function AllView() {
                               <span className="text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
                               {emp.isOnPTO && (
                                 <span
-                                  title={emp.nextPTO && emp.nextPTOEnd ? `En vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}` : 'En vacaciones'}
+                                  title={emp.nextPTO && emp.nextPTOEnd ? `En vacaciones: ${emp.nextPTO} a ${emp.nextPTOEnd}` : 'En vacaciones'}
                                   className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 cursor-default select-none flex-shrink-0"
                                 >
                                   PTO
                                 </span>
                               )}
                             </div>
-                            <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/día · {emp.country}</div>
+                            <div className="text-[9px] text-[var(--G4)] font-medium">{sahDay}h/dia · {offeringLabel}</div>
                           </div>
                           {isAdmin && ((emp.chgAssumption?.[0] ?? 0) > 0 || (emp.chgAssumption?.[1] ?? 0) > 0) && (
                             <button
@@ -1002,7 +1161,7 @@ export function AllView() {
                             style={{ padding: 0 }}
                           >
                             {holidayName && !d.weekend ? (
-                              <span className="text-[13px] leading-none" title={holidayName}>🌴</span>
+                              <span className="text-[10px] font-semibold text-[var(--G4)]" title={holidayName}>FER</span>
                             ) : isOutOfRange ? (
                               <span className="block text-[11px] font-semibold leading-tight text-[var(--G4)]">0h</span>
                             ) : effectivePto ? (
@@ -1022,7 +1181,7 @@ export function AllView() {
                         <span className={`text-[11px] font-semibold ${summaryColor}`}>{totalCHGLabel}</span>
                       </td>
                       <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sahForPeriod)}h</span>
+                        <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(adjustedSAH)}h</span>
                       </td>
                       <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
                         <span className={`text-[11px] font-semibold ${summaryColor}`}>{realChgPct}%</span>
@@ -1043,7 +1202,7 @@ export function AllView() {
                           >
                             {!isRefetching && (
                               <>
-                                {emp.client ?? '—'}
+                                {emp.client ?? '-'}
                                 <span className="ml-1 text-[9px] text-[var(--G4)]">
                                   ({emp.scenarioType === 'effective' ? 'HL' : 'SL'})
                                 </span>
@@ -1071,17 +1230,17 @@ export function AllView() {
                                   ? (emp.cp[pctIdx >= 0 ? pctIdx : 0] ?? 0)
                                   : (emp.slAssumed[pctIdx >= 0 ? pctIdx : 0] ?? 0);
 
-                                const ptoStart = parseDDMMYY(emp.nextPTO);
-                                const ptoEnd = parseDDMMYY(emp.nextPTOEnd);
-                                const ptoBar = ptoStart && ptoEnd ? (() => {
-                                  const ps = ptoStart < windowStart ? windowStart : ptoStart;
-                                  const pe = ptoEnd > windowEnd ? windowEnd : ptoEnd;
+                                const barPtoStart = parseDDMMYY(emp.nextPTO);
+                                const barPtoEnd = parseDDMMYY(emp.nextPTOEnd);
+                                const ptoBar = barPtoStart && barPtoEnd ? (() => {
+                                  const ps = barPtoStart < windowStart ? windowStart : barPtoStart;
+                                  const pe = barPtoEnd > windowEnd ? windowEnd : barPtoEnd;
                                   if (ps > windowEnd || pe < windowStart) return null;
                                   const ptoLeft = Math.round((ps.getTime() - windowStart.getTime()) / 86_400_000);
                                   const ptoWidth = Math.round((pe.getTime() - ps.getTime()) / 86_400_000) + 1;
                                   return (
                                     <div
-                                      title={`Vacaciones: ${emp.nextPTO} – ${emp.nextPTOEnd}`}
+                                      title={`Vacaciones: ${emp.nextPTO} a ${emp.nextPTOEnd}`}
                                       style={{
                                         position: 'absolute',
                                         top: 6, bottom: 6,
@@ -1101,7 +1260,7 @@ export function AllView() {
                                         zIndex: 2,
                                       }}
                                     >
-                                      🏖 PTO
+                                      PTO
                                     </div>
                                   );
                                 })() : null;
@@ -1126,7 +1285,7 @@ export function AllView() {
                                         ...getBarStyle(emp, isHL),
                                       }}
                                     >
-                                      {pct}% · {emp.client ?? 'Sin proyecto'}
+                                      {pct}% - {emp.client ?? 'Sin proyecto'}
                                     </div>
                                     {ptoBar}
                                   </>
@@ -1159,7 +1318,7 @@ export function AllView() {
                               style={{ fontSize: 10, color: 'var(--P)', fontWeight: 500, marginTop: 6, display: 'block', textAlign: 'left' }}
                               className="hover:underline"
                             >
-                              Ver detalle →
+                              Ver detalle
                             </button>
                           </td>
                           <td
@@ -1237,14 +1396,30 @@ export function AllView() {
 
       )}
 
+      {viewMode === 'forecast' && (
+        <div className="flex gap-4 flex-wrap items-center pt-1">
+          {/* Leyenda de assumptions - colores del Excel */}
+          {Object.entries(ASSUMPTION_CELL).map(([k, v]) => (
+            <div key={k} className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
+              <div className="w-6 h-[13px] rounded-[3px] border border-[var(--G5)]" style={{ background: v.bg }} />
+              {v.label}
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
+            <div className="w-6 h-[13px] rounded-[3px] border border-[var(--G5)] bg-white" />
+            Hard Lock
+          </div>
+        </div>
+      )}
+
       {viewMode === 'daily' && (
         <div className="flex gap-4 flex-wrap items-center pt-1">
           {[
             { style: { background: '#e8effc', border: '1.5px solid #5b8def' }, label: 'Hard Lock (efectivo)' },
-            { style: { background: '#fef2f2', border: '1.5px dashed #f87171' }, label: 'Assumption 1 – No ISG' },
-            { style: { background: '#fff7ed', border: '1.5px dashed #f97316' }, label: 'Assumption 2 – ISG Ringfenced' },
-            { style: { background: '#f8fafc', border: '1.5px dashed #94a3b8' }, label: 'Assumption 3 – New Joiner' },
-            { style: { background: '#fef9c3', border: '1.5px dashed #eab308' }, label: 'Assumption 4 – ISG PE Assessment' },
+            { style: { background: '#fef2f2', border: '1.5px dashed #f87171' }, label: 'Assumption 1 - No ISG' },
+            { style: { background: '#fff7ed', border: '1.5px dashed #f97316' }, label: 'Assumption 2 - ISG Ringfenced' },
+            { style: { background: '#f8fafc', border: '1.5px dashed #94a3b8' }, label: 'Assumption 3 - New Joiner' },
+            { style: { background: '#fef9c3', border: '1.5px dashed #eab308' }, label: 'Assumption 4 - ISG PE Assessment' },
           ].map(({ style, label }) => (
             <div key={label} className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
               <div className="w-6 h-[13px] rounded-[3px]" style={style} />
@@ -1267,10 +1442,10 @@ export function AllView() {
                 disabled={safePage <= 1}
                 className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
               >
-                ← Anterior
+                Anterior
               </button>
               <span className="whitespace-nowrap">
-                Página {safePage} de {pageCount}
+                Pagina {safePage} de {pageCount}
                 <span className="text-[var(--G3)] ml-1">({result?.total ?? 0} resultados)</span>
               </span>
               <button
@@ -1282,7 +1457,7 @@ export function AllView() {
                 disabled={safePage >= pageCount}
                 className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
               >
-                Siguiente →
+                Siguiente
               </button>
             </div>
           )}
@@ -1297,7 +1472,7 @@ export function AllView() {
             className="border border-[var(--G5)] rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-[var(--P)]"
           >
             {[10, 25, 50, 100].map((s) => (
-              <option key={s} value={s}>{s} por página</option>
+              <option key={s} value={s}>{s} por pagina</option>
             ))}
           </select>
         </div>
@@ -1329,11 +1504,11 @@ export function AllView() {
           <div className="space-y-4 mb-6">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-[var(--G2)]">Períodos</label>
+                <label className="text-xs font-medium text-[var(--G2)]">Periodos</label>
                 <span className="text-xs text-[var(--G4)]">
                   {rangeStart === rangeEnd
                     ? periods[rangeStart]?.label
-                    : `${periods[rangeStart]?.label} → ${periods[rangeEnd]?.label}`}
+                    : `${periods[rangeStart]?.label} a ${periods[rangeEnd]?.label}`}
                 </span>
               </div>
               <div className="flex">
@@ -1361,7 +1536,7 @@ export function AllView() {
               </div>
               <p className="mt-1.5 text-[10px] text-[var(--G4)]">
                 {rangeAnchor !== null
-                  ? 'Click en otro período para completar el rango'
+                  ? 'Click en otro periodo para completar el rango'
                   : 'Click para seleccionar desde, click de nuevo para hasta'}
               </p>
             </div>
@@ -1394,7 +1569,7 @@ export function AllView() {
             onClick={handleEffectivize}
             disabled={isEffectivizing || effectivizePct === '' || isNaN(parseFloat(effectivizePct))}
           >
-            {isEffectivizing ? 'Procesando…' : 'Hacer efectivo'}
+            {isEffectivizing ? 'Procesando...' : 'Hacer efectivo'}
           </Button>
         </div>
       </Modal>
@@ -1420,7 +1595,7 @@ export function AllView() {
                     {STATUS_LABELS[ticket.status] ?? ticket.status}
                   </Badge>
                   <Badge variant="neutral" className="text-[10px]">
-                    {ticket.scenarioType === 'assumption' ? 'Estimación' : 'Efectivo'}
+                    {ticket.scenarioType === 'assumption' ? 'Estimacion' : 'Efectivo'}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
@@ -1458,7 +1633,7 @@ export function AllView() {
                   className="text-[11px] text-[var(--P)] hover:underline mt-1"
                   onClick={() => { router.push(`/tickets/${ticket.id}`); setChgModal(null); }}
                 >
-                  Ver detalle completo →
+                  Ver detalle completo
                 </button>
               </div>
             ))}

@@ -19,6 +19,7 @@ export class HttpEmployeeRepository implements IEmployeeRepository {
     if (filter.q) params.set('q', filter.q);
     if (filter.status) params.set('status', filter.status);
     if (filter.offering) params.set('offering', filter.offering);
+    if (filter.level) params.set('level', filter.level);
     if (filter.teApprover) params.set('te_approver', filter.teApprover);
     if (filter.chgBucket) params.set('chg_bucket', filter.chgBucket);
     params.set('page', String(filter.page ?? 1));

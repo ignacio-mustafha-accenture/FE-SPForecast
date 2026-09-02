@@ -1,8 +1,6 @@
 export type Country = 'AR' | 'MX' | 'CR';
 export type ScenarioType = 'assumption' | 'effective';
-
 export type ChargeabilityStatus = 'green' | 'yellow' | 'red' | 'unassigned' | 'leave';
-
 export interface Employee {
   isgAligned: boolean;
   id: string;
@@ -10,7 +8,7 @@ export interface Employee {
   email: string;
   country: Country;
   level: string;
-  project: string | null;       // client name (alias for drawer compat)
+  project: string | null;
   client: string | null;
   projectType: string | null;
   manager: string | null;
@@ -25,6 +23,12 @@ export interface Employee {
   newJoiner: boolean;
   charge: boolean;
   chg: number[];
+  chgNeto: number[];
+  chgHl: number[];
+  chgSl: number[];
+  chgPctHl: number[];
+  chgPctSl: number[];
+  assumptionKind: (string | null)[];
   sah: number[];
   cp: number[];
   chgEffective: number[];

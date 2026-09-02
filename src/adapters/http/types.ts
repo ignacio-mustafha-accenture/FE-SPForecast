@@ -3,6 +3,7 @@ export interface RawPeriod {
   period_name: string;
   label: string;
   sah: number;
+  sah_by_country: Record<string, number>;
   isCurrent: boolean;
   start_date: string;
   end_date: string;
@@ -39,6 +40,7 @@ export interface RawEmployee {
   HasAssumptionBlocks: boolean;
   IsOnPTO: boolean;
   Ringfenced?: boolean;
+  ISGAligned?: boolean;
   chg: number[];
   sah: number[];
   cp: number[];
@@ -47,7 +49,9 @@ export interface RawEmployee {
   chg_hl: number[];
   chg_sl: number[];
   chg_pct_sl: number[];
+  assumption_kind: (string | null)[];
   chg_pct_hl: number[];
+  chg_neto: number[];
 }
 
 export interface RawTicket {

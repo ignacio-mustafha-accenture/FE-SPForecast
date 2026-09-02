@@ -14,6 +14,7 @@ export interface EmployeeFilter {
   pageSize?: number;
   offering?: string;
   teApprover?: string;
+  level?: string;
   chgBucket?: string;
 }
 
