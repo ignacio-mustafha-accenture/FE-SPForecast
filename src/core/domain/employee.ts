@@ -1,8 +1,7 @@
-export type Country = 'AR' | 'MX' | 'CR';
+﻿export type Country = 'AR' | 'MX' | 'CR';
 export type ScenarioType = 'assumption' | 'effective';
 export type ChargeabilityStatus = 'green' | 'yellow' | 'red' | 'unassigned' | 'leave';
 export interface Employee {
-  isgAligned: boolean;
   id: string;
   name: string;
   email: string;
@@ -11,6 +10,7 @@ export interface Employee {
   project: string | null;
   client: string | null;
   projectType: string | null;
+  offering: string | null;
   manager: string | null;
   rollOn: string | null;
   rollOff: string | null;
@@ -46,4 +46,5 @@ export interface Employee {
   hasAssumptionBlocks: boolean;
   isOnPTO: boolean;
   ringfenced: boolean;
+  isgAligned: boolean;
 }

@@ -9,6 +9,12 @@ export interface RawPeriod {
   end_date: string;
 }
 
+export interface RawCalendarPeriod {
+  period_name: string;
+  start_date: string;
+  end_date: string;
+}
+
 export interface RawEmployee {
   EID: string;
   Name: string;
@@ -19,6 +25,7 @@ export interface RawEmployee {
   Manager: string;
   TEApprover: string;
   ProjectType: string;
+  EmployeeOffering: string | null;
   Client: string;
   AccountManager: string;
   Office: string;
@@ -42,16 +49,16 @@ export interface RawEmployee {
   Ringfenced?: boolean;
   ISGAligned?: boolean;
   chg: number[];
+  chg_neto: number[];
+  chg_hl: number[];
+  chg_sl: number[];
+  chg_pct_hl: number[];
+  chg_pct_sl: number[];
   sah: number[];
   cp: number[];
   absence_hours: number[];
   chg_cascadeadas: number[];
-  chg_hl: number[];
-  chg_sl: number[];
-  chg_pct_sl: number[];
   assumption_kind: (string | null)[];
-  chg_pct_hl: number[];
-  chg_neto: number[];
 }
 
 export interface RawTicket {

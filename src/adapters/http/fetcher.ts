@@ -1,5 +1,9 @@
 import { API_BASE_URL } from '@/src/lib/constants';
 
+function resolveServerBaseUrl(): string {
+  return process.env.API_BASE_URL ?? API_BASE_URL;
+}
+
 export type ServerCtx = { cookieHeader: string };
 export type ClientCtx = { credentials: 'include' };
 export type FetcherCtx = ServerCtx | ClientCtx;
@@ -33,7 +37,7 @@ export function createFetcher(ctx: FetcherCtx) {
       headers['Cookie'] = ctx.cookieHeader;
     }
 
-    const baseURL = isServerCtx(ctx) ? API_BASE_URL : '';
+    const baseURL = isServerCtx(ctx) ? resolveServerBaseUrl() : '';
     const res = await fetch(`${baseURL}${path}`, {
       ...options,
       headers,

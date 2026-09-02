@@ -58,6 +58,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     project: raw.Client || null,
     client: raw.Client || null,
     projectType: raw.ProjectType || null,
+    offering: raw.EmployeeOffering ?? null,
     manager: raw.Manager || null,
     rollOn: raw.RollOn || null,
     rollOff: raw.RollOff || null,
@@ -190,7 +191,7 @@ export function mapRawAppState(raw: RawAppState, windowOffset: number): AppState
   const employeeMap = new Map(employees.map((e) => [e.id, e]));
 
   return {
-    period: currentPeriod ? mapRawPeriod(currentPeriod, windowOffset) : { label: '–', startDate: '', endDate: '', windowOffset },
+    period: currentPeriod ? mapRawPeriod(currentPeriod, windowOffset) : { label: '-', startDate: '', endDate: '', windowOffset },
     periods: allPeriods,
     employees,
     tickets: (raw.tickets ?? []).map((t) => mapRawTicket(t, employeeMap)),

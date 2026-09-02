@@ -5,3 +5,9 @@ export interface Period {
   endDate: string;
   windowOffset: number;
 }
+
+export interface CalendarPeriod {
+  name: string;
+  startDate: string;
+  endDate: string;
+}
