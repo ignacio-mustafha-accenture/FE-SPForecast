@@ -945,20 +945,20 @@ export function AllView() {
                         <Fragment key={i}>
                           <td
                             title={cellTitle}
-                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[34px] ${aStyle ? '' : isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`}
+                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[34px] ${aStyle ? '' : 'bg-white'}`}
                             style={{ padding: 0, ...cellBg }}
                           >
                             <span className="text-[11px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>{chgLabel}</span>
                           </td>
-                          <td className={`border-b border-r border-[var(--G5)] text-center h-[34px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
-                            <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(sahDisplay)}</span>
+                          <td className="border-b border-r border-[var(--G5)] text-center h-[34px] bg-white" style={{ padding: 0 }}>
+                            <span className="text-[11px] font-semibold text-[var(--G1)]">{Math.round(sahDisplay)}</span>
                           </td>
                           {(() => {
                             const isClickable = p !== 100 && employeeIdsWithTickets.has(emp.id);
                             return (
                               <td
                                 title={cellTitle}
-                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[34px] ${aStyle ? '' : isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[34px] ${aStyle ? '' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
                                 style={{ padding: 0, ...cellBg }}
                                 onClick={isClickable ? () => {
                                   const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
@@ -1181,7 +1181,7 @@ export function AllView() {
                         <span className={`text-[11px] font-semibold ${summaryColor}`}>{totalCHGLabel}</span>
                       </td>
                       <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
-                        <span className="text-[11px] font-semibold text-[#4a72c4]">{Math.round(adjustedSAH)}h</span>
+                        <span className="text-[11px] font-semibold text-[var(--G1)]">{Math.round(adjustedSAH)}h</span>
                       </td>
                       <td className="border-b border-l border-[var(--G5)] text-center align-middle h-[34px] bg-[#f4f6f9]" style={{ padding: 0 }}>
                         <span className={`text-[11px] font-semibold ${summaryColor}`}>{realChgPct}%</span>
