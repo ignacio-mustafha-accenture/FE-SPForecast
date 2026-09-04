@@ -371,13 +371,16 @@ export function AllView() {
   const nDays = days.length;
   const colW = DAY_W;
 
-  function navigate(dir: number) {
-    setWindowAnchor((prev) => {
-      const pIdx = getPeriodIdx(prev);
-      const safePIdx = pIdx >= 0 ? pIdx : 0;
-      const targetIdx = Math.max(0, Math.min(periods.length - 1, safePIdx + dir));
-      return startOfDay(parseLocalDate(periods[targetIdx].startDate));
-    });
+    function navigate(dir: number) {
+    const pIdx = getPeriodIdx(windowAnchor);
+    const safePIdx = pIdx >= 0 ? pIdx : 0;
+    const targetIdx = safePIdx + dir;
+    if (targetIdx < 0 || targetIdx > periods.length - 1) {
+      fetchState(windowOffset + dir);
+      return;
+    }
+
+    setWindowAnchor(startOfDay(parseLocalDate(periods[targetIdx].startDate)));
   }
 
   const activeCountries = useMemo(() => (country ? country.split(',') : []), [country]);
@@ -637,14 +640,14 @@ export function AllView() {
 
         <button
           onClick={() => navigate(-1)}
-          disabled={!canPrev}
+          disabled={isFetching}
           className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--G5)] bg-white text-[var(--G3)] hover:bg-[var(--G6)] hover:text-[var(--G1)] disabled:opacity-40 transition-colors"
         >
           <ChevronLeft size={15} />
         </button>
         <button
           onClick={() => navigate(1)}
-          disabled={!canNext}
+          disabled={isFetching}
           className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--G5)] bg-white text-[var(--G3)] hover:bg-[var(--G6)] hover:text-[var(--G1)] disabled:opacity-40 transition-colors"
         >
           <ChevronRight size={15} />
