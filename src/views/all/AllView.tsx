@@ -1075,14 +1075,14 @@ export function AllView() {
                             ? (chg / tot.sah) * 100
                             : null;
                           const overTarget = pct != null && pct >= row.targetPct;
-                          const cellBg = i === currentPIdx ? curBg : rowBg;
+                          const cellBg = rowBg;
                           return (
                             <Fragment key={i}>
                               <td className={`${bottom} border-r border-l-2 border-[var(--G5)] text-center ${cellBg}`}>
                                 <span className="text-[12px] font-semibold text-[var(--G1)]">{chg != null ? fmtHours(chg) : '—'}</span>
                               </td>
                               <td className={`${bottom} border-r border-[var(--G5)] text-center ${cellBg}`}>
-                                <span className="text-[12px] font-semibold text-[#4a72c4]">{tot ? fmtHours(tot.sah) : '—'}</span>
+                                <span className="text-[12px] font-semibold text-[var(--G1)]">{tot ? fmtHours(tot.sah) : '—'}</span>
                               </td>
                               <td
                                 title={pct != null ? `${pct.toFixed(1)}% vs target ${row.targetPct}%` : undefined}
@@ -1285,16 +1285,16 @@ export function AllView() {
                         <Fragment key={i}>
                           <td
                             title={cellTitle}
-                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[32px] ${aStyle ? '' : isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`}
+                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[32px] ${aStyle ? '' : 'bg-white'}`}
                             style={{ padding: 0, ...cellBg }}
                           >
                             <span className="text-[10px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>{chgLabel}</span>
                           </td>
-                          <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
+                          <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] bg-white`} style={{ padding: 0 }}>
                             {/* Sin SAH cargado se muestra un guion. Antes caia en una constante
                                 por pais y pintaba un numero inventado, que hacia parecer que el
                                 periodo tenia horas disponibles cuando en realidad no hay dato. */}
-                            <span className="text-[10px] font-semibold text-[#4a72c4]">
+                            <span className="text-[10px] font-semibold text-[var(--G1)]">
                               {sah > 0 ? Math.round(sah) : <span className="text-[var(--G4)]">—</span>}
                             </span>
                           </td>
@@ -1303,7 +1303,7 @@ export function AllView() {
                             return (
                               <td
                                 title={cellTitle}
-                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[32px] ${aStyle ? '' : isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[32px] ${aStyle ? '' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
                                 style={{ padding: 0, ...cellBg }}
                                 onClick={isClickable ? () => {
                                   const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
