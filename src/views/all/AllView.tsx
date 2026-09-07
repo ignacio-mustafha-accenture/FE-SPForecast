@@ -496,15 +496,12 @@ export function AllView() {
       const rollOff = parseDDMMYY(emp.rollOff);
       if (!rollOff) { map.set(emp.id, 0); continue; }
       const diff = Math.ceil((rollOff.getTime() - today.getTime()) / 86_400_000);
-      map.set(emp.id, Math.max(0, diff));
+      map.set(emp.id, diff);
     }
     return map;
   }, [paged]);
 
-    const sinDatos = useCallback((e: Employee) => {
-    const tieneSah = e.sah?.some((v) => (v ?? 0) > 0);
-    return !e.rollOn && !tieneSah;
-  }, []);
+  const sinDatos = useCallback((e: Employee) => !e.rollOff, []);
 
   const sortedPaged = useMemo(() => {
     const conDatos: Employee[] = [];
@@ -538,6 +535,10 @@ export function AllView() {
 
     return [...conDatos.sort(comparar), ...vacios.sort(comparar)];
   }, [paged, sortField, sortDir, days2AvailMap, chgType, currentPIdx, sinDatos]);
+
+
+
+
 
   // Las filas de totales son un extra: solo se muestran si el endpoint respondio y hay
   // empleados en la tabla. Nunca condicionan el render de las columnas de periodo.
@@ -1218,7 +1219,7 @@ export function AllView() {
                 const rowTone = ROW_TONE[assumptionKind(emp)];
                 const d2a = days2AvailMap.get(emp.id) ?? 0;
                 const d2aColor = d2a <= 14 ? 'text-[var(--RD)]' : d2a <= 30 ? 'text-[var(--YL)]' : 'text-[var(--GR)]';
-                // Offering label: Ãºltimo segmento del offering o projectType
+                const d2aLabel = emp.rollOff ? `${d2a}d` : '—';                // Offering label: Ãºltimo segmento del offering o projectType
                 const offeringLabel = emp.projectType ?? emp.country ?? '';
                 const clientLabel = emp.client && emp.client.trim() && emp.client.trim().toLowerCase() !== 'unassigned'
                   ? emp.client
@@ -1244,7 +1245,7 @@ export function AllView() {
                     {/* Days to Availability */}
                     <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] ${rowTone}`} style={{ padding: 0 }}>
                       {fRollOff ? (
-                        <span className={`text-[10px] font-semibold ${d2aColor}`}>{d2a}d</span>
+                        <span className={`text-[10px] font-semibold ${emp.rollOff ? d2aColor : 'text-[var(--G4)]'}`}>{d2aLabel}</span>
                       ) : (
                         <span className="text-[10px] text-[var(--G4)]">—</span>
                       )}

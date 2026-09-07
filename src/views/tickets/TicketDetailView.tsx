@@ -80,7 +80,7 @@ function TicketTimeline({ ticketId, rejectionReason }: { ticketId: string; rejec
   useEffect(() => {
     fetch(`/api/admin/audit-log?ticket_id=${ticketId}&page_size=50`, { credentials: 'include' })
       .then((r) => r.json())
-      .then((d) => setEvents((d.items ?? []).slice().reverse()))
+      .then((d) => setEvents(d.items ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [ticketId]);
