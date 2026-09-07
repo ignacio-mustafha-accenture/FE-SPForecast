@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
 import { useToast } from '@/src/hooks/useToast';
@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine, X, Arrow
 import { useTranslations } from 'next-intl';
 
 import type { Employee } from '@/src/core/domain/employee';
+import type { ForecastTotals, TotalPeriodValues } from '@/src/core/domain/forecast-totals';
 import type { Ticket } from '@/src/core/domain/ticket';
 import type { Period } from '@/src/core/domain/period';
 import type { Page } from '@/src/core/domain/pagination';
@@ -22,7 +23,7 @@ import { Badge } from '@/src/components/ui/Badge';
 import { Button } from '@/src/components/ui/Button';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { exportToXlsx } from '@/src/lib/excel';
-import { parseDDMMYY } from '@/src/lib/formatters';
+import { parseDDMMYY, formatDate } from '@/src/lib/formatters';
 
 const blockRepo = new HttpChargeabilityBlockRepository();
 
@@ -43,7 +44,32 @@ const ROW_VARIANTS = {
 const DAY_W = 40;
 const SUMMARY_W = 60;
 
-const DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+// Anchos de la tabla de empleados. A 1440px de ancho quedan ~1149px utiles
+// (1440 - sidebar 228 - padding 48 - barra de scroll ~15), asi que las 21 columnas
+// tienen que sumar menos que eso para no obligar a scrollear en horizontal.
+const EMP_NAME_W = 172;
+const EMP_D2A_W = 42;
+const EMP_ROLL_W = 56;
+const EMP_CHG_W = 46;
+const EMP_SAH_W = 42;
+const EMP_PCT_W = 46;
+const EMP_PERIOD_W = EMP_CHG_W + EMP_SAH_W + EMP_PCT_W;
+const EMP_FIXED_W = EMP_NAME_W + EMP_D2A_W + EMP_ROLL_W * 2;
+
+// Anchos del bloque de totales. Al ser una tabla aparte no necesita alinearse con la de
+// empleados, asi que se reparte el mismo ancho entre menos columnas y con mas aire.
+const TOT_LABEL_W = 180;
+const TOT_HC_W = 56;
+const TOT_CHG_W = 50;
+const TOT_SAH_W = 42;
+const TOT_PCT_W = 58;
+const TOT_PERIOD_W = TOT_CHG_W + TOT_SAH_W + TOT_PCT_W;
+
+// Separacion vertical entre el bloque de totales y la tabla (el space-y-3 del contenedor).
+// Se usa para anclar el header de columnas justo debajo del bloque cuando esta pegado arriba.
+const STICKY_GAP = 12;
+
+const DOW_ES = ['dom', 'lun', 'mar', 'miÃ©', 'jue', 'vie', 'sÃ¡b'];
 
 const AVATAR_PALETTE = [
   '#7c5cff', '#0ea5b5', '#12a86f', '#e0872a', '#e05c8a', '#5c9ae0', '#c05cc0',
@@ -87,13 +113,6 @@ const ASSUMPTION_CELL: Record<string, { bg: string; fg: string; label: string }>
   r:              { bg: '#dbe5f1', fg: '#1f4e79', label: 'Assumption R' },
 };
 
-// SAH normales por país (horas disponibles por período ~4 semanas)
-const SAH_BY_COUNTRY: Record<string, number> = {
-  AR: 176,
-  MX: 176,
-  CR: 176,
-};
-
 function avatarColor(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffffff;
@@ -122,6 +141,13 @@ function endOfDay(d: Date): Date {
 function parseLocalDate(s: string): Date {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(y, m - 1, d);
+}
+
+// Roll-on / Roll-off llegan del backend ya formateados como DD/MM/YY (TO_CHAR en SQL).
+// Si alguna fuente los entrega en ISO (YYYY-MM-DD) los normalizamos con formatDate.
+function formatRollDate(value: string | null): string {
+  if (!value) return '—';
+  return /^\d{4}-\d{2}-\d{2}/.test(value) ? formatDate(value) : value;
 }
 
 function getBarStyle(emp: Employee, isHL: boolean): React.CSSProperties {
@@ -167,6 +193,20 @@ interface DayGroup {
 
 type SortField = 'name' | 'days2avail' | 'chgPct' | null;
 type SortDir = 'asc' | 'desc';
+
+// Horas y porcentajes se muestran enteros. Los decimales que traia el backend venian de
+// repartir horas entre dias y no aportaban precision real, solo ruido al leer la grilla.
+function fmtHours(v: number): string {
+  return String(Math.round(v));
+}
+
+// El CHG que suman los totales tiene que ser el del modo activo del toggle, igual que las
+// celdas de los empleados. El backend devuelve las tres sumas y aca se elige la que aplica.
+function chgForMode(t: TotalPeriodValues, mode: 'HL' | 'SL' | 'NETO'): number {
+  if (mode === 'HL') return t.chgHl;
+  if (mode === 'SL') return t.chgSl;
+  return t.chgNeto;
+}
 
 function cellsInRange(from: Date, to: Date): DayCell[] {
   const cells: DayCell[] = [];
@@ -216,6 +256,7 @@ export function AllView() {
   }, [allTickets]);
 
   const [result, setResult] = useState<Page<Employee> | null>(null);
+  const [totals, setTotals] = useState<ForecastTotals | null>(null);
   const [isFetching, setIsFetching] = useState(true);
   const [isRefetching, setIsRefetching] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -244,8 +285,6 @@ export function AllView() {
   const chgParam = searchParams.get('chg');
   // Bug 9: default CHG Neto al ingresar (antes defaulteaba a HL)
   const chgType = (chgParam === 'HL' ? 'HL' : chgParam === 'SL' ? 'SL' : 'NETO') as 'HL' | 'SL' | 'NETO';
-  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-  const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10));
 
   const [teApprovers, setTeApprovers] = useState<string[]>([]);
   const [teApproverSearch, setTeApproverSearch] = useState('');
@@ -262,7 +301,6 @@ export function AllView() {
     if (!didMount.current) { didMount.current = true; return; }
     const p = new URLSearchParams(searchParams.toString());
     debouncedQ ? p.set('q', debouncedQ) : p.delete('q');
-    p.delete('page');
     router.replace(`?${p.toString()}`, { scroll: false });
   }, [debouncedQ]);
 
@@ -273,16 +311,16 @@ export function AllView() {
       .catch(() => {});
   }, []);
 
+  // La vista no pagina: se trae todo el set filtrado de una, para que los totales de arriba
+  // y la tabla de abajo hablen siempre de la misma poblacion.
   useEffect(() => {
     let cancelled = false;
     setIsFetching(true);
     getClientContainer()
-      .listEmployees.execute({
+      .listAllEmployees.execute({
         country: country || undefined,
         q: debouncedQ || undefined,
         status: status || undefined,
-        page,
-        pageSize,
         offering: offering || undefined,
         level: level || undefined,
         teApprover: teApprover || undefined,
@@ -292,7 +330,45 @@ export function AllView() {
       .catch(console.error)
       .finally(() => { if (!cancelled) { setIsFetching(false); setIsRefetching(false); } });
     return () => { cancelled = true; };
-  }, [country, debouncedQ, status, offering, level, teApprover, chgBucket, page, pageSize, refreshKey]);
+  }, [country, debouncedQ, status, offering, level, teApprover, chgBucket, refreshKey]);
+
+  // Totales agregados sobre TODO el set filtrado (el backend ignora el paginado).
+  // Se piden con los mismos filtros que el listado y con el window_offset de la ventana
+  // de periodos, para que las columnas coincidan con las de la tabla.
+  useEffect(() => {
+    let cancelled = false;
+    getClientContainer()
+      .getForecastTotals.execute(
+        {
+          country: country || undefined,
+          q: debouncedQ || undefined,
+          status: status || undefined,
+          offering: offering || undefined,
+          level: level || undefined,
+          teApprover: teApprover || undefined,
+          chgBucket: chgBucket || undefined,
+        },
+        windowOffset,
+      )
+      .then((data) => { if (!cancelled) setTotals(data); })
+      .catch((err) => {
+        // Un fallo aca no puede romper la tabla: se descartan los totales y se sigue
+        console.warn('[AllView] no se pudieron obtener los totales:', err);
+        if (!cancelled) setTotals(null);
+      });
+    return () => { cancelled = true; };
+  }, [country, debouncedQ, status, offering, level, teApprover, chgBucket, windowOffset, refreshKey]);
+
+  // Las columnas de periodo salen del appState que hidrata el layout server-side con
+  // /api/state. Si esa llamada falla durante el render del layout, el store queda sin
+  // periodos y la tabla se queda sin columnas hasta que el usuario recargue a mano.
+  // Este reintento unico en el cliente hace que ese fallo puntual no deje la tabla vacia.
+  const didRetryState = useRef(false);
+  useEffect(() => {
+    if (periods.length > 0 || didRetryState.current) return;
+    didRetryState.current = true;
+    fetchState(windowOffset);
+  }, [periods.length, fetchState, windowOffset]);
 
   useEffect(() => {
     const countries = ['AR', 'MX', 'CR'];
@@ -412,7 +488,7 @@ export function AllView() {
     return enriched;
   }, [result?.items, storeEmpMap]);
 
-  // Días hasta roll off (Days to Availability) por empleado
+  // DÃ­as hasta roll off (Days to Availability) por empleado
   const days2AvailMap = useMemo(() => {
     const today = startOfDay(new Date());
     const map = new Map<string, number>();
@@ -452,6 +528,16 @@ export function AllView() {
     });
   }, [paged, sortField, sortDir, days2AvailMap, chgType, currentPIdx]);
 
+  // Las filas de totales son un extra: solo se muestran si el endpoint respondio y hay
+  // empleados en la tabla. Nunca condicionan el render de las columnas de periodo.
+  // Se ocultan las filas sin gente: hoy Mexico y Costa Rica vienen en 0 y solo
+  // agregan ruido. El filtro es por dato, asi que si manana entra alguien la fila
+  // reaparece sola sin tocar codigo.
+  const totalRows = useMemo(
+    () => ((result?.total ?? 0) > 0 ? (totals?.rows ?? []).filter((r) => r.hc > 0) : []),
+    [result?.total, totals],
+  );
+
   function handleSort(field: SortField) {
     if (sortField === field) {
       setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
@@ -466,8 +552,36 @@ export function AllView() {
     return sortDir === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />;
   }
 
-  const pageCount = result?.pages ?? 1;
-  const safePage = result?.page ?? page;
+  // El bloque de totales y el header de columnas quedan pegados arriba mientras se scrollea
+  // la pagina. El alto del bloque de totales depende de cuantas filas tengan datos, asi que
+  // se mide en runtime para poder anclar el header justo debajo en vez de hardcodear un alto.
+  const totalsBlockRef = useRef<HTMLDivElement | null>(null);
+  const headRowRef = useRef<HTMLTableRowElement | null>(null);
+  const [totalsBlockH, setTotalsBlockH] = useState(0);
+  const [headRowH, setHeadRowH] = useState(0);
+  // El bloque de totales se puede colapsar para recuperar alto de pantalla al recorrer la
+  // lista de empleados. Al colapsar cambia el alto del bloque, y el ResizeObserver de arriba
+  // reancla el header de la tabla solo, sin recalcular nada a mano.
+  const [totalsOpen, setTotalsOpen] = useState(true);
+
+  useEffect(() => {
+    const measured: [HTMLElement | null, (h: number) => void][] = [
+      [totalsBlockRef.current, setTotalsBlockH],
+      [headRowRef.current, setHeadRowH],
+    ];
+    const observers = measured.map(([el, setH]) => {
+      if (!el) { setH(0); return null; }
+      setH(el.offsetHeight);
+      const ro = new ResizeObserver(() => setH(el.offsetHeight));
+      ro.observe(el);
+      return ro;
+    });
+    return () => { for (const ro of observers) ro?.disconnect(); };
+  }, [viewMode, totalRows.length, periods.length]);
+
+  const totalsOffset = totalsBlockH > 0 ? totalsBlockH + STICKY_GAP : 0;
+  const headTop = `calc(var(--topbar-h) + ${totalsOffset}px)`;
+  const headSubTop = `calc(var(--topbar-h) + ${totalsOffset + headRowH}px)`;
 
   const isHoliday = (date: Date, empCountry: string): string | null => {
     const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -554,7 +668,29 @@ export function AllView() {
   function setParam(key: string, value: string) {
     const p = new URLSearchParams(searchParams.toString());
     value ? p.set(key, value) : p.delete(key);
-    p.delete('page');
+    router.replace(`?${p.toString()}`, { scroll: false });
+  }
+
+  // Cantidad de filtros activos en la barra (busqueda, pais, offering, level, CHG% y T&E approver).
+  // Cada pais seleccionado cuenta como un filtro porque el filtro de pais es multiple.
+  const activeFilterCount = useMemo(() => {
+    let n = activeCountries.length;
+    if (localQ.trim()) n += 1;
+    if (offering) n += 1;
+    if (level) n += 1;
+    if (chgBucket) n += 1;
+    if (teApprover) n += 1;
+    return n;
+  }, [activeCountries, localQ, offering, level, chgBucket, teApprover]);
+
+  // Resetea todos los filtros de la barra a su valor por defecto de una sola vez
+  function clearAllFilters() {
+    setLocalQ('');
+    setTeApproverSearch('');
+    const p = new URLSearchParams(searchParams.toString());
+    for (const key of ['q', 'country', 'offering', 'level', 'chg_bucket', 'te_approver']) {
+      p.delete(key);
+    }
     router.replace(`?${p.toString()}`, { scroll: false });
   }
 
@@ -603,6 +739,9 @@ export function AllView() {
   ];
 
   const LEVEL_OPTIONS = [
+    { value: '6',  label: '6' },
+    { value: '7',  label: '7' },
+    { value: '8',  label: '8' },
     { value: '9',  label: '9' },
     { value: '10', label: '10' },
     { value: '11', label: '11' },
@@ -729,6 +868,24 @@ export function AllView() {
             onToggle: (v) => setParam('chg_bucket', chgBucket === v ? '' : v),
           },
         ]}
+        trailing={(
+          /* Queda siempre a la vista, apagado cuando no hay nada que limpiar, para que se
+             sepa que la opcion existe sin tener que descubrirla tocando un filtro. */
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            disabled={activeFilterCount === 0}
+            title={activeFilterCount > 0 ? 'Limpiar todos los filtros' : 'No hay filtros aplicados'}
+            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+              activeFilterCount > 0
+                ? 'border-[var(--P)] bg-[var(--PBG)] text-[var(--PD)] hover:bg-white cursor-pointer'
+                : 'border-[var(--G5)] text-[var(--G3)] cursor-default'
+            }`}
+          >
+            <X size={11} />
+            {activeFilterCount > 0 ? `Limpiar filtros (${activeFilterCount})` : 'Limpiar filtros'}
+          </button>
+        )}
       />
 
       <div className="flex items-center gap-2">
@@ -792,48 +949,218 @@ export function AllView() {
 
       {viewMode === 'forecast' ? (
 
-        <div className={`overflow-x-auto border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className={`space-y-3 transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
+
+          {/* Resumen ejecutivo: totales del Excel (hoja 'Forecast Update', filas 3 a 8), el
+              total por pais mas el desglose de Argentina por offering. Van en su PROPIA tabla,
+              con columnas anchas y tipografia grande, porque metidos entre las 21 columnas
+              angostas de la tabla de empleados competian con los datos y no se leian.
+              Es un bloque OPCIONAL: si el endpoint de totales falla, da 404 o vuelve vacio,
+              totalRows queda en [] y aca no se renderiza nada, sin tocar la tabla de abajo. */}
+          {totalRows.length > 0 && (
+            <div
+              ref={totalsBlockRef}
+              className="sticky z-20 border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] overflow-x-auto"
+              style={{ top: 'var(--topbar-h)' }}
+            >
+              <button
+                type="button"
+                onClick={() => setTotalsOpen((o) => !o)}
+                aria-expanded={totalsOpen}
+                title={totalsOpen ? 'Colapsar totales' : 'Expandir totales'}
+                className="w-full flex items-baseline gap-2 flex-wrap px-4 pt-3 pb-2.5 text-left hover:bg-[var(--G6)] transition-colors rounded-t-xl cursor-pointer"
+              >
+                {totalsOpen
+                  ? <ChevronUp size={13} className="text-[var(--G3)] self-center shrink-0" />
+                  : <ChevronDown size={13} className="text-[var(--G3)] self-center shrink-0" />}
+                <h2 className="text-sm font-bold text-[var(--G1)] tracking-tight">
+                  Totales de cargabilidad
+                </h2>
+                <span className="text-[11px] text-[var(--G3)]">
+                  {chgType === 'NETO' ? 'CHG Neto' : `CHG ${chgType}`} sobre los {result?.total ?? 0} empleados filtrados.
+                  {totalsOpen ? ' Solo se listan los grupos con gente.' : ` ${totalRows.length} grupos.`}
+                </span>
+              </button>
+
+              <table
+                style={{
+                  display: totalsOpen ? undefined : 'none',
+                  borderCollapse: 'separate',
+                  borderSpacing: 0,
+                  tableLayout: 'fixed',
+                  width: '100%',
+                  minWidth: TOT_LABEL_W + TOT_HC_W + periods.length * TOT_PERIOD_W,
+                }}
+              >
+                <colgroup>
+                  <col style={{ width: TOT_LABEL_W }} />
+                  <col style={{ width: TOT_HC_W }} />
+                  {periods.flatMap((_, i) => [
+                    <col key={`tot-chg-${i}`} style={{ width: TOT_CHG_W }} />,
+                    <col key={`tot-sah-${i}`} style={{ width: TOT_SAH_W }} />,
+                    <col key={`tot-pct-${i}`} style={{ width: TOT_PCT_W }} />,
+                  ])}
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th className="bg-[#eef2f8] text-left px-4 py-1.5 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-y border-r border-[var(--G5)]">
+                      Grupo
+                    </th>
+                    <th
+                      title="HC S&P: headcount del grupo dentro del set filtrado"
+                      className="bg-[#eef2f8] text-center py-1.5 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-y border-r-2 border-[var(--G5)]"
+                    >
+                      HC
+                    </th>
+                    {periods.map((p, i) => (
+                      <th
+                        key={p.label}
+                        colSpan={3}
+                        className={`text-center text-[11px] font-semibold py-1.5 px-1 tracking-wide overflow-hidden border-y border-r border-l-2 border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#eef2f8] text-[var(--G3)]'}`}
+                      >
+                        {p.label}
+                      </th>
+                    ))}
+                  </tr>
+                  <tr>
+                    <th className="bg-[#f6f8fb] border-b border-r border-[var(--G5)]" />
+                    <th className="bg-[#f6f8fb] border-b border-r-2 border-[var(--G5)]" />
+                    {periods.map((p, i) => (
+                      <Fragment key={p.label}>
+                        <th className={`text-center text-[9px] font-semibold text-[var(--G4)] py-1 border-b border-r border-l-2 border-[var(--G5)] ${i === currentPIdx ? 'bg-[#eff4fd]' : 'bg-[#f6f8fb]'}`}>CHG</th>
+                        <th className={`text-center text-[9px] font-semibold text-[var(--G4)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#eff4fd]' : 'bg-[#f6f8fb]'}`}>SAH</th>
+                        <th className={`text-center text-[9px] font-semibold text-[var(--G4)] py-1 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#eff4fd]' : 'bg-[#f6f8fb]'}`}>CHG%</th>
+                      </Fragment>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {totalRows.map((row, rowIdx) => {
+                    const isLast = rowIdx === totalRows.length - 1;
+                    const bottom = isLast ? '' : 'border-b';
+                    const isOffering = row.kind === 'offering';
+                    // Las filas de offering se subordinan a su pais: indentadas y en blanco
+                    const rowBg = isOffering ? 'bg-white' : 'bg-[#f2f6fc]';
+                    const curBg = isOffering ? 'bg-[#f8fbff]' : 'bg-[#e7eefa]';
+                    return (
+                      <tr key={row.key}>
+                        <td
+                          className={`${rowBg} ${bottom} border-r border-[var(--G5)] py-2`}
+                          style={{ paddingLeft: isOffering ? 30 : 16, paddingRight: 12 }}
+                        >
+                          <span className={`block truncate ${isOffering ? 'text-[12px] font-medium text-[var(--G2)]' : 'text-[13px] font-bold text-[var(--G1)]'}`}>
+                            {row.label}
+                          </span>
+                          <span className="block text-[10px] text-[var(--G4)]" title="Target de cargabilidad de la fila">
+                            Target {row.targetPct}%
+                          </span>
+                        </td>
+                        <td
+                          title="HC S&P: headcount del grupo dentro del set filtrado"
+                          className={`${rowBg} ${bottom} border-r-2 border-[var(--G5)] text-center`}
+                        >
+                          <span className="text-[13px] font-semibold text-[var(--G2)]">{row.hc}</span>
+                        </td>
+                        {/* Se itera SIEMPRE sobre los periodos de la tabla, no sobre los que
+                            trajo el endpoint: asi las columnas de totales no se pueden
+                            desalinear con las etiquetas de periodo de la tabla de empleados. */}
+                        {periods.map((_, i) => {
+                          const tot = row.periods[i];
+                          const chg = tot ? chgForMode(tot, chgType) : null;
+                          // Excel: =+CO3/CP3, promedio PONDERADO por horas (Î£CHG / Î£SAH),
+                          // no el promedio de los CHG% individuales de cada empleado
+                          // Se guarda sin redondear y se formatea a 1 decimal en el render, para
+                          // que 81 salga como "81.0%" y no como "81%".
+                          const pct = tot && chg != null && tot.sah > 0
+                            ? (chg / tot.sah) * 100
+                            : null;
+                          const overTarget = pct != null && pct >= row.targetPct;
+                          const cellBg = i === currentPIdx ? curBg : rowBg;
+                          return (
+                            <Fragment key={i}>
+                              <td className={`${bottom} border-r border-l-2 border-[var(--G5)] text-center ${cellBg}`}>
+                                <span className="text-[12px] font-semibold text-[var(--G1)]">{chg != null ? fmtHours(chg) : '—'}</span>
+                              </td>
+                              <td className={`${bottom} border-r border-[var(--G5)] text-center ${cellBg}`}>
+                                <span className="text-[12px] font-semibold text-[#4a72c4]">{tot ? fmtHours(tot.sah) : '—'}</span>
+                              </td>
+                              <td
+                                title={pct != null ? `${pct.toFixed(1)}% vs target ${row.targetPct}%` : undefined}
+                                className={`${bottom} border-r border-[var(--G5)] last:border-r-0 text-center ${cellBg}`}
+                              >
+                                {pct == null ? (
+                                  <span className="text-[12px] text-[var(--G4)]">—</span>
+                                ) : (
+                                  <span className={`text-[12px] font-bold whitespace-nowrap ${overTarget ? 'text-[var(--GR)]' : 'text-[var(--RD)]'}`}>
+                                    {overTarget ? '▲' : '▼'} {pct.toFixed(1)}%
+                                  </span>
+                                )}
+                              </td>
+                            </Fragment>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Sin overflow propio: la tabla scrollea con la pagina y el header de columnas se
+              queda pegado arriba, debajo del bloque de totales. */}
+          <div className="border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)]">
           <table
             style={{
               borderCollapse: 'separate',
               borderSpacing: 0,
               tableLayout: 'fixed',
-              minWidth: 260 + periods.length * 234,
+              width: '100%',
+              minWidth: EMP_FIXED_W + periods.length * EMP_PERIOD_W,
             }}
           >
             <colgroup>
               {/* Nombre */}
-              <col style={{ width: 200 }} />
+              <col style={{ width: EMP_NAME_W }} />
               {/* Days2Avail */}
-              <col style={{ width: 60 }} />
+              <col style={{ width: EMP_D2A_W }} />
+              {/* Roll-on y Roll-off */}
+              <col style={{ width: EMP_ROLL_W }} />
+              <col style={{ width: EMP_ROLL_W }} />
               {periods.flatMap((_, i) => [
-                <col key={`fc-chg-${i}`} style={{ width: 78 }} />,
-                <col key={`fc-sah-${i}`} style={{ width: 78 }} />,
-                <col key={`fc-pct-${i}`} style={{ width: 78 }} />,
+                <col key={`fc-chg-${i}`} style={{ width: EMP_CHG_W }} />,
+                <col key={`fc-sah-${i}`} style={{ width: EMP_SAH_W }} />,
+                <col key={`fc-pct-${i}`} style={{ width: EMP_PCT_W }} />,
               ])}
             </colgroup>
             <thead>
-              <tr>
-                <th className="sticky left-0 z-20 bg-[#f4f6f9] text-left px-3 py-2 text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
+              <tr ref={headRowRef}>
+                <th style={{ position: 'sticky', top: headTop }} className="z-20 bg-[#f4f6f9] text-left px-2 py-1.5 text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
                   <button className="flex items-center gap-1 hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('name')}>
                     {t('title')} <SortIcon field="name" />
                   </button>
                 </th>
                 {/* Days to Availability header */}
-                <th className="bg-[#f4f6f9] text-center text-[11px] font-semibold text-[var(--G3)] tracking-wide border-b border-r-2 border-[var(--G5)] px-1 py-2 whitespace-nowrap">
-                  <button className="flex items-center gap-1 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('days2avail')}>
+                <th style={{ position: 'sticky', top: headTop }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
+                  <button className="flex items-center gap-0.5 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('days2avail')}>
                     D2A <SortIcon field="days2avail" />
                   </button>
+                </th>
+                <th style={{ position: 'sticky', top: headTop }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
+                  Roll-on
+                </th>
+                <th style={{ position: 'sticky', top: headTop }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r-2 border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
+                  Roll-off
                 </th>
                 {periods.map((p, i) => (
                   <th
                     key={p.label}
                     colSpan={3}
-                    style={{ maxWidth: 234 }}
-                    className={`text-center text-[11px] font-semibold py-2 px-1 tracking-wide overflow-hidden border-b border-r border-l-2 border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'}`}
+                    style={{ position: 'sticky', top: headTop, maxWidth: EMP_PERIOD_W }}
+                    className={`z-20 text-center text-[10px] font-semibold py-1.5 px-0.5 tracking-wide overflow-hidden border-b border-r border-l-2 border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'}`}
                   >
                     {p.label}
-                    <span className="block text-[9px] font-normal text-[var(--G4)] mt-0.5">
+                    <span className="block text-[8px] font-normal text-[var(--G4)] leading-tight">
                       {[['AR', 'Argentina'], ['MX', 'Mexico'], ['CR', 'Costa Rica']]
                         .map(([code, full]) => {
                           const v = p.sahByCountry?.[full] ?? p.sahByCountry?.[code];
@@ -846,13 +1173,15 @@ export function AllView() {
                 ))}
               </tr>
               <tr>
-                <th className="sticky left-0 z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
-                <th className="bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th style={{ position: 'sticky', top: headSubTop }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th style={{ position: 'sticky', top: headSubTop }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th style={{ position: 'sticky', top: headSubTop }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th style={{ position: 'sticky', top: headSubTop }} className="z-20 bg-[#f4f6f9] border-b border-r-2 border-[var(--G5)]" />
                 {periods.map((p, i) => (
                   <Fragment key={p.label}>
-                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-l-2 border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG</th>
-                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#dce8fc]' : 'bg-[#f4f6f9]'}`}>SAH</th>
-                    <th className={`text-center text-[10px] font-semibold text-[var(--G3)] py-1 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>
+                    <th style={{ position: 'sticky', top: headSubTop }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-l-2 border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG</th>
+                    <th style={{ position: 'sticky', top: headSubTop }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#dce8fc]' : 'bg-[#f4f6f9]'}`}>SAH</th>
+                    <th style={{ position: 'sticky', top: headSubTop }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>
                       <button className="flex items-center gap-0.5 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('chgPct')}>
                         CHG% <SortIcon field="chgPct" />
                       </button>
@@ -865,7 +1194,7 @@ export function AllView() {
 
               {paged.length === 0 ? (
                 <tr>
-                  <td colSpan={2 + periods.length * 3} className="text-center text-sm text-[var(--G3)] py-12">
+                  <td colSpan={4 + periods.length * 3} className="text-center text-sm text-[var(--G3)] py-12">
                     Sin empleados
                   </td>
                 </tr>
@@ -878,23 +1207,23 @@ export function AllView() {
                 const rowTone = ROW_TONE[assumptionKind(emp)];
                 const d2a = days2AvailMap.get(emp.id) ?? 0;
                 const d2aColor = d2a <= 14 ? 'text-[var(--RD)]' : d2a <= 30 ? 'text-[var(--YL)]' : 'text-[var(--GR)]';
-                // Offering label: último segmento del offering o projectType
+                // Offering label: Ãºltimo segmento del offering o projectType
                 const offeringLabel = emp.projectType ?? emp.country ?? '';
                 const clientLabel = emp.client && emp.client.trim() && emp.client.trim().toLowerCase() !== 'unassigned'
                   ? emp.client
                   : 'Sin proyecto';
                 return (
                   <tr key={emp.id} className={`group ${rowTone}`}>
-                    <td className={`sticky left-0 z-10 border-b border-r border-[var(--G5)] px-3 py-2 ${rowTone}`}>
-                      <div className="flex items-center gap-2">
+                    <td className={`border-b border-r border-[var(--G5)] px-2 py-1.5 ${rowTone}`}>
+                      <div className="flex items-center gap-1.5">
                         <div
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
                           style={{ background: avatarColor(emp.id) }}
                         >
                           {getInitials(emp.name)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="block text-xs font-semibold text-[var(--G1)] truncate">{emp.name}</span>
+                          <span className="block text-[11px] font-semibold text-[var(--G1)] truncate" title={emp.name}>{emp.name}</span>
                           <span className="block text-[9px] text-[var(--G4)] truncate" title={clientLabel}>
                             {emp.level} · {offeringLabel} · {clientLabel}
                           </span>
@@ -902,18 +1231,26 @@ export function AllView() {
                       </div>
                     </td>
                     {/* Days to Availability */}
-                    <td className={`border-b border-r-2 border-[var(--G5)] text-center h-[34px] ${rowTone}`} style={{ padding: 0 }}>
+                    <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] ${rowTone}`} style={{ padding: 0 }}>
                       {fRollOff ? (
-                        <span className={`text-[11px] font-semibold ${d2aColor}`}>{d2a}d</span>
+                        <span className={`text-[10px] font-semibold ${d2aColor}`}>{d2a}d</span>
                       ) : (
-                        <span className="text-[11px] text-[var(--G4)]">—</span>
+                        <span className="text-[10px] text-[var(--G4)]">—</span>
                       )}
+                    </td>
+                    {/* Roll-on / Roll-off */}
+                    <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] ${rowTone}`} style={{ padding: 0 }}>
+                      <span className={`text-[10px] ${emp.rollOn ? 'text-[var(--G1)] font-medium' : 'text-[var(--G4)]'}`}>
+                        {formatRollDate(emp.rollOn)}
+                      </span>
+                    </td>
+                    <td className={`border-b border-r-2 border-[var(--G5)] text-center h-[32px] ${rowTone}`} style={{ padding: 0 }}>
+                      <span className={`text-[10px] ${emp.rollOff ? 'text-[var(--G1)] font-medium' : 'text-[var(--G4)]'}`}>
+                        {formatRollDate(emp.rollOff)}
+                      </span>
                     </td>
                     {periods.map((period, i) => {
                       const sah = emp.sah[i] ?? 0;
-                      // SAH normal por país para este período
-                      const normalSah = SAH_BY_COUNTRY[emp.country] ?? 176;
-                      const sahDisplay = sah > 0 ? sah : normalSah;
                       // CHG Neto = chg_hl + chg_sl del backend
                       const netoVal = emp.chgNeto?.[i] != null
                         ? emp.chgNeto[i]
@@ -925,16 +1262,16 @@ export function AllView() {
                         : chgType === 'SL'
                           ? (emp.chgSl?.[i] ?? emp.chgAssumption?.[i] ?? 0)
                           : netoVal;
-                      const chgLabel = chgRaw % 1 === 0 ? `${Math.round(chgRaw)}` : chgRaw.toFixed(1);
+                      const chgLabel = `${Math.round(chgRaw)}`;
 
                       const hlPctReal = sah > 0
-                        ? Math.round(((emp.chgHl?.[i] ?? 0) / sah) * 10000) / 100
+                        ? Math.round(((emp.chgHl?.[i] ?? 0) / sah) * 100)
                         : 0;
                       const p = chgType === 'HL'
                         ? hlPctReal
                         : chgType === 'SL'
-                          ? (emp.slAssumed[i] ?? 0)
-                          : (sah > 0 ? Math.round((netoVal / sah) * 10000) / 100 : 0);
+                          ? Math.round(emp.slAssumed[i] ?? 0)
+                          : (sah > 0 ? Math.round((netoVal / sah) * 100) : 0);
 
                       // Color de celda segun el subtipo de assumption del Excel
                       // Bug 4: si cargable = 0, no colorear (blanco = Hard Lock)
@@ -948,29 +1285,34 @@ export function AllView() {
                         <Fragment key={i}>
                           <td
                             title={cellTitle}
-                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[34px] ${aStyle ? '' : 'bg-white'}`}
+                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[32px] ${aStyle ? '' : isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`}
                             style={{ padding: 0, ...cellBg }}
                           >
-                            <span className="text-[11px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>{chgLabel}</span>
+                            <span className="text-[10px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>{chgLabel}</span>
                           </td>
-                          <td className="border-b border-r border-[var(--G5)] text-center h-[34px] bg-white" style={{ padding: 0 }}>
-                            <span className="text-[11px] font-semibold text-[var(--G1)]">{Math.round(sahDisplay)}</span>
+                          <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] ${isCur ? 'bg-[#f0f5ff]' : 'bg-white'}`} style={{ padding: 0 }}>
+                            {/* Sin SAH cargado se muestra un guion. Antes caia en una constante
+                                por pais y pintaba un numero inventado, que hacia parecer que el
+                                periodo tenia horas disponibles cuando en realidad no hay dato. */}
+                            <span className="text-[10px] font-semibold text-[#4a72c4]">
+                              {sah > 0 ? Math.round(sah) : <span className="text-[var(--G4)]">—</span>}
+                            </span>
                           </td>
                           {(() => {
                             const isClickable = p !== 100 && employeeIdsWithTickets.has(emp.id);
                             return (
                               <td
                                 title={cellTitle}
-                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[34px] ${aStyle ? '' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[32px] ${aStyle ? '' : isCur ? 'bg-[#f0f5ff]' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
                                 style={{ padding: 0, ...cellBg }}
                                 onClick={isClickable ? () => {
                                   const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
                                   setChgModal({ emp, tickets: empTickets });
                                 } : undefined}
                               >
-                                <span className="text-[11px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>
+                                <span className="text-[10px] font-semibold whitespace-nowrap" style={aStyle ? { color: aStyle.fg } : undefined}>
                                   {p}%
-                                  {isClickable && <span className="ml-0.5 text-[9px] opacity-50">i</span>}
+                                  {isClickable && <span className="ml-0.5 text-[8px] opacity-50">i</span>}
                                 </span>
                               </td>
                             );
@@ -983,6 +1325,7 @@ export function AllView() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
 
       ) : (
@@ -1052,7 +1395,7 @@ export function AllView() {
             </thead>
 
             <motion.tbody
-              key={`${safePage}-${debouncedQ}-${status}-${country}-${offering}-${level}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
+              key={`${debouncedQ}-${status}-${country}-${offering}-${level}-${teApprover}-${chgBucket}-${windowStart.getTime()}-${refreshKey}`}
               initial="hidden"
               animate="visible"
               variants={TBODY_VARIANTS}
@@ -1080,19 +1423,19 @@ export function AllView() {
                     ? (emp.cp[pIdx] ?? 0)
                     : chgType === 'SL'
                       ? (emp.slAssumed[pIdx] ?? 0)
-                      : (sahForPeriod > 0 ? Math.round(((emp.chgNeto?.[pIdx] ?? 0) / sahForPeriod) * 10000) / 100 : 0);
+                      : (sahForPeriod > 0 ? Math.round(((emp.chgNeto?.[pIdx] ?? 0) / sahForPeriod) * 100) : 0);
                   const dailyCHG = 8 * chgPct / 100;
-                  const dailyCHGLabel = dailyCHG % 1 === 0 ? `${dailyCHG}h` : `${dailyCHG.toFixed(1)}h`;
+                  const dailyCHGLabel = `${Math.round(dailyCHG)}h`;
 
                   // Bug 3: usar valores del backend para el resumen (compatible con PPAs)
-                  // No recalcular CHG desde horas/día, sino tomar los valores reales del período
+                  // No recalcular CHG desde horas/dÃ­a, sino tomar los valores reales del perÃ­odo
                   const summaryCHG = chgType === 'HL'
                     ? (emp.chgHl?.[pIdx] ?? 0)
                     : chgType === 'SL'
                       ? (emp.chgSl?.[pIdx] ?? 0)
                       : (emp.chgNeto?.[pIdx] ?? 0);
 
-                  // Bug 2: SAH ajustado por días de vacaciones dentro del período visible
+                  // Bug 2: SAH ajustado por dÃ­as de vacaciones dentro del perÃ­odo visible
                   const ptoDaysInWindow = days.filter((d) => {
                     if (d.weekend) return false;
                     if (isHoliday(d.date, emp.country)) return false;
@@ -1100,7 +1443,7 @@ export function AllView() {
                   }).length;
                   const adjustedSAH = Math.max(0, sahForPeriod - ptoDaysInWindow * 8);
 
-                  const totalCHGLabel = summaryCHG % 1 === 0 ? `${Math.round(summaryCHG)}h` : `${summaryCHG.toFixed(1)}h`;
+                  const totalCHGLabel = `${Math.round(summaryCHG)}h`;
                   const realChgPct = adjustedSAH > 0 ? Math.round((summaryCHG / adjustedSAH) * 100) : 0;
                   const summaryColor = realChgPct >= 80 ? 'text-[var(--GR)]' : realChgPct >= 50 ? 'text-[var(--YL)]' : 'text-[var(--RD)]';
 
@@ -1429,55 +1772,6 @@ export function AllView() {
               {label}
             </div>
           ))}
-        </div>
-      )}
-
-      {(result?.total ?? 0) > 0 && (
-        <div className={`flex items-center px-1 text-sm text-[var(--G2)] ${pageCount > 1 ? 'justify-between' : 'justify-end'}`}>
-          {pageCount > 1 && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  const p = new URLSearchParams(searchParams.toString());
-                  safePage > 1 ? p.set('page', String(safePage - 1)) : p.delete('page');
-                  router.replace(`?${p.toString()}`, { scroll: false });
-                }}
-                disabled={safePage <= 1}
-                className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
-              >
-                Anterior
-              </button>
-              <span className="whitespace-nowrap">
-                Pagina {safePage} de {pageCount}
-                <span className="text-[var(--G3)] ml-1">({result?.total ?? 0} resultados)</span>
-              </span>
-              <button
-                onClick={() => {
-                  const p = new URLSearchParams(searchParams.toString());
-                  p.set('page', String(safePage + 1));
-                  router.replace(`?${p.toString()}`, { scroll: false });
-                }}
-                disabled={safePage >= pageCount}
-                className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
-              >
-                Siguiente
-              </button>
-            </div>
-          )}
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              const p = new URLSearchParams(searchParams.toString());
-              p.set('pageSize', e.target.value);
-              p.delete('page');
-              router.replace(`?${p.toString()}`, { scroll: false });
-            }}
-            className="border border-[var(--G5)] rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-[var(--P)]"
-          >
-            {[10, 25, 50, 100].map((s) => (
-              <option key={s} value={s}>{s} por pagina</option>
-            ))}
-          </select>
         </div>
       )}
 

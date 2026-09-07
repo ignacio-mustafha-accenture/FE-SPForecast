@@ -109,6 +109,25 @@ export interface RawPage<T> {
   pages: number;
 }
 
+export interface RawForecastTotalRow {
+  key: string;
+  label: string;
+  kind: string;
+  country: string;
+  target_pct: number;
+  hc: number;
+  chg_hl: number[];
+  chg_sl: number[];
+  chg_neto: number[];
+  chg: number[];
+  sah: number[];
+}
+
+export interface RawForecastTotals {
+  periods: { period_name: string; label: string }[];
+  rows: RawForecastTotalRow[];
+}
+
 export interface RawTargets {
   general: number;
   [country: string]: number;

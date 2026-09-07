@@ -11,8 +11,10 @@ export function AppShell({ children }: AppShellProps) {
     <>
       <TopBar />
       <Sidebar />
+      {/* Sin overflow propio: el scroll es el de la pagina, asi los encabezados sticky
+          de las vistas se anclan al viewport y no a una caja interna */}
       <main
-        className="min-h-screen overflow-y-auto"
+        className="min-h-screen"
         style={{
           paddingTop: 'var(--topbar-h)',
           paddingLeft: 'var(--sidebar-w)',
