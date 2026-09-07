@@ -37,9 +37,11 @@ interface FilterBarProps {
   search?: SearchProps;
   toggleGroups?: ToggleGroup[];
   className?: string;
+  // Contenido opcional al final de la barra (ej: boton de limpiar filtros)
+  trailing?: React.ReactNode;
 }
 
-export function FilterBar({ search, toggleGroups, className }: FilterBarProps) {
+export function FilterBar({ search, toggleGroups, className, trailing }: FilterBarProps) {
   const t = useTranslations('common');
 
   return (
@@ -91,6 +93,8 @@ export function FilterBar({ search, toggleGroups, className }: FilterBarProps) {
           ))}
         </div>
       ))}
+
+      {trailing}
     </div>
   );
 }
