@@ -6,10 +6,16 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig: NextConfig = {
   output: 'standalone',
   async rewrites() {
+    // API_BASE_URL es de servidor y se lee en runtime, asi que la misma imagen
+    // sirve para dev y prod. NEXT_PUBLIC_ queda como fallback porque se hornea
+    // en el build. Hardcodear la URL aca hacia que prod apuntara a dev.
+    const backendUrl = process.env.API_BASE_URL
+      ?? process.env.NEXT_PUBLIC_API_BASE_URL
+      ?? 'http://localhost:8000';
     return [
       {
         source: '/api/:path*',
-        destination: 'https://forecast-backend-dev.yellowsea-99dbc30d.eastus.azurecontainerapps.io/api/:path*',
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
