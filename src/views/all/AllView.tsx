@@ -501,10 +501,7 @@ export function AllView() {
     return map;
   }, [paged]);
 
-    const sinDatos = useCallback((e: Employee) => {
-    const tieneSah = e.sah?.some((v) => (v ?? 0) > 0);
-    return !e.rollOn && !tieneSah;
-  }, []);
+  const sinDatos = useCallback((e: Employee) => !e.rollOff, []);
 
   const sortedPaged = useMemo(() => {
     const conDatos: Employee[] = [];
