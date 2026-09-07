@@ -98,6 +98,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     hasAssumptionBlocks: raw.HasAssumptionBlocks ?? ((raw.chg_pct_sl?.[0] ?? 0) > 0),
     isOnPTO: raw.IsOnPTO ?? false,
     ringfenced: raw.Ringfenced ?? false,
+    reservaStatus: raw.ReservaStatus ?? null,
     isgAligned: raw.ISGAligned ?? false,
   };
 }

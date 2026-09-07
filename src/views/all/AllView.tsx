@@ -492,7 +492,10 @@ export function AllView() {
   const days2AvailMap = useMemo(() => {
     const today = startOfDay(new Date());
     const map = new Map<string, number>();
-    for (const emp of paged) {
+        for (const emp of paged) {
+      const rs = emp.reservaStatus?.toLowerCase() ?? '';
+      if (rs.includes('reserva light')) { map.set(emp.id, -88); continue; }
+      if (rs.includes('en reserva')) { map.set(emp.id, -99); continue; }
       const rollOff = parseDDMMYY(emp.rollOff);
       if (!rollOff) { map.set(emp.id, 0); continue; }
       const diff = Math.ceil((rollOff.getTime() - today.getTime()) / 86_400_000);
@@ -1238,6 +1241,7 @@ export function AllView() {
                           <span className="block text-[11px] font-semibold text-[var(--G1)] truncate" title={emp.name}>{emp.name}</span>
                           <span className="block text-[9px] text-[var(--G4)] truncate" title={clientLabel}>
                             {emp.level} · {offeringLabel} · {clientLabel}
+                            {emp.reservaStatus && <span className="text-[var(--RD)] font-semibold"> · {emp.reservaStatus}</span>}
                           </span>
                         </div>
                       </div>

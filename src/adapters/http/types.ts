@@ -47,6 +47,7 @@ export interface RawEmployee {
   HasAssumptionBlocks: boolean;
   IsOnPTO: boolean;
   Ringfenced?: boolean;
+  ReservaStatus?: string | null;
   ISGAligned?: boolean;
   chg: number[];
   chg_neto: number[];
