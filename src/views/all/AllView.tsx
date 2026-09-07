@@ -501,10 +501,19 @@ export function AllView() {
     return map;
   }, [paged]);
 
-  // Sorted paged list
+    const sinDatos = useCallback((e: Employee) => {
+    const tieneSah = e.sah?.some((v) => (v ?? 0) > 0);
+    return !e.rollOn && !tieneSah;
+  }, []);
+
   const sortedPaged = useMemo(() => {
-    if (!sortField) return paged;
-    return [...paged].sort((a, b) => {
+    const conDatos: Employee[] = [];
+    const vacios: Employee[] = [];
+    for (const e of paged) (sinDatos(e) ? vacios : conDatos).push(e);
+
+    if (!sortField) return [...conDatos, ...vacios];
+
+    const comparar = (a: Employee, b: Employee) => {
       let va = 0, vb = 0;
       if (sortField === 'name') {
         const cmp = a.name.localeCompare(b.name);
@@ -525,8 +534,10 @@ export function AllView() {
         vb = pctOf(b);
       }
       return sortDir === 'asc' ? va - vb : vb - va;
-    });
-  }, [paged, sortField, sortDir, days2AvailMap, chgType, currentPIdx]);
+    };
+
+    return [...conDatos.sort(comparar), ...vacios.sort(comparar)];
+  }, [paged, sortField, sortDir, days2AvailMap, chgType, currentPIdx, sinDatos]);
 
   // Las filas de totales son un extra: solo se muestran si el endpoint respondio y hay
   // empleados en la tabla. Nunca condicionan el render de las columnas de periodo.
