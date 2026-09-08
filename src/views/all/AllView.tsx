@@ -24,6 +24,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { exportToXlsx } from '@/src/lib/excel';
 import { parseDDMMYY, formatDate } from '@/src/lib/formatters';
+import { OFFERING_OPTIONS } from '@/src/core/domain/offerings';
 
 const blockRepo = new HttpChargeabilityBlockRepository();
 
@@ -744,14 +745,6 @@ export function AllView() {
     { value: 'unassigned', label: t('statusUnassigned') },
   ];
 
-  const OFFERING_OPTIONS = [
-    { value: 'SO',     label: 'SO' },
-    { value: 'PR',     label: 'PR' },
-    { value: 'Tools',  label: 'Tools' },
-    { value: 'S4',     label: 'S4' },
-    { value: 'Ariba',  label: 'Ariba' },
-    { value: 'Oracle', label: 'Oracle' },
-  ];
 
   const LEVEL_OPTIONS = [
     { value: '6',  label: '6' },
