@@ -18,6 +18,7 @@ import { Textarea } from '@/src/components/ui/Textarea';
 import { Button } from '@/src/components/ui/Button';
 import { useToast } from '@/src/hooks/useToast';
 import { useForecastStore } from '@/src/store/StoreProvider';
+import { OFFERING_OPTIONS } from '@/src/core/domain/offerings';
 
 type TicketType = 'newproj' | 'ongoing' | 'pto' | 'sick' | 'nj' | 'baja' | 'ppa';
 
@@ -97,13 +98,7 @@ const LOCATION_OPTIONS = [
   { value: 'Mexico', label: 'Mexico' },
   { value: 'Costa Rica', label: 'Costa Rica' },
 ];
-const OFFERING_OPTIONS = [
-  { value: 'Tech-led', label: 'Tech-led' },
-  { value: 'Cost Take Out', label: 'Cost Take Out' },
-  { value: 'OM+SPY+Others', label: 'OM+SPY+Others' },
-  { value: 'Internal', label: 'Internal' },
-  { value: 'CTO', label: 'CTO' },
-];
+
 
 const MONTH_SHORT_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const;
 
