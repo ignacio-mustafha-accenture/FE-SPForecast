@@ -96,6 +96,8 @@ export interface RawPPALog {
   from: string;
   to: string;
   hs: number;
+  hours_chargeable?: number | null;
+  hours_standard?: number | null;
   reason: string;
   date: string;
   country?: string | null;

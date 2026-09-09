@@ -20,7 +20,8 @@ type PPAFormData = {
   eid: string;
   fromPeriod: string;
   toPeriod: string;
-  hours: string;
+  hoursChargeable: string;
+  hoursStandard: string;
   reason: string;
 };
 
@@ -69,9 +70,13 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
     eid: z.string().min(1, t('required')),
     fromPeriod: z.string().min(1, t('required')),
     toPeriod: z.string().min(1, t('required')),
-    hours: z.string().min(1, t('required')),
+    hoursChargeable: z.string().optional().refine((v) => !v || Number(v) >= 1, t('minHours')),
+    hoursStandard: z.string().optional().refine((v) => !v || Number(v) >= 1, t('minHours')),
     reason: z.string().optional(),
-  });
+  }).refine(
+    (d) => (d.hoursChargeable && d.hoursChargeable !== '') || (d.hoursStandard && d.hoursStandard !== ''),
+    { message: t('atLeastOneRequired'), path: ['hoursChargeable'] },
+  );
 
   const {
     register,
@@ -113,7 +118,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
         eid: data.eid,
         fromPeriod: data.fromPeriod,
         toPeriod: data.toPeriod,
-        hours: Number(data.hours),
+        hoursChargeable: data.hoursChargeable ? Number(data.hoursChargeable) : undefined,
+        hoursStandard: data.hoursStandard ? Number(data.hoursStandard) : undefined,
         reason: data.reason ?? '',
       });
       toast.success(t('toastCreated'));
@@ -274,13 +280,22 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
         </div>
 
         {/* Hours */}
-        <Input
-          label={t('fieldHours')}
-          type="number"
-          min={1}
-          error={errors.hours?.message}
-          {...register('hours')}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label={t('fieldHoursChargeable')}
+            type="number"
+            min={1}
+            error={errors.hoursChargeable?.message}
+            {...register('hoursChargeable')}
+          />
+          <Input
+            label={t('fieldHoursStandard')}
+            type="number"
+            min={1}
+            error={errors.hoursStandard?.message}
+            {...register('hoursStandard')}
+          />
+        </div>
 
         {/* Reason */}
         <Textarea
