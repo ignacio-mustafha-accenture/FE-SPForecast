@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 
 import { cn } from '@/src/lib/cn';
 
+import { Dropdown } from './Dropdown';
+
 const chipVariants = {
   hidden: { opacity: 0, y: -4 },
   show: (i: number) => ({
@@ -33,15 +35,24 @@ interface ToggleGroup {
   multi?: boolean;
 }
 
+interface SelectGroup {
+  label: string;
+  options: ToggleOption[];
+  value: string;
+  onChange: (v: string) => void;
+  allLabel?: string;
+}
+
 interface FilterBarProps {
   search?: SearchProps;
   toggleGroups?: ToggleGroup[];
+  selectGroups?: SelectGroup[];
   className?: string;
   // Contenido opcional al final de la barra (ej: boton de limpiar filtros)
   trailing?: React.ReactNode;
 }
 
-export function FilterBar({ search, toggleGroups, className, trailing }: FilterBarProps) {
+export function FilterBar({ search, toggleGroups, selectGroups, className, trailing }: FilterBarProps) {
   const t = useTranslations('common');
 
   return (
@@ -94,6 +105,19 @@ export function FilterBar({ search, toggleGroups, className, trailing }: FilterB
         </div>
       ))}
 
+      {selectGroups?.map((group) => (
+        <div key={group.label} className="flex items-center gap-1.5">
+          <span className="text-xs text-[var(--G3)] whitespace-nowrap">{group.label}:</span>
+          <Dropdown
+            options={group.options}
+            value={group.value}
+            onChange={group.onChange}
+            allLabel={group.allLabel}
+            compact
+          />
+        </div>
+      ))}
+
       {trailing}
     </div>
   );
@@ -108,7 +132,7 @@ function Chip({ label, active, index, onClick }: { label: string; active: boolea
       animate="show"
       onClick={onClick}
       className={cn(
-        'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors duration-120',
+        'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors duration-120 cursor-pointer',
         active
           ? 'bg-[var(--PBG)] text-[var(--PD)] border-[var(--P)]'
           : 'bg-white text-[var(--G2)] border-[var(--G5)] hover:border-[var(--G3)]',

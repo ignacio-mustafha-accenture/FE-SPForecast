@@ -38,7 +38,8 @@ export class HttpPPARepository implements IPPARepository {
         eid: payload.eid,
         from_period: payload.fromPeriod,
         to_period: payload.toPeriod,
-        hours: payload.hours,
+        hours_chargeable: payload.hoursChargeable ?? null,
+        hours_standard: payload.hoursStandard ?? null,
         reason: payload.reason,
       }),
     });

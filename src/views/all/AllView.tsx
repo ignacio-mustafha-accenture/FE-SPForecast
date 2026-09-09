@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
-import { useToast } from '@/src/hooks/useToast';
+import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, ChevronDown, PencilLine, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, PencilLine, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type { Employee } from '@/src/core/domain/employee';
+import { useToast } from '@/src/hooks/useToast';
 import type { ForecastTotals, TotalPeriodValues } from '@/src/core/domain/forecast-totals';
 import type { Ticket } from '@/src/core/domain/ticket';
 import type { Period } from '@/src/core/domain/period';
@@ -392,7 +392,7 @@ export function AllView() {
 
   const [windowAnchor, setWindowAnchor] = useState<Date>(() => startOfDay(new Date()));
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [viewMode, setViewMode] = useState<'daily' | 'forecast'>('forecast');
+  const [viewMode, setViewMode] = useState<'daily' | 'forecast'>('daily');
 
   const getPeriodIdx = useCallback(
     (date: Date): number => {
@@ -573,8 +573,10 @@ export function AllView() {
   // se mide en runtime para poder anclar el header justo debajo en vez de hardcodear un alto.
   const totalsBlockRef = useRef<HTMLDivElement | null>(null);
   const headRowRef = useRef<HTMLTableRowElement | null>(null);
+  const tableCardRef = useRef<HTMLDivElement | null>(null);
   const [totalsBlockH, setTotalsBlockH] = useState(0);
   const [headRowH, setHeadRowH] = useState(0);
+  const [tableHeight, setTableHeight] = useState(600);
   // El bloque de totales se puede colapsar para recuperar alto de pantalla al recorrer la
   // lista de empleados. Al colapsar cambia el alto del bloque, y el ResizeObserver de arriba
   // reancla el header de la tabla solo, sin recalcular nada a mano.
@@ -595,9 +597,17 @@ export function AllView() {
     return () => { for (const ro of observers) ro?.disconnect(); };
   }, [viewMode, totalRows.length, periods.length]);
 
-  const totalsOffset = totalsBlockH > 0 ? totalsBlockH + STICKY_GAP : 0;
-  const headTop = `calc(var(--topbar-h) + ${totalsOffset}px)`;
-  const headSubTop = `calc(var(--topbar-h) + ${totalsOffset + headRowH}px)`;
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (tableCardRef.current) {
+        const top = tableCardRef.current.getBoundingClientRect().top;
+        setTableHeight(Math.max(400, window.innerHeight - top - 8));
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [totalsBlockH, totalsOpen, viewMode]);
 
   const isHoliday = (date: Date, empCountry: string): string | null => {
     const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -808,39 +818,6 @@ export function AllView() {
 
         <div className="flex-1" />
 
-        <div className="flex border border-[var(--G5)] rounded-lg overflow-hidden bg-white">
-          {(['HL', 'SL', 'NETO'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setParam('chg', mode)}
-              className={`px-3.5 py-1.5 text-xs font-medium transition-colors ${chgType === mode
-                ? 'bg-[var(--P)] text-white'
-                : 'text-[var(--G3)] hover:text-[var(--G1)]'
-                }`}
-            >
-              {mode === 'NETO' ? 'CHG Neto' : t(mode === 'HL' ? 'toggleHL' : 'toggleSL')}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex border border-[var(--G5)] rounded-lg overflow-hidden bg-white">
-          {(['daily', 'forecast'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`px-3.5 py-1.5 text-xs font-medium transition-colors ${viewMode === mode
-                ? 'bg-[var(--P)] text-white'
-                : 'text-[var(--G3)] hover:text-[var(--G1)]'
-                }`}
-            >
-              {mode === 'daily' ? 'Diario' : 'Forecast'}
-            </button>
-          ))}
-        </div>
-
-        <Button variant="ghost" size="sm" onClick={handleExport}>
-          {t('exportBtn')}
-        </Button>
       </div>
 
       <FilterBar
@@ -857,103 +834,146 @@ export function AllView() {
             onToggle: toggleCountry,
             multi: true,
           },
+        ]}
+        selectGroups={[
           {
             label: 'Offering',
             options: OFFERING_OPTIONS,
-            active: offering ? [offering] : [],
-            onToggle: (v) => setParam('offering', offering === v ? '' : v),
+            value: offering,
+            onChange: (v) => setParam('offering', v),
           },
           {
             label: 'Level',
             options: LEVEL_OPTIONS,
-            active: level ? [level] : [],
-            onToggle: (v) => setParam('level', level === v ? '' : v),
+            value: level,
+            onChange: (v) => setParam('level', v),
           },
           {
             label: 'CHG%',
             options: CHG_BUCKET_OPTIONS,
-            active: chgBucket ? [chgBucket] : [],
-            onToggle: (v) => setParam('chg_bucket', chgBucket === v ? '' : v),
+            value: chgBucket,
+            onChange: (v) => setParam('chg_bucket', v),
           },
         ]}
         trailing={(
-          /* Queda siempre a la vista, apagado cuando no hay nada que limpiar, para que se
-             sepa que la opcion existe sin tener que descubrirla tocando un filtro. */
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            disabled={activeFilterCount === 0}
-            title={activeFilterCount > 0 ? 'Limpiar todos los filtros' : 'No hay filtros aplicados'}
-            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-              activeFilterCount > 0
-                ? 'border-[var(--P)] bg-[var(--PBG)] text-[var(--PD)] hover:bg-white cursor-pointer'
-                : 'border-[var(--G5)] text-[var(--G3)] cursor-default'
-            }`}
-          >
-            <X size={11} />
-            {activeFilterCount > 0 ? `Limpiar filtros (${activeFilterCount})` : 'Limpiar filtros'}
-          </button>
+          <>
+            {/* T&E Approver inline en la barra */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-[var(--G3)] whitespace-nowrap">T&amp;E Approver:</span>
+              {teApprover ? (
+                <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-xs font-medium">
+                  {teApprover}
+                  <button
+                    type="button"
+                    onClick={() => { setTeApproverSearch(''); setParam('te_approver', ''); }}
+                    className="hover:opacity-70 transition-opacity"
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="buscar..."
+                    value={teApproverSearch}
+                    onChange={(e) => { setTeApproverSearch(e.target.value); setShowTeApproverDrop(true); }}
+                    onFocus={() => setShowTeApproverDrop(true)}
+                    onBlur={() => setTimeout(() => setShowTeApproverDrop(false), 150)}
+                    className="px-2.5 py-0.5 text-xs border border-[var(--G5)] rounded-md bg-white text-[var(--G1)] placeholder-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] w-32"
+                  />
+                  {showTeApproverDrop && (teApproversFiltered.length > 0 || teApproverSearch.length > 0) && (
+                    <ul className="absolute z-50 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto min-w-[180px] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)]">
+                      {teApproversFiltered.map((name) => (
+                        <li
+                          key={name}
+                          onMouseDown={() => {
+                            setParam('te_approver', name);
+                            setTeApproverSearch('');
+                            setShowTeApproverDrop(false);
+                          }}
+                          className="px-3 py-2 text-xs cursor-pointer text-[var(--G1)] hover:bg-[var(--G6)]"
+                        >
+                          {name}
+                        </li>
+                      ))}
+                      {teApproverSearch.length > 0 && !teApprovers.includes(teApproverSearch) && (
+                        <li
+                          onMouseDown={() => {
+                            setParam('te_approver', teApproverSearch);
+                            setTeApproverSearch('');
+                            setShowTeApproverDrop(false);
+                          }}
+                          className="px-3 py-2 text-xs cursor-pointer text-[var(--P)] border-t border-[var(--G6)] hover:bg-[var(--PB)]"
+                        >
+                          + Usar &quot;{teApproverSearch}&quot;
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Limpiar filtros */}
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              disabled={activeFilterCount === 0}
+              title={activeFilterCount > 0 ? 'Limpiar todos los filtros' : 'No hay filtros aplicados'}
+              className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                activeFilterCount > 0
+                  ? 'border-[var(--P)] bg-[var(--PBG)] text-[var(--PD)] hover:bg-white cursor-pointer'
+                  : 'border-[var(--G5)] text-[var(--G3)] cursor-default'
+              }`}
+            >
+              <X size={11} />
+              {activeFilterCount > 0 ? `Limpiar filtros (${activeFilterCount})` : 'Limpiar filtros'}
+            </button>
+          </>
         )}
       />
 
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-[var(--G3)] whitespace-nowrap">T&amp;E Approver:</span>
-        {teApprover ? (
-          <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-xs font-medium">
-            {teApprover}
-            <button
-              type="button"
-              onClick={() => { setTeApproverSearch(''); setParam('te_approver', ''); }}
-              className="hover:opacity-70 transition-opacity"
-            >
-              <X size={11} />
-            </button>
-          </span>
-        ) : (
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="buscar..."
-              value={teApproverSearch}
-              onChange={(e) => { setTeApproverSearch(e.target.value); setShowTeApproverDrop(true); }}
-              onFocus={() => setShowTeApproverDrop(true)}
-              onBlur={() => setTimeout(() => setShowTeApproverDrop(false), 150)}
-              className="px-2.5 py-0.5 text-xs border border-[var(--G5)] rounded-md bg-white text-[var(--G1)] placeholder-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] w-32"
-            />
-            {showTeApproverDrop && (teApproversFiltered.length > 0 || teApproverSearch.length > 0) && (
-              <ul className="absolute z-50 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto min-w-[180px] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)]">
-                {teApproversFiltered.map((name) => (
-                  <li
-                    key={name}
-                    onMouseDown={() => {
-                      setParam('te_approver', name);
-                      setTeApproverSearch('');
-                      setShowTeApproverDrop(false);
-                    }}
-                    className="px-3 py-2 text-xs cursor-pointer text-[var(--G1)] hover:bg-[var(--G6)]"
-                  >
-                    {name}
-                  </li>
-                ))}
-                {teApproverSearch.length > 0 && !teApprovers.includes(teApproverSearch) && (
-                  <li
-                    onMouseDown={() => {
-                      setParam('te_approver', teApproverSearch);
-                      setTeApproverSearch('');
-                      setShowTeApproverDrop(false);
-                    }}
-                    className="px-3 py-2 text-xs cursor-pointer text-[var(--P)] border-t border-[var(--G6)] hover:bg-[var(--PB)]"
-                  >
-                    + Usar &quot;{teApproverSearch}&quot;
-                  </li>
-                )}
-              </ul>
-            )}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start gap-2.5">
+          <p className="text-xs text-[var(--G3)]">{t('countEmployees', { count: result?.total ?? 0 })}</p>
+          <Button variant="ghost" size="sm" onClick={handleExport} className="cursor-pointer">
+            {t('exportBtn')}
+          </Button>
+        </div>
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex gap-1">
+            {(['forecast', 'daily'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`px-3 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                  viewMode === mode
+                    ? 'bg-[var(--PBG)] text-[var(--PD)] shadow-sm'
+                    : 'text-[var(--G4)] hover:text-[var(--G2)] hover:shadow-sm hover:bg-[var(--G6)]'
+                }`}
+              >
+                {mode === 'daily' ? 'Diario' : 'Forecast'}
+              </button>
+            ))}
           </div>
-        )}
+          <div className="flex gap-1">
+            {(['HL', 'SL', 'NETO'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setParam('chg', mode)}
+                className={`px-3 py-1 rounded text-xs font-medium transition-all cursor-pointer ${
+                  chgType === mode
+                    ? 'bg-[var(--PBG)] text-[var(--PD)] shadow-sm'
+                    : 'text-[var(--G4)] hover:text-[var(--G2)] hover:shadow-sm hover:bg-[var(--G6)]'
+                }`}
+              >
+                {mode === 'NETO' ? 'Neto' : mode}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-
-      <p className="text-xs text-[var(--G3)]">{t('countEmployees', { count: result?.total ?? 0 })}</p>
 
       {viewMode === 'forecast' ? (
 
@@ -968,8 +988,7 @@ export function AllView() {
           {totalRows.length > 0 && (
             <div
               ref={totalsBlockRef}
-              className="sticky z-20 border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] overflow-x-auto"
-              style={{ top: 'var(--topbar-h)' }}
+              className="border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] flex flex-col"
             >
               <button
                 type="button"
@@ -978,9 +997,13 @@ export function AllView() {
                 title={totalsOpen ? 'Colapsar totales' : 'Expandir totales'}
                 className="w-full flex items-baseline gap-2 flex-wrap px-4 pt-3 pb-2.5 text-left hover:bg-[var(--G6)] transition-colors rounded-t-xl cursor-pointer"
               >
-                {totalsOpen
-                  ? <ChevronUp size={13} className="text-[var(--G3)] self-center shrink-0" />
-                  : <ChevronDown size={13} className="text-[var(--G3)] self-center shrink-0" />}
+                <motion.div
+                  animate={{ rotate: totalsOpen ? 180 : 0 }}
+                  transition={{ duration: 0.22, ease: 'easeInOut' }}
+                  className="self-center shrink-0"
+                >
+                  <ChevronDown size={13} className="text-[var(--G3)]" />
+                </motion.div>
                 <h2 className="text-sm font-bold text-[var(--G1)] tracking-tight">
                   Totales de cargabilidad
                 </h2>
@@ -990,9 +1013,18 @@ export function AllView() {
                 </span>
               </button>
 
+              <AnimatePresence initial={false}>
+                {totalsOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    style={{ overflow: 'hidden' }}
+                  >
+              <div className="overflow-x-auto overflow-y-auto max-h-96 [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar]:h-[6px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
               <table
                 style={{
-                  display: totalsOpen ? undefined : 'none',
                   borderCollapse: 'separate',
                   borderSpacing: 0,
                   tableLayout: 'fixed',
@@ -1112,12 +1144,18 @@ export function AllView() {
                   })}
                 </tbody>
               </table>
+              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
-          {/* Sin overflow propio: la tabla scrollea con la pagina y el header de columnas se
-              queda pegado arriba, debajo del bloque de totales. */}
-          <div className="border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)]">
+          <div
+            ref={tableCardRef}
+            className="border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] overflow-auto [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar]:h-[6px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+            style={{ height: tableHeight }}
+          >
           <table
             style={{
               borderCollapse: 'separate',
@@ -1143,28 +1181,28 @@ export function AllView() {
             </colgroup>
             <thead>
               <tr ref={headRowRef}>
-                <th style={{ position: 'sticky', top: headTop }} className="z-20 bg-[#f4f6f9] text-left px-2 py-1.5 text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
+                <th style={{ position: 'sticky', top: 0 }} className="z-20 bg-[#f4f6f9] text-left px-2 py-1.5 text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] whitespace-nowrap">
                   <button className="flex items-center gap-1 hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('name')}>
                     {t('title')} <SortIcon field="name" />
                   </button>
                 </th>
                 {/* Days to Availability header */}
-                <th style={{ position: 'sticky', top: headTop }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
+                <th style={{ position: 'sticky', top: 0 }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
                   <button className="flex items-center gap-0.5 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('days2avail')}>
                     D2A <SortIcon field="days2avail" />
                   </button>
                 </th>
-                <th style={{ position: 'sticky', top: headTop }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
+                <th style={{ position: 'sticky', top: 0 }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
                   Roll-on
                 </th>
-                <th style={{ position: 'sticky', top: headTop }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r-2 border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
+                <th style={{ position: 'sticky', top: 0 }} className="z-20 bg-[#f4f6f9] text-center text-[10px] font-semibold text-[var(--G3)] tracking-wide border-b border-r-2 border-[var(--G5)] px-0.5 py-1.5 whitespace-nowrap">
                   Roll-off
                 </th>
                 {periods.map((p, i) => (
                   <th
                     key={p.label}
                     colSpan={3}
-                    style={{ position: 'sticky', top: headTop, maxWidth: EMP_PERIOD_W }}
+                    style={{ position: 'sticky', top: 0, maxWidth: EMP_PERIOD_W }}
                     className={`z-20 text-center text-[10px] font-semibold py-1.5 px-0.5 tracking-wide overflow-hidden border-b border-r border-l-2 border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc] text-[#2f5bb7]' : 'bg-[#f4f6f9] text-[var(--G3)]'}`}
                   >
                     {p.label}
@@ -1181,15 +1219,15 @@ export function AllView() {
                 ))}
               </tr>
               <tr>
-                <th style={{ position: 'sticky', top: headSubTop }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
-                <th style={{ position: 'sticky', top: headSubTop }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
-                <th style={{ position: 'sticky', top: headSubTop }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
-                <th style={{ position: 'sticky', top: headSubTop }} className="z-20 bg-[#f4f6f9] border-b border-r-2 border-[var(--G5)]" />
+                <th style={{ position: 'sticky', top: headRowH }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th style={{ position: 'sticky', top: headRowH }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th style={{ position: 'sticky', top: headRowH }} className="z-20 bg-[#f4f6f9] border-b border-r border-[var(--G5)]" />
+                <th style={{ position: 'sticky', top: headRowH }} className="z-20 bg-[#f4f6f9] border-b border-r-2 border-[var(--G5)]" />
                 {periods.map((p, i) => (
                   <Fragment key={p.label}>
-                    <th style={{ position: 'sticky', top: headSubTop }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-l-2 border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG</th>
-                    <th style={{ position: 'sticky', top: headSubTop }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#dce8fc]' : 'bg-[#f4f6f9]'}`}>SAH</th>
-                    <th style={{ position: 'sticky', top: headSubTop }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>
+                    <th style={{ position: 'sticky', top: headRowH }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-l-2 border-[var(--G5)] ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>CHG</th>
+                    <th style={{ position: 'sticky', top: headRowH }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-[var(--G5)] ${i === currentPIdx ? 'bg-[#dce8fc]' : 'bg-[#f4f6f9]'}`}>SAH</th>
+                    <th style={{ position: 'sticky', top: headRowH }} className={`z-20 text-center text-[9px] font-semibold text-[var(--G3)] py-0.5 border-b border-r border-[var(--G5)] last:border-r-0 ${i === currentPIdx ? 'bg-[#e8effc]' : 'bg-[#f4f6f9]'}`}>
                       <button className="flex items-center gap-0.5 mx-auto hover:text-[var(--G1)] transition-colors" onClick={() => handleSort('chgPct')}>
                         CHG% <SortIcon field="chgPct" />
                       </button>
@@ -1492,9 +1530,13 @@ export function AllView() {
                               <PencilLine size={11} />
                             </button>
                           )}
-                          <span className="text-[var(--G4)] flex-shrink-0">
-                            {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-                          </span>
+                          <motion.span
+                            className="text-[var(--G4)] flex-shrink-0"
+                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                            transition={{ duration: 0.2, ease: 'easeInOut' }}
+                          >
+                            <ChevronDown size={11} />
+                          </motion.span>
                         </div>
                       </td>
 

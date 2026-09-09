@@ -6,6 +6,8 @@ export interface PPALog {
   fromPeriod: string;
   toPeriod: string;
   hours: number;
+  hoursChargeable?: number | null;
+  hoursStandard?: number | null;
   reason: string;
   appliedAt: string;
 }
@@ -14,6 +16,7 @@ export interface PPACreatePayload {
   eid: string;
   fromPeriod: string;
   toPeriod: string;
-  hours: number;
+  hoursChargeable?: number;
+  hoursStandard?: number;
   reason: string;
 }

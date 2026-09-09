@@ -178,6 +178,8 @@ export function mapRawPPALog(raw: RawPPALog, employeeMap: Map<string, Employee>)
     fromPeriod: raw.from,
     toPeriod: raw.to,
     hours: raw.hs,
+    hoursChargeable: raw.hours_chargeable ?? null,
+    hoursStandard: raw.hours_standard ?? null,
     reason: raw.reason,
     appliedAt: raw.date,
   };
