@@ -1,4 +1,4 @@
-{
+﻿{
   "layout": {
     "appName": "SP Forecast",
     "logout": "Sign out",
@@ -23,8 +23,8 @@
     "noData": "No data",
     "employees": "employees",
     "results": "results",
-    "previous": "← Previous",
-    "next": "Next →",
+    "previous": "â† Previous",
+    "next": "Next â†’",
     "page": "Page",
     "of": "of",
     "perPage": "per page",
@@ -69,7 +69,7 @@
     "holidayDeleted": "Holiday deleted",
     "holidayDeleteError": "Error deleting holiday",
     "sahTitle": "How we calculate available hours",
-    "sahFormula": "SAH = working days × 8 hrs",
+    "sahFormula": "SAH = working days Ã— 8 hrs",
     "sahExplain": "Working days per period exclude Saturdays, Sundays and holidays for the employee's country."
   },
   "agent": {
@@ -85,7 +85,7 @@
       "emailLabel": "Email",
       "emailPlaceholder": "name@accenture.com",
       "passwordLabel": "Password",
-      "passwordPlaceholder": "••••••••",
+      "passwordPlaceholder": "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢",
       "submit": "Sign in",
       "forgotPassword": "Forgot your password?",
       "errors": {
@@ -100,8 +100,8 @@
       "subtitle": "Enter your email and we'll send you a link.",
       "emailLabel": "Email",
       "submit": "Send link",
-      "backToLogin": "← Back to login",
-      "successTitle": "✓ Email sent",
+      "backToLogin": "â† Back to login",
+      "successTitle": "âœ“ Email sent",
       "successBody": "If the email exists in the system, you'll receive instructions to recover your password.",
       "backToLoginBtn": "Back to login",
       "emailInvalid": "Invalid email"
@@ -180,7 +180,7 @@
   },
   "employeeDetail": {
     "title": "Employee detail",
-    "back": "← Back",
+    "back": "â† Back",
     "sectionInfo": "Information",
     "sectionForecast": "Forecast history",
     "sectionEdit": "Edit data",
@@ -248,7 +248,7 @@
     "fieldHoursChargeable": "Chargeable Hours (CHG)",
     "fieldHoursStandard": "Standard Hours (SAH)",
     "atLeastOneRequired": "At least one hour type is required",
-    "minHours": "Must be at least 1",
+    "minHours": "Cannot be negative",
     "fieldReason": "Reason",
     "fieldReasonPlaceholder": "Description...",
     "submitCreate": "Create PPA",
@@ -329,7 +329,7 @@
     "clientPlaceholder": "Google",
     "chargeabilityLabel": "Chargeability %",
     "njNameLabel": "New Joiner Name",
-    "njNamePlaceholder": "e.g. Juan García",
+    "njNamePlaceholder": "e.g. Juan GarcÃ­a",
     "clLabel": "Career Level",
     "locationLabel": "Country",
     "peopleleadLabel": "People Lead",
@@ -400,3 +400,4 @@
     "unexpected": "Unexpected error"
   }
 }
+

@@ -118,8 +118,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
         eid: data.eid,
         fromPeriod: data.fromPeriod,
         toPeriod: data.toPeriod,
-        hoursChargeable: data.hoursChargeable ? Number(data.hoursChargeable) : undefined,
-        hoursStandard: data.hoursStandard ? Number(data.hoursStandard) : undefined,
+        hoursChargeable: data.hoursChargeable !== '' ? Number(data.hoursChargeable) : undefined,
+        hoursStandard: data.hoursStandard !== '' ? Number(data.hoursStandard) : undefined,
         reason: data.reason ?? '',
       });
       toast.success(t('toastCreated'));
@@ -284,14 +284,14 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
           <Input
             label={t('fieldHoursChargeable')}
             type="number"
-            min={1}
+            min={0}
             error={errors.hoursChargeable?.message}
             {...register('hoursChargeable')}
           />
           <Input
             label={t('fieldHoursStandard')}
             type="number"
-            min={1}
+            min={0}
             error={errors.hoursStandard?.message}
             {...register('hoursStandard')}
           />
