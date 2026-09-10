@@ -73,7 +73,6 @@ export function TicketsView() {
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
-  const [rejectTargetIsPPA, setRejectTargetIsPPA] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectSaving, setRejectSaving] = useState(false);
 
@@ -112,14 +111,10 @@ export function TicketsView() {
     { value: 'ppa', label: 'PPA' },
   ];
 
-  async function handleApprove(id: string, isPPA: boolean) {
+  async function handleApprove(id: string) {
     setApprovingId(id);
     try {
-      if (isPPA) {
-        await getClientContainer().approvePPA.execute(id);
-      } else {
-        await getClientContainer().approveTicket.execute(id);
-      }
+      await getClientContainer().approveTicket.execute(id);
       toast.success(t('toastApproved'));
       setRefreshKey((k) => k + 1);
     } catch {
@@ -130,9 +125,8 @@ export function TicketsView() {
     fetchState(windowOffset).catch(console.error);
   }
 
-  function openRejectModal(id: string, isPPA: boolean) {
+  function openRejectModal(id: string) {
     setRejectTargetId(id);
-    setRejectTargetIsPPA(isPPA);
     setRejectReason('');
     setRejectModalOpen(true);
   }
@@ -141,11 +135,7 @@ export function TicketsView() {
     if (!rejectTargetId || !rejectReason.trim()) return;
     setRejectSaving(true);
     try {
-      if (rejectTargetIsPPA) {
-        await getClientContainer().rejectPPA.execute(rejectTargetId, rejectReason.trim());
-      } else {
-        await getClientContainer().rejectTicket.execute(rejectTargetId, rejectReason.trim());
-      }
+      await getClientContainer().rejectTicket.execute(rejectTargetId, rejectReason.trim());
       toast.success(t('toastRejected'));
       setRefreshKey((k) => k + 1);
       setRejectModalOpen(false);
@@ -228,14 +218,13 @@ export function TicketsView() {
     header: t('columnActions'),
     cell: ({ row }) => {
       if (approvingId === row.original.id) return <Skeleton className="h-7 w-32" />;
-      const isPPA = row.original.type === 'ppa';
       const isOpen = row.original.status === 'Open' || row.original.status === 'pending';
       return isOpen ? (
         <div className="flex items-center gap-1.5">
           <Button
             variant="approve-outline"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); handleApprove(row.original.id, isPPA); }}
+            onClick={(e) => { e.stopPropagation(); handleApprove(row.original.id); }}
           >
             <Check size={13} strokeWidth={2.5} />
             {t('approve')}
@@ -243,7 +232,7 @@ export function TicketsView() {
           <Button
             variant="reject-outline"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); openRejectModal(row.original.id, isPPA); }}
+            onClick={(e) => { e.stopPropagation(); openRejectModal(row.original.id); }}
           >
             <X size={13} strokeWidth={2.5} />
             {t('reject')}
