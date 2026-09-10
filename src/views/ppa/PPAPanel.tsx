@@ -70,8 +70,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
     eid: z.string().min(1, t('required')),
     fromPeriod: z.string().min(1, t('required')),
     toPeriod: z.string().min(1, t('required')),
-    hoursChargeable: z.string().optional().refine((v) => !v || Number(v) >= 1, t('minHours')),
-    hoursStandard: z.string().optional().refine((v) => !v || Number(v) >= 1, t('minHours')),
+    hoursChargeable: z.string().optional().refine((v) => !v || Number(v) >= 0, t('minHours')),
+    hoursStandard: z.string().optional().refine((v) => !v || Number(v) >= 0, t('minHours')),
     reason: z.string().optional(),
   }).refine(
     (d) => (d.hoursChargeable && d.hoursChargeable !== '') || (d.hoursStandard && d.hoursStandard !== ''),
