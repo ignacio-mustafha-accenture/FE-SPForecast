@@ -1,10 +1,14 @@
 import type { Employee } from '@/src/core/domain/employee';
+import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
 import type { EmployeeFilter, Page } from '@/src/core/domain/pagination';
 import type { IEmployeeRepository, EmployeeUpdatePayload } from '@/src/core/ports/IEmployeeRepository';
 
 import { createFetcher, type FetcherCtx } from './fetcher';
-import { mapRawEmployee } from './mappers';
-import type { RawEmployee, RawPage } from './types';
+import { mapRawEmployee, mapRawForecastTotals } from './mappers';
+import type { RawEmployee, RawForecastTotals, RawPage } from './types';
+
+// Tope que acepta el backend en /api/employees (page_size: Query(25, ge=1, le=200))
+const MAX_PAGE_SIZE = 200;
 
 export class HttpEmployeeRepository implements IEmployeeRepository {
   private fetch: ReturnType<typeof createFetcher>;
@@ -13,15 +17,29 @@ export class HttpEmployeeRepository implements IEmployeeRepository {
     this.fetch = createFetcher(ctx);
   }
 
-  async list(filter: EmployeeFilter): Promise<Page<Employee>> {
+  // Params de filtro compartidos por el listado y los totales
+  private filterParams(filter: EmployeeFilter): URLSearchParams {
     const params = new URLSearchParams();
     if (filter.country) params.set('country', filter.country);
     if (filter.q) params.set('q', filter.q);
     if (filter.status) params.set('status', filter.status);
     if (filter.offering) params.set('offering', filter.offering);
-    if (filter.level) params.set('level', filter.level);
+    // El backend espera 'cl' (acepta varios niveles separados por coma)
+    if (filter.level) params.set('cl', filter.level);
     if (filter.teApprover) params.set('te_approver', filter.teApprover);
     if (filter.chgBucket) params.set('chg_bucket', filter.chgBucket);
+    return params;
+  }
+
+  async totals(filter: EmployeeFilter, windowOffset: number): Promise<ForecastTotals> {
+    const params = this.filterParams(filter);
+    params.set('window_offset', String(windowOffset));
+    const raw = await this.fetch<RawForecastTotals>(`/api/employees/totals?${params}`);
+    return mapRawForecastTotals(raw);
+  }
+
+  async list(filter: EmployeeFilter): Promise<Page<Employee>> {
+    const params = this.filterParams(filter);
     params.set('page', String(filter.page ?? 1));
     params.set('page_size', String(filter.pageSize ?? 10));
     const raw = await this.fetch<RawPage<RawEmployee>>(`/api/employees?${params}`);
@@ -32,6 +50,25 @@ export class HttpEmployeeRepository implements IEmployeeRepository {
       pageSize: raw.page_size,
       pages: raw.pages,
     };
+  }
+
+  // El backend no tiene un modo "sin paginar", asi que se pide la pagina mas grande que
+  // acepta y, si el set no entro entero, se completan las que faltan. Hoy son 99 empleados
+  // (una sola llamada); el bucle esta para que el dia que superen las 200 siga andando.
+  async listAll(filter: EmployeeFilter): Promise<Page<Employee>> {
+    const first = await this.list({ ...filter, page: 1, pageSize: MAX_PAGE_SIZE });
+    const items = [...first.items];
+
+    if (first.pages > 1) {
+      const restPages = Array.from({ length: first.pages - 1 }, (_, i) => i + 2);
+      const rest = await Promise.all(
+        restPages.map((page) => this.list({ ...filter, page, pageSize: MAX_PAGE_SIZE })),
+      );
+      for (const p of rest) items.push(...p.items);
+    }
+
+    // Se respeta el contrato de Page<Employee>: queda una unica pagina con todo adentro
+    return { items, total: first.total, page: 1, pageSize: items.length, pages: 1 };
   }
 
   async update(id: string, data: EmployeeUpdatePayload): Promise<void> {

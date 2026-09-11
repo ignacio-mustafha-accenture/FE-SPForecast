@@ -129,7 +129,7 @@ export function DatePicker({
               mode="single"
               selected={selected ?? new Date()}
               defaultMonth={selected ?? new Date()}
-              disabled={[{ dayOfWeek: [0, 6] }, { before: minDate ?? new Date() }]}
+              disabled={minDate ? [{ dayOfWeek: [0, 6] }, { before: minDate }] : [{ dayOfWeek: [0, 6] }]}
               onSelect={(date) => {
                 if (date) {
                   onChange?.(format(date, ISO));

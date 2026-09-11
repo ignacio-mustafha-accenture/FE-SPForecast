@@ -46,5 +46,6 @@ export interface Employee {
   hasAssumptionBlocks: boolean;
   isOnPTO: boolean;
   ringfenced: boolean;
+  reservaStatus: string | null;
   isgAligned: boolean;
 }

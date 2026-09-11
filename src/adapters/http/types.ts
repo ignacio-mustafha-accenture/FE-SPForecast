@@ -47,6 +47,7 @@ export interface RawEmployee {
   HasAssumptionBlocks: boolean;
   IsOnPTO: boolean;
   Ringfenced?: boolean;
+  ReservaStatus?: string | null;
   ISGAligned?: boolean;
   chg: number[];
   chg_neto: number[];
@@ -87,6 +88,11 @@ export interface RawTicket {
   rejection_reason?: string | null;
   scenario_type?: string | null;
   effectivization_date?: string | null;
+  ppa_log_id?: string | null;
+  ppa_log_status?: string | null;
+  created_by_email?: string | null;
+  hours_chargeable?: number | null;
+  hours_standard?: number | null;
 }
 
 export interface RawPPALog {
@@ -96,9 +102,19 @@ export interface RawPPALog {
   from: string;
   to: string;
   hs: number;
+  hours_chargeable?: number | null;
+  hours_standard?: number | null;
   reason: string;
   date: string;
   country?: string | null;
+  status?: string | null;
+  rejection_reason?: string | null;
+  created_by?: string | null;
+  created_at?: string | null;
+  resolved_by?: string | null;
+  resolved_at?: string | null;
+  reversed_by?: string | null;
+  reversed_at?: string | null;
 }
 
 export interface RawPage<T> {
@@ -107,6 +123,25 @@ export interface RawPage<T> {
   page: number;
   page_size: number;
   pages: number;
+}
+
+export interface RawForecastTotalRow {
+  key: string;
+  label: string;
+  kind: string;
+  country: string;
+  target_pct: number;
+  hc: number;
+  chg_hl: number[];
+  chg_sl: number[];
+  chg_neto: number[];
+  chg: number[];
+  sah: number[];
+}
+
+export interface RawForecastTotals {
+  periods: { period_name: string; label: string }[];
+  rows: RawForecastTotalRow[];
 }
 
 export interface RawTargets {

@@ -15,6 +15,8 @@ export interface Ticket {
   offeringType: string | null;
   chargeabilityPct: number | null;
   hoursToMove: number | null;
+  hoursChargeable: number | null;
+  hoursStandard: number | null;
   fromPeriod: string | null;
   toPeriod: string | null;
   comments: string | null;
@@ -27,6 +29,9 @@ export interface Ticket {
   rejectionReason: string | null;
   scenarioType: ScenarioType;
   effectivizationDate: string | null;
+  ppaLogId?: string | null;
+  ppaLogStatus?: string | null;
+  createdByEmail?: string | null;
 }
 
 export interface CreateTicketPayload {

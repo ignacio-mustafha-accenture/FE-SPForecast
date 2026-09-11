@@ -23,7 +23,7 @@
     "noData": "Sin datos",
     "employees": "empleados",
     "results": "resultados",
-    "previous": "← Anterior",
+    "previous": "�? Anterior",
     "next": "Siguiente →",
     "page": "Página",
     "of": "de",
@@ -100,7 +100,7 @@
       "subtitle": "Ingresá tu email y te enviaremos un enlace.",
       "emailLabel": "Email",
       "submit": "Enviar enlace",
-      "backToLogin": "← Volver al login",
+      "backToLogin": "�? Volver al login",
       "successTitle": "✓ Email enviado",
       "successBody": "Si el email existe en el sistema, recibirás instrucciones para recuperar tu contraseña.",
       "backToLoginBtn": "Volver al login",
@@ -180,7 +180,7 @@
   },
   "employeeDetail": {
     "title": "Detalle del empleado",
-    "back": "← Volver",
+    "back": "�? Volver",
     "sectionInfo": "Información",
     "sectionForecast": "Forecast histórico",
     "sectionEdit": "Editar datos",
@@ -245,7 +245,10 @@
     "fieldEmployeePlaceholder": "ramos.lucas",
     "fieldFrom": "Período origen",
     "fieldTo": "Período destino",
-    "fieldHours": "Horas",
+    "fieldHoursChargeable": "Hs. Cargables (CHG)",
+    "fieldHoursStandard": "Hs. Estándar (SAH)",
+    "atLeastOneRequired": "Al menos un tipo de horas es requerido",
+    "minHours": "No puede ser negativo",
     "fieldReason": "Motivo",
     "fieldReasonPlaceholder": "Descripción...",
     "submitCreate": "Crear PPA",
@@ -314,7 +317,26 @@
     "sectionDates": "Fechas",
     "sectionHours": "Transferencia de horas",
     "sectionComments": "Comentarios",
-    "sectionRejection": "Motivo de rechazo"
+    "sectionRejection": "Motivo de rechazo",
+    "historyTitle": "Historial",
+    "historyCreated": "Creado",
+    "historyApproved": "Aprobado",
+    "historyRejected": "Rechazado",
+    "historyReversed": "Revertido",
+    "historyTicketCreated": "Ticket creado",
+    "historyEidAssigned": "EID asignado",
+    "historyRequestChange": "Creación de solicitud de PPA",
+    "historyRequestRejected": "Solicitud rechazada",
+    "historyChangeApproved": "Aprobación de PPA",
+    "historyChangeReversed": "Cambio revertido",
+    "historyBy": "por",
+    "historyReason": "Motivo",
+    "reverseBtn": "Revertir",
+    "reverseModalTitle": "Revertir PPA",
+    "reverseModalBody": "¿Estás seguro de que querés revertir este PPA? Esta acción deshará el impacto en las horas del empleado.",
+    "reverseModalConfirm": "Confirmar reversión",
+    "toastReversed": "PPA revertido correctamente",
+    "toastReverseError": "Error al revertir el PPA"
   },
   "ticketPanel": {
     "editTitle": "Editar ticket",
@@ -397,3 +419,4 @@
     "unexpected": "Error inesperado"
   }
 }
+

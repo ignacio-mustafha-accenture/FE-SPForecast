@@ -9,7 +9,9 @@ import type { FetcherCtx } from '@/src/adapters/http/fetcher';
 
 import { ApplyPPAUseCase } from './use-cases/ApplyPPAUseCase';
 import { ApprovePPAUseCase } from './use-cases/ApprovePPAUseCase';
+import { GetPPAByIdUseCase } from './use-cases/GetPPAByIdUseCase';
 import { RejectPPAUseCase } from './use-cases/RejectPPAUseCase';
+import { ReversePPAUseCase } from './use-cases/ReversePPAUseCase';
 import { ApproveTicketUseCase } from './use-cases/ApproveTicketUseCase';
 import { AssignEidUseCase } from './use-cases/AssignEidUseCase';
 import { RejectTicketUseCase } from './use-cases/RejectTicketUseCase';
@@ -17,7 +19,9 @@ import { CreateTicketUseCase } from './use-cases/CreateTicketUseCase';
 import { FetchStateUseCase } from './use-cases/FetchStateUseCase';
 import { ForgotPasswordUseCase } from './use-cases/ForgotPasswordUseCase';
 import { GetAuthUserUseCase } from './use-cases/GetAuthUserUseCase';
+import { GetForecastTotalsUseCase } from './use-cases/GetForecastTotalsUseCase';
 import { GetTicketByIdUseCase } from './use-cases/GetTicketByIdUseCase';
+import { ListAllEmployeesUseCase } from './use-cases/ListAllEmployeesUseCase';
 import { ListEmployeesUseCase } from './use-cases/ListEmployeesUseCase';
 import { ListPeriodsUseCase } from './use-cases/ListPeriodsUseCase';
 import { ListPPAUseCase } from './use-cases/ListPPAUseCase';
@@ -39,6 +43,8 @@ export interface AppContainer {
   forgotPassword: ForgotPasswordUseCase;
   resetPassword: ResetPasswordUseCase;
   listEmployees: ListEmployeesUseCase;
+  listAllEmployees: ListAllEmployeesUseCase;
+  getForecastTotals: GetForecastTotalsUseCase;
   listTickets: ListTicketsUseCase;
   listPPA: ListPPAUseCase;
   listPeriods: ListPeriodsUseCase;
@@ -51,6 +57,8 @@ export interface AppContainer {
   applyPPA: ApplyPPAUseCase;
   approvePPA: ApprovePPAUseCase;
   rejectPPA: RejectPPAUseCase;
+  getPPAById: GetPPAByIdUseCase;
+  reversePPA: ReversePPAUseCase;
   recalculate: RecalculateUseCase;
   sync: SyncUseCase;
 }
@@ -68,6 +76,8 @@ function buildContainer(ctx: FetcherCtx): AppContainer {
     forgotPassword: new ForgotPasswordUseCase(new HttpAuthRepository(ctx)),
     resetPassword: new ResetPasswordUseCase(new HttpAuthRepository(ctx)),
     listEmployees: new ListEmployeesUseCase(employeeRepo),
+    listAllEmployees: new ListAllEmployeesUseCase(employeeRepo),
+    getForecastTotals: new GetForecastTotalsUseCase(employeeRepo),
     listTickets: new ListTicketsUseCase(ticketRepo),
     listPPA: new ListPPAUseCase(ppaRepo),
     listPeriods: new ListPeriodsUseCase(new HttpPeriodRepository(ctx)),
@@ -80,6 +90,8 @@ function buildContainer(ctx: FetcherCtx): AppContainer {
     applyPPA: new ApplyPPAUseCase(ppaRepo),
     approvePPA: new ApprovePPAUseCase(ppaRepo),
     rejectPPA: new RejectPPAUseCase(ppaRepo),
+    getPPAById: new GetPPAByIdUseCase(ppaRepo),
+    reversePPA: new ReversePPAUseCase(ppaRepo),
     recalculate: new RecalculateUseCase(new HttpAdminRepository(ctx)),
     sync: new SyncUseCase(new HttpAdminRepository(ctx)),
   };

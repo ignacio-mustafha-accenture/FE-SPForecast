@@ -9,6 +9,7 @@ import type { PPALog } from '@/src/core/domain/ppa';
 import type { Page } from '@/src/core/domain/pagination';
 import { getClientContainer } from '@/src/application/container';
 import { useDebounce } from '@/src/hooks/useDebounce';
+import { Badge } from '@/src/components/ui/Badge';
 import { DataTable } from '@/src/components/ui/DataTable';
 import { FilterBar } from '@/src/components/ui/FilterBar';
 import { Skeleton } from '@/src/components/ui/Skeleton';
@@ -32,6 +33,19 @@ export function PPAView() {
   const [isLoading, setIsLoading] = useState(true);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  const statusVariant: Record<string, 'yellow' | 'green' | 'red' | 'purple' | 'neutral'> = {
+    pending:  'yellow',
+    approved: 'green',
+    rejected: 'red',
+    reversed: 'purple',
+  };
+  const statusLabel: Record<string, string> = {
+    pending:  t('statusPending'),
+    approved: t('statusApproved'),
+    rejected: t('statusRejected'),
+    reversed: t('statusReversed'),
+  };
+
   const columns: ColumnDef<PPALog, unknown>[] = [
     { id: 'employeeName', accessorKey: 'employeeName', header: t('columnEmployee') },
     { id: 'country', accessorKey: 'country', header: t('columnCountry') },
@@ -40,6 +54,15 @@ export function PPAView() {
     { id: 'hours', accessorKey: 'hours', header: t('columnHours'), cell: ({ row }) => `${row.original.hours}h` },
     { id: 'reason', accessorKey: 'reason', header: t('columnReason') },
     { id: 'appliedAt', accessorKey: 'appliedAt', header: t('columnDate') },
+    {
+      id: 'status',
+      accessorKey: 'status',
+      header: t('columnStatus'),
+      cell: ({ row }) => {
+        const s = row.original.status;
+        return <Badge variant={statusVariant[s] ?? 'neutral'}>{statusLabel[s] ?? s}</Badge>;
+      },
+    },
   ];
 
   async function loadList() {
@@ -119,6 +142,7 @@ export function PPAView() {
         data={result?.items ?? []}
         columns={columns}
         tableKey="ppa"
+        onRowClick={(row) => router.push(`/ppa/${row.id}`)}
         pagination={
           result
             ? {

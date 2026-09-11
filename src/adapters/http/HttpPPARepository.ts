@@ -38,10 +38,16 @@ export class HttpPPARepository implements IPPARepository {
         eid: payload.eid,
         from_period: payload.fromPeriod,
         to_period: payload.toPeriod,
-        hours: payload.hours,
+        hours_chargeable: payload.hoursChargeable ?? null,
+        hours_standard: payload.hoursStandard ?? null,
         reason: payload.reason,
       }),
     });
+  }
+
+  async getById(ppaId: string): Promise<PPALog> {
+    const raw = await this.fetch<RawPPALog>(`/api/ppa/${ppaId}`);
+    return mapRawPPALog(raw, new Map());
   }
 
   async approve(ppaId: string): Promise<void> {
@@ -53,5 +59,9 @@ export class HttpPPARepository implements IPPARepository {
       method: 'POST',
       body: JSON.stringify({ reason }),
     });
+  }
+
+  async reverse(ppaId: string): Promise<void> {
+    await this.fetch<void>(`/api/ppa/${ppaId}/reverse`, { method: 'POST' });
   }
 }

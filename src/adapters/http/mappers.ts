@@ -1,12 +1,13 @@
-﻿import type { AppState, CountrySummary } from '@/src/core/domain/app-state';
+import type { AppState, CountrySummary } from '@/src/core/domain/app-state';
 import type { Country, Employee, ScenarioType as EmployeeScenarioType } from '@/src/core/domain/employee';
+import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
 import type { Period } from '@/src/core/domain/period';
 import type { PPALog } from '@/src/core/domain/ppa';
 import type { Ticket, TicketType, ScenarioType } from '@/src/core/domain/ticket';
 import type { User, Role } from '@/src/core/domain/user';
 import { getEmployeeStatus } from '@/src/lib/status';
 
-import type { RawAppState, RawEmployee, RawPeriod, RawPPALog, RawTicket, RawUser, RawTargets } from './types';
+import type { RawAppState, RawEmployee, RawForecastTotals, RawPeriod, RawPPALog, RawTicket, RawUser, RawTargets } from './types';
 
 const COUNTRY_MAP: Record<string, Country> = {
   argentina: 'AR',
@@ -97,7 +98,30 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     hasAssumptionBlocks: raw.HasAssumptionBlocks ?? ((raw.chg_pct_sl?.[0] ?? 0) > 0),
     isOnPTO: raw.IsOnPTO ?? false,
     ringfenced: raw.Ringfenced ?? false,
+    reservaStatus: raw.ReservaStatus ?? null,
     isgAligned: raw.ISGAligned ?? false,
+  };
+}
+
+export function mapRawForecastTotals(raw: RawForecastTotals): ForecastTotals {
+  const periodNames = (raw.periods ?? []).map((p) => p.label ?? p.period_name);
+  return {
+    periodNames,
+    rows: (raw.rows ?? []).map((r) => ({
+      key: r.key,
+      label: r.label,
+      kind: r.kind === 'offering' ? 'offering' : 'country',
+      country: r.country,
+      targetPct: r.target_pct ?? 0,
+      hc: r.hc ?? 0,
+      periods: periodNames.map((_, i) => ({
+        chgHl: r.chg_hl?.[i] ?? 0,
+        chgSl: r.chg_sl?.[i] ?? 0,
+        chgNeto: r.chg_neto?.[i] ?? 0,
+        chg: r.chg?.[i] ?? 0,
+        sah: r.sah?.[i] ?? 0,
+      })),
+    })),
   };
 }
 
@@ -128,6 +152,8 @@ export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>)
     offeringType: raw.offering_type,
     chargeabilityPct: raw.chargeability_pct,
     hoursToMove: raw.hours_to_move,
+    hoursChargeable: raw.hours_chargeable ?? null,
+    hoursStandard: raw.hours_standard ?? null,
     fromPeriod: raw.from_period,
     toPeriod: raw.to_period,
     comments: raw.comments,
@@ -140,6 +166,9 @@ export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>)
     rejectionReason: raw.rejection_reason ?? null,
     scenarioType: (raw.scenario_type === 'effective' ? 'effective' : 'assumption') as ScenarioType,
     effectivizationDate: raw.effectivization_date ?? null,
+    ppaLogId: raw.ppa_log_id ?? null,
+    ppaLogStatus: raw.ppa_log_status ?? null,
+    createdByEmail: raw.created_by_email ?? null,
   };
 }
 
@@ -154,8 +183,18 @@ export function mapRawPPALog(raw: RawPPALog, employeeMap: Map<string, Employee>)
     fromPeriod: raw.from,
     toPeriod: raw.to,
     hours: raw.hs,
+    hoursChargeable: raw.hours_chargeable ?? null,
+    hoursStandard: raw.hours_standard ?? null,
     reason: raw.reason,
     appliedAt: raw.date,
+    status: raw.status ?? 'pending',
+    rejectionReason: raw.rejection_reason ?? null,
+    createdBy: raw.created_by ?? null,
+    createdAt: raw.created_at ?? null,
+    resolvedBy: raw.resolved_by ?? null,
+    resolvedAt: raw.resolved_at ?? null,
+    reversedBy: raw.reversed_by ?? null,
+    reversedAt: raw.reversed_at ?? null,
   };
 }
 
