@@ -332,9 +332,7 @@ export function TicketsView() {
               }
             : undefined
         }
-        onRowClick={(ticket) => {
-          if (ticket.type !== 'ppa') router.push(`/tickets/${ticket.id}`);
-        }}
+        onRowClick={(ticket) => router.push(`/tickets/${ticket.id}`)}
       />
 
       {/* TicketPanel — al seleccionar PPA como tipo, cierra y abre PPAPanel */}

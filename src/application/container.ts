@@ -9,7 +9,9 @@ import type { FetcherCtx } from '@/src/adapters/http/fetcher';
 
 import { ApplyPPAUseCase } from './use-cases/ApplyPPAUseCase';
 import { ApprovePPAUseCase } from './use-cases/ApprovePPAUseCase';
+import { GetPPAByIdUseCase } from './use-cases/GetPPAByIdUseCase';
 import { RejectPPAUseCase } from './use-cases/RejectPPAUseCase';
+import { ReversePPAUseCase } from './use-cases/ReversePPAUseCase';
 import { ApproveTicketUseCase } from './use-cases/ApproveTicketUseCase';
 import { AssignEidUseCase } from './use-cases/AssignEidUseCase';
 import { RejectTicketUseCase } from './use-cases/RejectTicketUseCase';
@@ -55,6 +57,8 @@ export interface AppContainer {
   applyPPA: ApplyPPAUseCase;
   approvePPA: ApprovePPAUseCase;
   rejectPPA: RejectPPAUseCase;
+  getPPAById: GetPPAByIdUseCase;
+  reversePPA: ReversePPAUseCase;
   recalculate: RecalculateUseCase;
   sync: SyncUseCase;
 }
@@ -86,6 +90,8 @@ function buildContainer(ctx: FetcherCtx): AppContainer {
     applyPPA: new ApplyPPAUseCase(ppaRepo),
     approvePPA: new ApprovePPAUseCase(ppaRepo),
     rejectPPA: new RejectPPAUseCase(ppaRepo),
+    getPPAById: new GetPPAByIdUseCase(ppaRepo),
+    reversePPA: new ReversePPAUseCase(ppaRepo),
     recalculate: new RecalculateUseCase(new HttpAdminRepository(ctx)),
     sync: new SyncUseCase(new HttpAdminRepository(ctx)),
   };

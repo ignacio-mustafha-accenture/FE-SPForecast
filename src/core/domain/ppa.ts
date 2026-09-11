@@ -10,6 +10,14 @@ export interface PPALog {
   hoursStandard?: number | null;
   reason: string;
   appliedAt: string;
+  status: string;
+  rejectionReason?: string | null;
+  createdBy?: string | null;
+  createdAt?: string | null;
+  resolvedBy?: string | null;
+  resolvedAt?: string | null;
+  reversedBy?: string | null;
+  reversedAt?: string | null;
 }
 
 export interface PPACreatePayload {

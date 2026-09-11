@@ -152,6 +152,8 @@ export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>)
     offeringType: raw.offering_type,
     chargeabilityPct: raw.chargeability_pct,
     hoursToMove: raw.hours_to_move,
+    hoursChargeable: raw.hours_chargeable ?? null,
+    hoursStandard: raw.hours_standard ?? null,
     fromPeriod: raw.from_period,
     toPeriod: raw.to_period,
     comments: raw.comments,
@@ -164,6 +166,9 @@ export function mapRawTicket(raw: RawTicket, employeeMap: Map<string, Employee>)
     rejectionReason: raw.rejection_reason ?? null,
     scenarioType: (raw.scenario_type === 'effective' ? 'effective' : 'assumption') as ScenarioType,
     effectivizationDate: raw.effectivization_date ?? null,
+    ppaLogId: raw.ppa_log_id ?? null,
+    ppaLogStatus: raw.ppa_log_status ?? null,
+    createdByEmail: raw.created_by_email ?? null,
   };
 }
 
@@ -182,6 +187,14 @@ export function mapRawPPALog(raw: RawPPALog, employeeMap: Map<string, Employee>)
     hoursStandard: raw.hours_standard ?? null,
     reason: raw.reason,
     appliedAt: raw.date,
+    status: raw.status ?? 'pending',
+    rejectionReason: raw.rejection_reason ?? null,
+    createdBy: raw.created_by ?? null,
+    createdAt: raw.created_at ?? null,
+    resolvedBy: raw.resolved_by ?? null,
+    resolvedAt: raw.resolved_at ?? null,
+    reversedBy: raw.reversed_by ?? null,
+    reversedAt: raw.reversed_at ?? null,
   };
 }
 

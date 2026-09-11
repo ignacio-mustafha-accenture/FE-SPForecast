@@ -88,6 +88,11 @@ export interface RawTicket {
   rejection_reason?: string | null;
   scenario_type?: string | null;
   effectivization_date?: string | null;
+  ppa_log_id?: string | null;
+  ppa_log_status?: string | null;
+  created_by_email?: string | null;
+  hours_chargeable?: number | null;
+  hours_standard?: number | null;
 }
 
 export interface RawPPALog {
@@ -102,6 +107,14 @@ export interface RawPPALog {
   reason: string;
   date: string;
   country?: string | null;
+  status?: string | null;
+  rejection_reason?: string | null;
+  created_by?: string | null;
+  created_at?: string | null;
+  resolved_by?: string | null;
+  resolved_at?: string | null;
+  reversed_by?: string | null;
+  reversed_at?: string | null;
 }
 
 export interface RawPage<T> {
