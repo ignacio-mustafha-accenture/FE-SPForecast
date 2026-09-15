@@ -476,7 +476,9 @@ export function AllView() {
         sah: s.sah.length > 0 ? s.sah : e.sah,
         chgEffective: s.chgEffective.length > 0 ? s.chgEffective : e.chgEffective,
         chgAssumption: s.chgAssumption.length > 0 ? s.chgAssumption : e.chgAssumption,
-        ppaAdj: s.ppaAdj.length > 0 ? s.ppaAdj : e.ppaAdj,
+        ppaAdj:   s.ppaAdj.length > 0   ? s.ppaAdj   : e.ppaAdj,
+        ppaAdjHl: s.ppaAdjHl?.length > 0 ? s.ppaAdjHl : e.ppaAdjHl,
+        ppaAdjSl: s.ppaAdjSl?.length > 0 ? s.ppaAdjSl : e.ppaAdjSl,
         slReal: s.slReal.length > 0 ? s.slReal : e.slReal,
         chgNeto: s.chgNeto ?? e.chgNeto,
         chgHl: s.chgHl ?? e.chgHl,
@@ -1298,21 +1300,23 @@ export function AllView() {
                     </td>
                     {periods.map((period, i) => {
                       const sah = emp.sah[i] ?? 0;
-                      // CHG Neto = chg_hl + chg_sl del backend
-                      const netoVal = emp.chgNeto?.[i] != null
-                        ? emp.chgNeto[i]
-                        : (emp.chgHl?.[i] ?? 0) + (emp.chgSl?.[i] ?? 0);
+                      // CHG Neto = chg_hl + chg_sl + cascadeadas_hl (con PPA)
+                      const netoVal = emp.chg?.[i] != null
+                        ? emp.chg[i]
+                        : (emp.chgHl?.[i] ?? 0) + (emp.chgSl?.[i] ?? 0) + (emp.ppaAdjHl?.[i] ?? 0);
 
                       // CHG y CHG% segun el modo elegido en el toggle
+                      // HL incluye el ajuste de PPA HL (chg_cascadeadas_hl)
+                      const chgHlWithPpa = (emp.chgHl?.[i] ?? 0) + (emp.ppaAdjHl?.[i] ?? 0);
                       const chgRaw = chgType === 'HL'
-                        ? (emp.chgHl?.[i] ?? emp.chgEffective?.[i] ?? 0)
+                        ? chgHlWithPpa
                         : chgType === 'SL'
                           ? (emp.chgSl?.[i] ?? emp.chgAssumption?.[i] ?? 0)
                           : netoVal;
                       const chgLabel = `${Math.round(chgRaw)}`;
 
                       const hlPctReal = sah > 0
-                        ? Math.round(((emp.chgHl?.[i] ?? 0) / sah) * 100)
+                        ? Math.round((chgHlWithPpa / sah) * 100)
                         : 0;
                       const p = chgType === 'HL'
                         ? hlPctReal
@@ -1324,7 +1328,8 @@ export function AllView() {
                       // Bug 4: si cargable = 0, no colorear (blanco = Hard Lock)
                       const aKind = chgRaw > 0 ? (emp.assumptionKind?.[i] ?? null) : null;
                       const aStyle = aKind ? ASSUMPTION_CELL[aKind as keyof typeof ASSUMPTION_CELL] : undefined;
-                      const cellBg = aStyle ? { background: aStyle.bg } : undefined;
+                      const hasPpaCascade = chgType !== 'SL' && ((emp.ppaAdjHl?.[i] ?? 0) !== 0 || (emp.ppaAdjSl?.[i] ?? 0) !== 0);
+                      const cellBg = aStyle ? { background: aStyle.bg } : hasPpaCascade ? { background: '#EDE9FE' } : undefined;
                       const cellTitle = aStyle ? aStyle.label : undefined;
                       const cellColor = 'text-[var(--G1)]';
                       const isCur = i === currentPIdx;
@@ -1332,12 +1337,12 @@ export function AllView() {
                         <Fragment key={i}>
                           <td
                             title={cellTitle}
-                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[32px] ${aStyle ? '' : 'bg-white'}`}
+                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[32px] ${aStyle || hasPpaCascade ? '' : 'bg-white'}`}
                             style={{ padding: 0, ...cellBg }}
                           >
                             <span className="text-[10px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>{chgLabel}</span>
                           </td>
-                          <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] bg-white`} style={{ padding: 0 }}>
+                          <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] ${hasPpaCascade ? '' : 'bg-white'}`} style={{ padding: 0, ...(hasPpaCascade ? { background: '#EDE9FE' } : {}) }}>
                             {/* Sin SAH cargado se muestra un guion. Antes caia en una constante
                                 por pais y pintaba un numero inventado, que hacia parecer que el
                                 periodo tenia horas disponibles cuando en realidad no hay dato. */}
@@ -1350,7 +1355,7 @@ export function AllView() {
                             return (
                               <td
                                 title={cellTitle}
-                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[32px] ${aStyle ? '' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[32px] ${aStyle || hasPpaCascade ? '' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
                                 style={{ padding: 0, ...cellBg }}
                                 onClick={isClickable ? () => {
                                   const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
@@ -1470,17 +1475,17 @@ export function AllView() {
                     ? (emp.cp[pIdx] ?? 0)
                     : chgType === 'SL'
                       ? (emp.slAssumed[pIdx] ?? 0)
-                      : (sahForPeriod > 0 ? Math.round(((emp.chgNeto?.[pIdx] ?? 0) / sahForPeriod) * 100) : 0);
+                      : (sahForPeriod > 0 ? Math.round(((emp.chg?.[pIdx] ?? 0) / sahForPeriod) * 100) : 0);
                   const dailyCHG = 8 * chgPct / 100;
                   const dailyCHGLabel = `${Math.round(dailyCHG)}h`;
 
                   // Bug 3: usar valores del backend para el resumen (compatible con PPAs)
                   // No recalcular CHG desde horas/dÃ­a, sino tomar los valores reales del perÃ­odo
                   const summaryCHG = chgType === 'HL'
-                    ? (emp.chgHl?.[pIdx] ?? 0)
+                    ? (emp.chgHl?.[pIdx] ?? 0) + (emp.ppaAdjHl?.[pIdx] ?? 0)
                     : chgType === 'SL'
                       ? (emp.chgSl?.[pIdx] ?? 0)
-                      : (emp.chgNeto?.[pIdx] ?? 0);
+                      : (emp.chg?.[pIdx] ?? 0);
 
                   // Bug 2: SAH ajustado por dÃ­as de vacaciones dentro del perÃ­odo visible
                   const ptoDaysInWindow = days.filter((d) => {
@@ -1805,6 +1810,10 @@ export function AllView() {
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
             <div className="w-6 h-[13px] rounded-[3px] border border-[var(--G5)] bg-white" />
             Hard Lock
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
+            <div className="w-6 h-[13px] rounded-[3px] border border-[var(--G5)]" style={{ background: '#EDE9FE' }} />
+            PPA Cascade
           </div>
         </div>
       )}

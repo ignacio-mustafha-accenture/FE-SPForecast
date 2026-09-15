@@ -25,6 +25,5 @@ export interface PPACreatePayload {
   fromPeriod: string;
   toPeriod: string;
   hoursChargeable?: number;
-  hoursStandard?: number;
   reason: string;
 }
