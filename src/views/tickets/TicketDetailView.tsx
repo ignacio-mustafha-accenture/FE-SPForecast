@@ -87,7 +87,7 @@ type TimelineRow = {
   by: string | null;
   note?: string | null;
   hoursChargeable?: number | null;
-  hoursStandard?: number | null;
+  hoursSah?: number | null;
   reversed?: boolean;
   fromPeriod?: string | null;
   toPeriod?: string | null;
@@ -95,16 +95,16 @@ type TimelineRow = {
 
 function buildPPARows(ppa: Record<string, string | null>, t: TFn, rejectionReason?: string | null, creatorFallback?: string | null): TimelineRow[] {
   const hl = ppa.hours_chargeable != null ? Number(ppa.hours_chargeable) : null;
-  const sl = ppa.hours_standard != null ? Number(ppa.hours_standard) : null;
+  const sah = ppa.hours_sah != null ? Number(ppa.hours_sah) : null;
   const fp = ppa.from ?? null;
   const tp = ppa.to ?? null;
   const rows: TimelineRow[] = [];
-  if (ppa.created_at) rows.push({ key: 'created', label: t('historyCreated'), description: t('historyRequestChange'), Icon: Plus, color: 'text-[var(--P)]', dot: 'bg-[var(--P)]', at: ppa.created_at, by: ppa.created_by_name ?? ppa.created_by ?? creatorFallback ?? null, hoursChargeable: hl, hoursStandard: sl, fromPeriod: fp, toPeriod: tp });
+  if (ppa.created_at) rows.push({ key: 'created', label: t('historyCreated'), description: t('historyRequestChange'), Icon: Plus, color: 'text-[var(--P)]', dot: 'bg-[var(--P)]', at: ppa.created_at, by: ppa.created_by_name ?? ppa.created_by ?? creatorFallback ?? null, hoursChargeable: hl, hoursSah: sah, fromPeriod: fp, toPeriod: tp });
   if (ppa.resolved_at) {
     const isRej = ppa.status === 'rejected';
-    rows.push({ key: 'resolved', label: isRej ? t('historyRejected') : t('historyApproved'), description: isRej ? t('historyRequestRejected') : t('historyChangeApproved'), Icon: isRej ? UserX : UserCheck, color: isRej ? 'text-[var(--RD)]' : 'text-[var(--GR)]', dot: isRej ? 'bg-[var(--RD)]' : 'bg-[var(--GR)]', at: ppa.resolved_at, by: ppa.resolved_by_name ?? ppa.resolved_by ?? null, note: isRej ? (rejectionReason ?? ppa.rejection_reason) : null, hoursChargeable: isRej ? null : hl, hoursStandard: isRej ? null : sl, fromPeriod: fp, toPeriod: tp });
+    rows.push({ key: 'resolved', label: isRej ? t('historyRejected') : t('historyApproved'), description: isRej ? t('historyRequestRejected') : t('historyChangeApproved'), Icon: isRej ? UserX : UserCheck, color: isRej ? 'text-[var(--RD)]' : 'text-[var(--GR)]', dot: isRej ? 'bg-[var(--RD)]' : 'bg-[var(--GR)]', at: ppa.resolved_at, by: ppa.resolved_by_name ?? ppa.resolved_by ?? null, note: isRej ? (rejectionReason ?? ppa.rejection_reason) : null, hoursChargeable: isRej ? null : hl, hoursSah: isRej ? null : sah, fromPeriod: fp, toPeriod: tp });
   }
-  if (ppa.reversed_at) rows.push({ key: 'reversed', label: t('historyReversed'), description: t('historyChangeReversed'), Icon: RotateCcw, color: 'text-red-600', dot: 'bg-red-500', at: ppa.reversed_at, by: ppa.reversed_by_name ?? ppa.reversed_by ?? null, hoursChargeable: hl, hoursStandard: sl, reversed: true, fromPeriod: fp, toPeriod: tp });
+  if (ppa.reversed_at) rows.push({ key: 'reversed', label: t('historyReversed'), description: t('historyChangeReversed'), Icon: RotateCcw, color: 'text-red-600', dot: 'bg-red-500', at: ppa.reversed_at, by: ppa.reversed_by_name ?? ppa.reversed_by ?? null, hoursChargeable: hl, hoursSah: sah, reversed: true, fromPeriod: fp, toPeriod: tp });
   return rows;
 }
 
@@ -161,7 +161,7 @@ function TicketTimeline({ ticketId, ppaLogId, rejectionReason, creatorFallback }
                     {row.reversed ? `${row.toPeriod} ← ${row.fromPeriod}` : `${row.fromPeriod} → ${row.toPeriod}`}
                   </p>
                 )}
-                {(row.hoursChargeable != null || row.hoursStandard != null) && (
+                {(row.hoursChargeable != null || row.hoursSah != null) && (
                   <div className="flex gap-1.5 mt-1.5">
                     {row.hoursChargeable != null && (
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
@@ -172,13 +172,13 @@ function TicketTimeline({ ticketId, ppaLogId, rejectionReason, creatorFallback }
                         HL {row.reversed ? '+' : '−'}{row.hoursChargeable}h
                       </span>
                     )}
-                    {row.hoursStandard != null && (
+                    {row.hoursSah != null && (
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-                        row.key === 'created'  ? 'bg-sky-50 text-sky-700 border-sky-200' :
-                        row.key === 'resolved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        row.key === 'created'  ? 'bg-violet-50 text-violet-700 border-violet-200' :
+                        row.key === 'resolved' ? 'bg-violet-50 text-violet-700 border-violet-200' :
                                                  'bg-red-50 text-red-600 border-red-200'
                       }`}>
-                        SL {row.reversed ? '+' : '−'}{row.hoursStandard}h
+                        SAH {row.reversed ? '+' : '−'}{row.hoursSah}h
                       </span>
                     )}
                   </div>
@@ -371,7 +371,7 @@ export function TicketDetailView({ id }: Props) {
       ? null
       : { label: t('fieldHours'), value: ticket.hoursToMove != null ? `${ticket.hoursToMove}h` : null },
     { label: t('fieldHoursChargeable'), value: ticket.hoursChargeable != null ? `${ticket.hoursChargeable}h` : null },
-    { label: t('fieldHoursStandard'),   value: ticket.hoursStandard != null ? `${ticket.hoursStandard}h` : null },
+    { label: t('fieldHoursSah'),        value: ticket.hoursSah != null ? `${ticket.hoursSah}h` : null },
     !isPPA ? { label: t('fieldFromPeriod'), value: ticket.fromPeriod } : null,
     !isPPA ? { label: t('fieldToPeriod'),   value: ticket.toPeriod }  : null,
   ] as ({ label: string; value: React.ReactNode } | null)[]).filter((f): f is { label: string; value: React.ReactNode } => f != null && f.value != null && f.value !== '');

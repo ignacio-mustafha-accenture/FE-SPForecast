@@ -257,7 +257,10 @@
     "required": "Requerido",
     "cancel": "Cancelar",
     "errorInsufficientHL": "No hay suficientes horas HL en {fromPeriod}. Disponibles: {available}h, solicitadas: {requested}h",
-    "errorInsufficientSAH": "No hay suficientes horas SAH en {fromPeriod}. Disponibles: {available}h, solicitadas: {requested}h"
+    "fieldHoursSah": "Hs. SAH",
+    "errorInsufficientSAH": "No hay suficientes horas SAH en {fromPeriod}. Disponibles: {available}h, solicitadas: {requested}h",
+    "errorSahZeroNeedsChg": "Si sacás todas las SAH de {fromPeriod}, también tenés que mover las CHG ({chg}h)",
+    "errorSahBelowChg": "En {fromPeriod}, el SAH restante ({sah}h) quedaría menor que el CHG restante ({chg}h)"
   },
   "tickets": {
     "title": "Tickets",

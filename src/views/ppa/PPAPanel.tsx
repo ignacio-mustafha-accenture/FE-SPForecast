@@ -21,6 +21,7 @@ type PPAFormData = {
   fromPeriod: string;
   toPeriod: string;
   hoursChargeable: string;
+  hoursSah: string;
   reason: string;
 };
 
@@ -71,7 +72,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
     eid: z.string().min(1, t('required')),
     fromPeriod: z.string().min(1, t('required')),
     toPeriod: z.string().min(1, t('required')),
-    hoursChargeable: z.string().min(1, t('required')).refine((v) => Number(v) >= 0, t('minHours')),
+    hoursChargeable: z.string().refine((v) => v === '' || Number(v) >= 0, t('minHours')),
+    hoursSah: z.string().refine((v) => v === '' || Number(v) >= 0, t('minHours')),
     reason: z.string().optional(),
   });
 
@@ -109,7 +111,13 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
   }
 
   async function onSubmit(data: PPAFormData) {
-    const hc = Number(data.hoursChargeable);
+    const hc = Number(data.hoursChargeable) || 0;
+    const hs = Number(data.hoursSah) || 0;
+
+    if (hc === 0 && hs === 0) {
+      toast.error(t('atLeastOneRequired'));
+      return;
+    }
 
     const fromIdx = storePeriodNames.indexOf(data.fromPeriod);
     if (fromIdx !== -1 && selectedEmployee) {
@@ -117,6 +125,27 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
       if (hc > hlAvailable) {
         toast.error(t('errorInsufficientHL', { fromPeriod: data.fromPeriod, available: Math.round(hlAvailable), requested: hc }));
         return;
+      }
+
+      if (hs > 0) {
+        const sahAvailable = selectedEmployee.sah[fromIdx] ?? 0;
+        if (hs > sahAvailable) {
+          toast.error(t('errorInsufficientSAH', { fromPeriod: data.fromPeriod, available: sahAvailable, requested: hs }));
+          return;
+        }
+        const chgTotal = (selectedEmployee.chg[fromIdx] ?? 0);
+        // Si el SAH quedaría en 0 y hay CHG sin mover → bloquear
+        if (hs === sahAvailable && chgTotal > 0 && hc === 0) {
+          toast.error(t('errorSahZeroNeedsChg', { fromPeriod: data.fromPeriod, chg: Math.round(chgTotal) }));
+          return;
+        }
+        // Si el SAH resultante sería menor que el CHG resultante → bloquear
+        const sahResultante = sahAvailable - hs;
+        const chgResultante = chgTotal - hc;
+        if (sahResultante > 0 && sahResultante < chgResultante) {
+          toast.error(t('errorSahBelowChg', { fromPeriod: data.fromPeriod, sah: sahResultante, chg: Math.round(chgResultante) }));
+          return;
+        }
       }
     }
 
@@ -126,7 +155,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
         eid: data.eid,
         fromPeriod: data.fromPeriod,
         toPeriod: data.toPeriod,
-        hoursChargeable: hc,
+        hoursChargeable: hc || undefined,
+        hoursSah: hs || undefined,
         reason: data.reason ?? '',
       });
       toast.success(t('toastCreated'));
@@ -287,13 +317,22 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
         </div>
 
         {/* Hours */}
-        <Input
-          label={t('fieldHoursChargeable')}
-          type="number"
-          min={0}
-          error={errors.hoursChargeable?.message}
-          {...register('hoursChargeable')}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label={t('fieldHoursChargeable')}
+            type="number"
+            min={0}
+            error={errors.hoursChargeable?.message}
+            {...register('hoursChargeable')}
+          />
+          <Input
+            label={t('fieldHoursSah')}
+            type="number"
+            min={0}
+            error={errors.hoursSah?.message}
+            {...register('hoursSah')}
+          />
+        </div>
 
         {/* Reason */}
         <Textarea
