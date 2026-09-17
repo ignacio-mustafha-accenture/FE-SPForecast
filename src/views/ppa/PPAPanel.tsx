@@ -134,16 +134,9 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
           return;
         }
         const chgTotal = (selectedEmployee.chg[fromIdx] ?? 0);
-        // Si el SAH quedaría en 0 y hay CHG sin mover → bloquear
-        if (hs === sahAvailable && chgTotal > 0 && hc === 0) {
-          toast.error(t('errorSahZeroNeedsChg', { fromPeriod: data.fromPeriod, chg: Math.round(chgTotal) }));
-          return;
-        }
-        // Si el SAH resultante sería menor que el CHG resultante → bloquear
-        const sahResultante = sahAvailable - hs;
         const chgResultante = chgTotal - hc;
-        if (sahResultante > 0 && sahResultante < chgResultante) {
-          toast.error(t('errorSahBelowChg', { fromPeriod: data.fromPeriod, sah: sahResultante, chg: Math.round(chgResultante) }));
+        if (hs === sahAvailable && chgResultante > 0) {
+          toast.error(t('errorSahZeroNeedsChg', { fromPeriod: data.fromPeriod, chg: Math.round(chgResultante) }));
           return;
         }
       }

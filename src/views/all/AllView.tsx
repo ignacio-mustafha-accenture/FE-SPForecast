@@ -1983,7 +1983,7 @@ export function AllView() {
                 </div>
                 {(ticket.detail || ticket.comments) && (
                   <p className="text-[11px] text-[var(--G2)] border-t border-[var(--G6)] pt-2">
-                    {ticket.detail ?? ticket.comments}
+                    {(ticket.detail ?? ticket.comments ?? '').replace(/\s*\(log:[^)]*\)/gi, '').trim()}
                   </p>
                 )}
                 <button
