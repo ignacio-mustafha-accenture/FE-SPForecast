@@ -17,6 +17,7 @@ export interface Ticket {
   hoursToMove: number | null;
   hoursChargeable: number | null;
   hoursStandard: number | null;
+  hoursSah: number | null;
   fromPeriod: string | null;
   toPeriod: string | null;
   comments: string | null;

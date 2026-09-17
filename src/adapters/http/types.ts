@@ -95,6 +95,7 @@ export interface RawTicket {
   created_by_email?: string | null;
   hours_chargeable?: number | null;
   hours_standard?: number | null;
+  hours_sah?: number | null;
 }
 
 export interface RawPPALog {
@@ -106,6 +107,7 @@ export interface RawPPALog {
   hs: number;
   hours_chargeable?: number | null;
   hours_standard?: number | null;
+  hours_sah?: number | null;
   reason: string;
   date: string;
   country?: string | null;
