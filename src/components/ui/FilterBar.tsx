@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { cn } from '@/src/lib/cn';
 
-import { Dropdown } from './Dropdown';
+import { Dropdown, MultiDropdown } from './Dropdown';
 
 const chipVariants = {
   hidden: { opacity: 0, y: -4 },
@@ -41,6 +41,9 @@ interface SelectGroup {
   value: string;
   onChange: (v: string) => void;
   allLabel?: string;
+  multi?: boolean;
+  values?: string[];
+  onToggle?: (v: string) => void;
 }
 
 interface FilterBarProps {
@@ -108,13 +111,22 @@ export function FilterBar({ search, toggleGroups, selectGroups, className, trail
       {selectGroups?.map((group) => (
         <div key={group.label} className="flex items-center gap-1.5">
           <span className="text-xs text-[var(--G3)] whitespace-nowrap">{group.label}:</span>
-          <Dropdown
-            options={group.options}
-            value={group.value}
-            onChange={group.onChange}
-            allLabel={group.allLabel}
-            compact
-          />
+          {group.multi && group.onToggle ? (
+            <MultiDropdown
+              options={group.options}
+              values={group.values ?? []}
+              onToggle={group.onToggle}
+              allLabel={group.allLabel}
+            />
+          ) : (
+            <Dropdown
+              options={group.options}
+              value={group.value}
+              onChange={group.onChange}
+              allLabel={group.allLabel}
+              compact
+            />
+          )}
         </div>
       ))}
 

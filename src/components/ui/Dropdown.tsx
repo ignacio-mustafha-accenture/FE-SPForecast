@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { cn } from '@/src/lib/cn';
@@ -9,6 +9,108 @@ import { cn } from '@/src/lib/cn';
 interface DropdownOption {
   value: string;
   label: string;
+}
+
+interface MultiDropdownProps {
+  options: DropdownOption[];
+  values: string[];
+  onToggle: (value: string) => void;
+  allLabel?: string;
+  placeholder?: string;
+  className?: string;
+}
+
+export function MultiDropdown({
+  options,
+  values,
+  onToggle,
+  allLabel = 'Todos',
+  placeholder,
+  className,
+}: MultiDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const label = values.length === 0
+    ? (placeholder ?? allLabel)
+    : values.length === 1
+      ? (options.find((o) => o.value === values[0])?.label ?? values[0])
+      : `${values.length} seleccionados`;
+
+  const isActive = values.length > 0;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium border rounded-full bg-white transition-colors focus:outline-none cursor-pointer',
+          open || isActive
+            ? 'border-[var(--P)] text-[var(--PD)] bg-[var(--PBG)]'
+            : 'border-[var(--G5)] text-[var(--G2)] hover:border-[var(--G3)]',
+          className,
+        )}
+      >
+        <span>{label}</span>
+        <motion.div
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.18, ease: 'easeInOut' }}
+        >
+          <ChevronDown size={11} className="text-[var(--G3)]" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.ul
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute z-50 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden min-w-[120px] max-h-56 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+          >
+            {values.length > 0 && (
+              <li
+                onMouseDown={(e) => { e.preventDefault(); values.forEach((v) => onToggle(v)); }}
+                className="px-3 py-2 text-xs cursor-pointer text-[var(--G3)] hover:bg-[var(--G6)] border-b border-[var(--G5)]"
+              >
+                {allLabel}
+              </li>
+            )}
+            {options.map((o) => {
+              const checked = values.includes(o.value);
+              return (
+                <li
+                  key={o.value}
+                  onMouseDown={(e) => { e.preventDefault(); onToggle(o.value); }}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 text-xs cursor-pointer transition-colors',
+                    checked ? 'bg-[var(--PBG)] text-[var(--PD)] font-medium' : 'text-[var(--G1)] hover:bg-[var(--G6)]',
+                  )}
+                >
+                  <span className={cn('w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0', checked ? 'bg-[var(--P)] border-[var(--P)]' : 'border-[var(--G4)]')}>
+                    {checked && <Check size={9} className="text-white" strokeWidth={3} />}
+                  </span>
+                  {o.label}
+                </li>
+              );
+            })}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 interface DropdownProps {
