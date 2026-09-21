@@ -23,7 +23,7 @@
     "noData": "Sin datos",
     "employees": "empleados",
     "results": "resultados",
-    "previous": "�? Anterior",
+    "previous": "← Anterior",
     "next": "Siguiente →",
     "page": "Página",
     "of": "de",
@@ -245,7 +245,7 @@
     "fieldEmployeePlaceholder": "ramos.lucas",
     "fieldFrom": "Período origen",
     "fieldTo": "Período destino",
-    "fieldHoursChargeable": "Hs. Cargables (CHG)",
+    "fieldHoursChargeable": "CHG HL",
     "fieldHoursStandard": "Hs. Estándar (SAH)",
     "atLeastOneRequired": "Al menos un tipo de horas es requerido",
     "minHours": "No puede ser negativo",
@@ -255,7 +255,12 @@
     "toastCreated": "PPA creado correctamente",
     "toastError": "Error al crear PPA",
     "required": "Requerido",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "errorInsufficientHL": "No hay suficientes horas HL en {fromPeriod}. Disponibles: {available}h, solicitadas: {requested}h",
+    "fieldHoursSah": "Hs. SAH",
+    "errorInsufficientSAH": "No hay suficientes horas SAH en {fromPeriod}. Disponibles: {available}h, solicitadas: {requested}h",
+    "errorSahZeroNeedsChg": "Si sacás todas las SAH de {fromPeriod}, también tenés que mover las CHG ({chg}h)",
+    "errorSahBelowChg": "En {fromPeriod}, el SAH restante ({sah}h) quedaría menor que el CHG restante ({chg}h)"
   },
   "tickets": {
     "title": "Tickets",

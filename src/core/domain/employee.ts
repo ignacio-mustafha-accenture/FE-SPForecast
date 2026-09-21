@@ -34,6 +34,8 @@ export interface Employee {
   chgEffective: number[];
   chgAssumption: number[];
   ppaAdj: number[];
+  ppaAdjHl: number[];
+  ppaAdjSl: number[];
   slReal: number[];
   slAssumed: number[];
   hl: number[];

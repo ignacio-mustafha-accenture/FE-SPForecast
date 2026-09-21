@@ -59,6 +59,8 @@ export interface RawEmployee {
   cp: number[];
   absence_hours: number[];
   chg_cascadeadas: number[];
+  chg_cascadeadas_hl: number[];
+  chg_cascadeadas_sl: number[];
   assumption_kind: (string | null)[];
 }
 
@@ -93,6 +95,7 @@ export interface RawTicket {
   created_by_email?: string | null;
   hours_chargeable?: number | null;
   hours_standard?: number | null;
+  hours_sah?: number | null;
 }
 
 export interface RawPPALog {
@@ -104,6 +107,7 @@ export interface RawPPALog {
   hs: number;
   hours_chargeable?: number | null;
   hours_standard?: number | null;
+  hours_sah?: number | null;
   reason: string;
   date: string;
   country?: string | null;

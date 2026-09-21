@@ -21,7 +21,7 @@ type PPAFormData = {
   fromPeriod: string;
   toPeriod: string;
   hoursChargeable: string;
-  hoursStandard: string;
+  hoursSah: string;
   reason: string;
 };
 
@@ -63,6 +63,8 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
   const toListRef = useRef<HTMLUListElement>(null);
 
   const employees = useForecastStore((s) => s.appState?.employees ?? null);
+  const storePeriods = useForecastStore((s) => s.appState?.periods ?? []);
+  const storePeriodNames = useMemo(() => storePeriods.map((p) => p.label), [storePeriods]);
   const { periods } = usePeriods(open);
   const periodNames = useMemo(() => periods.map((p) => p.name), [periods]);
 
@@ -70,13 +72,10 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
     eid: z.string().min(1, t('required')),
     fromPeriod: z.string().min(1, t('required')),
     toPeriod: z.string().min(1, t('required')),
-    hoursChargeable: z.string().optional().refine((v) => !v || Number(v) >= 0, t('minHours')),
-    hoursStandard: z.string().optional().refine((v) => !v || Number(v) >= 0, t('minHours')),
+    hoursChargeable: z.string().refine((v) => v === '' || Number(v) >= 0, t('minHours')),
+    hoursSah: z.string().refine((v) => v === '' || Number(v) >= 0, t('minHours')),
     reason: z.string().optional(),
-  }).refine(
-    (d) => (d.hoursChargeable && d.hoursChargeable !== '') || (d.hoursStandard && d.hoursStandard !== ''),
-    { message: t('atLeastOneRequired'), path: ['hoursChargeable'] },
-  );
+  });
 
   const {
     register,
@@ -112,14 +111,45 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
   }
 
   async function onSubmit(data: PPAFormData) {
+    const hc = Number(data.hoursChargeable) || 0;
+    const hs = Number(data.hoursSah) || 0;
+
+    if (hc === 0 && hs === 0) {
+      toast.error(t('atLeastOneRequired'));
+      return;
+    }
+
+    const fromIdx = storePeriodNames.indexOf(data.fromPeriod);
+    if (fromIdx !== -1 && selectedEmployee) {
+      const hlAvailable = (selectedEmployee.chgHl[fromIdx] ?? 0) + (selectedEmployee.ppaAdjHl[fromIdx] ?? 0);
+      if (hc > hlAvailable) {
+        toast.error(t('errorInsufficientHL', { fromPeriod: data.fromPeriod, available: Math.round(hlAvailable), requested: hc }));
+        return;
+      }
+
+      if (hs > 0) {
+        const sahAvailable = selectedEmployee.sah[fromIdx] ?? 0;
+        if (hs > sahAvailable) {
+          toast.error(t('errorInsufficientSAH', { fromPeriod: data.fromPeriod, available: sahAvailable, requested: hs }));
+          return;
+        }
+        const chgTotal = (selectedEmployee.chg[fromIdx] ?? 0);
+        const chgResultante = chgTotal - hc;
+        if (hs === sahAvailable && chgResultante > 0) {
+          toast.error(t('errorSahZeroNeedsChg', { fromPeriod: data.fromPeriod, chg: Math.round(chgResultante) }));
+          return;
+        }
+      }
+    }
+
     setSaving(true);
     try {
       await getClientContainer().applyPPA.execute({
         eid: data.eid,
         fromPeriod: data.fromPeriod,
         toPeriod: data.toPeriod,
-        hoursChargeable: data.hoursChargeable !== '' ? Number(data.hoursChargeable) : undefined,
-        hoursStandard: data.hoursStandard !== '' ? Number(data.hoursStandard) : undefined,
+        hoursChargeable: hc || undefined,
+        hoursSah: hs || undefined,
         reason: data.reason ?? '',
       });
       toast.success(t('toastCreated'));
@@ -289,11 +319,11 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
             {...register('hoursChargeable')}
           />
           <Input
-            label={t('fieldHoursStandard')}
+            label={t('fieldHoursSah')}
             type="number"
             min={0}
-            error={errors.hoursStandard?.message}
-            {...register('hoursStandard')}
+            error={errors.hoursSah?.message}
+            {...register('hoursSah')}
           />
         </div>
 
