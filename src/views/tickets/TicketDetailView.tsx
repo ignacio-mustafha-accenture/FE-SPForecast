@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Check, X, Plus, UserCheck, UserX, Key, RotateCcw } from 'lucide-react';
+import { Check, X, Plus, UserCheck, UserX, Key, RotateCcw, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import type { Ticket } from '@/src/core/domain/ticket';
@@ -256,6 +256,7 @@ export function TicketDetailView({ id }: Props) {
      
   }, [id]);
 
+  const [approving, setApproving] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectSaving, setRejectSaving] = useState(false);
@@ -298,6 +299,7 @@ export function TicketDetailView({ id }: Props) {
 
   async function handleApprove() {
     if (!ticket) return;
+    setApproving(true);
     try {
       await getClientContainer().approveTicket.execute(ticket.id);
       toast.success(t('toastApproved'));
@@ -305,6 +307,8 @@ export function TicketDetailView({ id }: Props) {
       router.back();
     } catch {
       toast.error(t('toastApproveError'));
+    } finally {
+      setApproving(false);
     }
   }
 
@@ -391,8 +395,10 @@ export function TicketDetailView({ id }: Props) {
         </button>
         {isAdmin && ticket.status === 'Open' && (
           <div className="flex items-center gap-2">
-            <Button variant="approve-outline" size="sm" onClick={handleApprove}>
-              <Check size={13} strokeWidth={2.5} />
+            <Button variant="approve-outline" size="sm" onClick={handleApprove} disabled={approving}>
+              {approving
+                ? <Loader2 size={13} className="animate-spin" />
+                : <Check size={13} strokeWidth={2.5} />}
               {t('approve')}
             </Button>
             <Button variant="reject-outline" size="sm" onClick={openRejectModal}>

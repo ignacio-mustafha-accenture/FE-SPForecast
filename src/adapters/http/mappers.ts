@@ -85,6 +85,7 @@ export function mapRawEmployee(raw: RawEmployee, target = 87): Employee {
     ppaAdj:         raw.chg_cascadeadas    ?? [],
     ppaAdjHl:       raw.chg_cascadeadas_hl ?? [],
     ppaAdjSl:       raw.chg_cascadeadas_sl ?? [],
+    sahPpaAdj:      raw.sah_ppa_adj        ?? [],
     slReal:         raw.absence_hours   ?? [],
     slAssumed:      raw.chg_pct_sl      ?? [],
     hl:             raw.chg_pct_hl      ?? [],

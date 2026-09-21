@@ -82,7 +82,7 @@ const TYPE_LABELS: Record<string, string> = {
   pto: 'Vacaciones',
   sick: 'Enfermedad',
   nj: 'No joineo',
-  baja: 'Baja',
+  baja: 'Baja empleado',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -461,6 +461,7 @@ export function AllView() {
   }
 
   const activeCountries = useMemo(() => (country ? country.split(',') : []), [country]);
+  const activeLevels = useMemo(() => (level ? level.split(',') : []), [level]);
 
   const paged = useMemo(() => {
     const items = result?.items ?? [];
@@ -476,9 +477,10 @@ export function AllView() {
         sah: s.sah.length > 0 ? s.sah : e.sah,
         chgEffective: s.chgEffective.length > 0 ? s.chgEffective : e.chgEffective,
         chgAssumption: s.chgAssumption.length > 0 ? s.chgAssumption : e.chgAssumption,
-        ppaAdj:   s.ppaAdj.length > 0   ? s.ppaAdj   : e.ppaAdj,
-        ppaAdjHl: s.ppaAdjHl?.length > 0 ? s.ppaAdjHl : e.ppaAdjHl,
-        ppaAdjSl: s.ppaAdjSl?.length > 0 ? s.ppaAdjSl : e.ppaAdjSl,
+        ppaAdj:    s.ppaAdj.length > 0    ? s.ppaAdj    : e.ppaAdj,
+        ppaAdjHl:  s.ppaAdjHl?.length > 0  ? s.ppaAdjHl  : e.ppaAdjHl,
+        ppaAdjSl:  s.ppaAdjSl?.length > 0  ? s.ppaAdjSl  : e.ppaAdjSl,
+        sahPpaAdj: s.sahPpaAdj?.length > 0 ? s.sahPpaAdj : e.sahPpaAdj,
         slReal: s.slReal.length > 0 ? s.slReal : e.slReal,
         chgNeto: s.chgNeto ?? e.chgNeto,
         chgHl: s.chgHl ?? e.chgHl,
@@ -702,14 +704,13 @@ export function AllView() {
   // Cantidad de filtros activos en la barra (busqueda, pais, offering, level, CHG% y T&E approver).
   // Cada pais seleccionado cuenta como un filtro porque el filtro de pais es multiple.
   const activeFilterCount = useMemo(() => {
-    let n = activeCountries.length;
+    let n = activeCountries.length + activeLevels.length;
     if (localQ.trim()) n += 1;
     if (offering) n += 1;
-    if (level) n += 1;
     if (chgBucket) n += 1;
     if (teApprover) n += 1;
     return n;
-  }, [activeCountries, localQ, offering, level, chgBucket, teApprover]);
+  }, [activeCountries, activeLevels, localQ, offering, chgBucket, teApprover]);
 
   // Resetea todos los filtros de la barra a su valor por defecto de una sola vez
   function clearAllFilters() {
@@ -726,6 +727,12 @@ export function AllView() {
     const current = country ? country.split(',') : [];
     const next = current.includes(v) ? current.filter((c) => c !== v) : [...current, v];
     setParam('country', next.join(','));
+  }
+
+  function toggleLevel(v: string) {
+    const current = level ? level.split(',') : [];
+    const next = current.includes(v) ? current.filter((l) => l !== v) : [...current, v];
+    setParam('level', next.join(','));
   }
 
   function toggleExpand(id: string) {
@@ -849,6 +856,9 @@ export function AllView() {
             options: LEVEL_OPTIONS,
             value: level,
             onChange: (v) => setParam('level', v),
+            multi: true,
+            values: activeLevels,
+            onToggle: toggleLevel,
           },
           {
             label: 'CHG%',
@@ -1328,7 +1338,7 @@ export function AllView() {
                       // Bug 4: si cargable = 0, no colorear (blanco = Hard Lock)
                       const aKind = chgRaw > 0 ? (emp.assumptionKind?.[i] ?? null) : null;
                       const aStyle = aKind ? ASSUMPTION_CELL[aKind as keyof typeof ASSUMPTION_CELL] : undefined;
-                      const hasPpaCascade = chgType !== 'SL' && ((emp.ppaAdjHl?.[i] ?? 0) !== 0 || (emp.ppaAdjSl?.[i] ?? 0) !== 0);
+                      const hasPpaCascade = (chgType !== 'SL' && ((emp.ppaAdjHl?.[i] ?? 0) !== 0 || (emp.ppaAdjSl?.[i] ?? 0) !== 0)) || (emp.sahPpaAdj?.[i] ?? 0) !== 0;
                       const cellBg = aStyle ? { background: aStyle.bg } : hasPpaCascade ? { background: '#EDE9FE' } : undefined;
                       const cellTitle = aStyle ? aStyle.label : undefined;
                       const cellColor = 'text-[var(--G1)]';

@@ -36,6 +36,7 @@ export interface Employee {
   ppaAdj: number[];
   ppaAdjHl: number[];
   ppaAdjSl: number[];
+  sahPpaAdj: number[];
   slReal: number[];
   slAssumed: number[];
   hl: number[];
