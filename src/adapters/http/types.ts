@@ -61,6 +61,7 @@ export interface RawEmployee {
   chg_cascadeadas: number[];
   chg_cascadeadas_hl: number[];
   chg_cascadeadas_sl: number[];
+  sah_ppa_adj: number[];
   assumption_kind: (string | null)[];
 }
 
