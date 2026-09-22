@@ -1,83 +1,142 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
-import { ChartFrame, EmptyChart } from './chart-primitives';
+import {
+  Bar,
+  BarChart,
+  Cell,
+  LabelList,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
-const W = 420;
-const ML = 132;
-const MR = 46;
-const MT = 14;
-const FILA = 30;
+import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
+import { COLORS, ChartTooltip, DrillHint, EmptyChart, fmtHorasFull, useDrillDown } from './chart-kit';
 
 interface Props {
   totals: ForecastTotals | null;
   indicePeriodo: number;
 }
 
+interface Fila {
+  label: string;
+  gap: number;
+  pct: number;
+  target: number;
+  hc: number;
+  faltan: number;
+  esPais: boolean;
+  country: string;
+  offering?: string;
+}
+
+
 export function GapVsTargetChart({ totals, indicePeriodo }: Props) {
-  const filas = useMemo(() => {
+  const drill = useDrillDown();
+
+  const datos = useMemo<Fila[]>(() => {
     if (!totals) return [];
-    return totals.rows
-      .filter((r) => r.hc > 0)
-      .map((r) => {
-        const p = r.periods[indicePeriodo];
-        const pct = p && p.sah > 0 ? (p.chg / p.sah) * 100 : null;
-        return pct === null
-          ? null
-          : { label: r.label, kind: r.kind, gap: pct - r.targetPct, pct, target: r.targetPct };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null)
-      .sort((a, b) => a.gap - b.gap);
+    const out: Fila[] = [];
+    for (const r of totals.rows) {
+      if (r.hc <= 0) continue;
+      const p = r.periods[indicePeriodo];
+      if (!p || p.sah === 0) continue;
+      const pct = (p.chg / p.sah) * 100;
+      out.push({
+        label: r.label,
+        gap: pct - r.targetPct,
+        pct,
+        target: r.targetPct,
+        hc: r.hc,
+        faltan: Math.max((r.targetPct / 100) * p.sah - p.chg, 0),
+        esPais: r.kind === 'country',
+        country: r.country,
+        offering: r.kind === 'offering' ? r.label.trim() : undefined,
+      });
+    }
+    return out.sort((a, b) => a.gap - b.gap);
   }, [totals, indicePeriodo]);
 
-  if (filas.length === 0) return <EmptyChart mensaje="Sin datos de totales" />;
+  if (datos.length === 0) return <EmptyChart mensaje="Sin datos de totales" alto={240} />;
 
-  const H = MT + filas.length * FILA + 12;
-  const IW = W - ML - MR;
-  const lim = Math.max(...filas.map((f) => Math.abs(f.gap))) * 1.25 || 1;
-  const x0 = ML + IW / 2;
+  const lim = Math.max(...datos.map((d) => Math.abs(d.gap))) * 1.3;
 
   return (
-    <ChartFrame viewBox={`0 0 ${W} ${H}`} ariaLabel="Brecha contra target por grupo">
-      <line x1={x0} y1={MT} x2={x0} y2={MT + filas.length * FILA} stroke="var(--G3)" strokeWidth={1.4} />
-
-      {filas.map((f, i) => {
-        const y = MT + i * FILA + FILA * 0.24;
-        const alto = FILA * 0.52;
-        const ancho = (Math.abs(f.gap) / lim) * (IW / 2);
-        const x = f.gap >= 0 ? x0 : x0 - ancho;
-        const color = f.gap >= 0 ? 'var(--GR)' : 'var(--RD)';
-        const sangria = f.kind === 'offering' ? 12 : 0;
-
-        return (
-          <g key={f.label}>
-            <rect x={x} y={y} width={Math.max(ancho, 1.5)} height={alto} rx={2.5} fill={color} />
-            <text
-              x={ML - 10}
-              y={y + alto * 0.76}
-              textAnchor="end"
-              fontSize={11}
-              fontWeight={f.kind === 'country' ? 700 : 500}
-              fill="var(--G1)"
-            >
-              {'\u00A0'.repeat(sangria)}
-              {f.label}
-            </text>
-            <text
-              x={f.gap >= 0 ? x + ancho + 7 : x - 7}
-              y={y + alto * 0.76}
-              textAnchor={f.gap >= 0 ? 'start' : 'end'}
-              fontSize={11}
-              fontWeight={700}
-              fill={color}
-            >
-              {f.gap >= 0 ? '+' : ''}
-              {f.gap.toFixed(1)}
-            </text>
-          </g>
-        );
-      })}
-    </ChartFrame>
+    <>
+      <ResponsiveContainer width="100%" height={Math.max(datos.length * 34 + 30, 200)}>
+        <BarChart
+          data={datos}
+          layout="vertical"
+          margin={{ top: 6, right: 44, bottom: 6, left: 8 }}
+          barCategoryGap="22%"
+        >
+          <XAxis type="number" domain={[-lim, lim]} hide />
+          <YAxis
+            type="category"
+            dataKey="label"
+            width={126}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 11, fill: COLORS.ink }}
+          />
+          <Tooltip
+            cursor={{ fill: COLORS.primary, fillOpacity: 0.05 }}
+            content={({ active, payload }) => {
+              const d = payload?.[0]?.payload as Fila | undefined;
+              if (!d) return null;
+              return (
+                <ChartTooltip
+                  activo={active}
+                  titulo={d.label}
+                  filas={[
+                    { etiqueta: 'Cargabilidad', valor: `${d.pct.toFixed(1)}%`, destacado: true },
+                    { etiqueta: 'Target del grupo', valor: `${d.target}%` },
+                    {
+                      etiqueta: 'Brecha',
+                      valor: `${d.gap >= 0 ? '+' : ''}${d.gap.toFixed(1)} pts`,
+                      color: d.gap >= 0 ? COLORS.ok : COLORS.bad,
+                    },
+                    { etiqueta: 'Headcount', valor: String(d.hc) },
+                  ]}
+                  pie={
+                    d.faltan > 0
+                      ? `Faltan ${fmtHorasFull(d.faltan)} horas`
+                      : 'Cumple el target'
+                  }
+                />
+              );
+            }}
+          />
+          <ReferenceLine x={0} stroke={COLORS.axis} strokeWidth={1.4} />
+          <Bar
+            dataKey="gap"
+            radius={[2, 2, 2, 2]}
+            cursor="pointer"
+            animationDuration={600}
+            onClick={(d) => {
+              const f = d as unknown as Fila;
+              drill({ country: f.country, offering: f.offering });
+            }}
+          >
+            {datos.map((d) => (
+              <Cell key={d.label} fill={d.gap >= 0 ? COLORS.ok : COLORS.bad} />
+            ))}
+            <LabelList
+              dataKey="gap"
+              position="right"
+              formatter={(v: unknown) => {
+                const n = Number(v);
+                return Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(1)}` : '';
+              }}
+              style={{ fontSize: 11, fontWeight: 700 }}
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <DrillHint texto="Click en una barra para abrir ese grupo en la Vista Global" />
+    </>
   );
 }
