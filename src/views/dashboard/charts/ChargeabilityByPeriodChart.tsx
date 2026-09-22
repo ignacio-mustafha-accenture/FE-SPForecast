@@ -1,25 +1,30 @@
 'use client';
 
 import { useMemo } from 'react';
+import {
+  Bar,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Cell,
+} from 'recharts';
+
 import type { Employee } from '@/src/core/domain/employee';
 import type { Period } from '@/src/core/domain/period';
 import {
-  ChartFrame,
-  GridY,
-  TargetLine,
+  COLORS,
+  ChartTooltip,
+  DrillHint,
   EmptyChart,
-  escalaY,
-  type Escala,
-} from './chart-primitives';
-
-const W = 860;
-const H = 260;
-const ML = 44;
-const MR = 16;
-const MT = 26;
-const MB = 34;
-const IW = W - ML - MR;
-const IH = H - MT - MB;
+  fmtHorasFull,
+  useDrillDown,
+} from './chart-kit';
 
 interface Props {
   employees: Employee[];
@@ -28,130 +33,171 @@ interface Props {
   targetPct: number;
 }
 
+interface Punto {
+  label: string;
+  pct: number;
+  gap: number;
+  chg: number;
+  sah: number;
+  faltan: number;
+  futuro: boolean;
+  actual: boolean;
+}
+
 export function ChargeabilityByPeriodChart({
   employees,
   periods,
   indicePeriodoActual,
   targetPct,
 }: Props) {
-  const datos = useMemo(() => {
-    return periods.map((p, i) => {
-      let chg = 0;
-      let sah = 0;
-      for (const e of employees) {
-        chg += e.chg[i] ?? 0;
-        sah += e.sah[i] ?? 0;
-      }
-      return { label: p.label, pct: sah > 0 ? (chg / sah) * 100 : 0, sah };
-    });
-  }, [employees, periods]);
+  const drill = useDrillDown();
 
-  if (datos.length === 0) return <EmptyChart mensaje="Sin períodos para mostrar" />;
+  const datos = useMemo<Punto[]>(
+    () =>
+      periods.map((p, i) => {
+        let chg = 0;
+        let sah = 0;
+        for (const e of employees) {
+          chg += e.chg[i] ?? 0;
+          sah += e.sah[i] ?? 0;
+        }
+        const pct = sah > 0 ? (chg / sah) * 100 : 0;
+        return {
+          label: p.label,
+          pct,
+          gap: pct - targetPct,
+          chg,
+          sah,
+          faltan: Math.max((targetPct / 100) * sah - chg, 0),
+          futuro: i > indicePeriodoActual,
+          actual: i === indicePeriodoActual,
+        };
+      }),
+    [employees, periods, indicePeriodoActual, targetPct],
+  );
 
-  const maxVal = Math.max(...datos.map((d) => d.pct), targetPct);
-  const escala: Escala = { min: 0, max: maxVal * 1.16 };
-  const bw = IW / datos.length;
+  if (datos.length === 0) return <EmptyChart mensaje="Sin períodos para mostrar" alto={280} />;
+
+  const tope = Math.max(...datos.map((d) => d.pct), targetPct) * 1.18;
 
   return (
-    <ChartFrame viewBox={`0 0 ${W} ${H}`} ariaLabel="Cargabilidad por período contra target">
-      <GridY
-        escala={escala}
-        left={ML}
-        top={MT}
-        ancho={IW}
-        alto={IH}
-        formato={(v) => `${Math.round(v)}%`}
-      />
-
-      {datos.map((d, i) => {
-        const y = escalaY(d.pct, escala, MT, IH);
-        const alto = MT + IH - y;
-        const x = ML + i * bw + bw * 0.17;
-        const ancho = bw * 0.66;
-        const futuro = i > indicePeriodoActual;
-        const cumple = d.pct >= targetPct;
-        const sinDato = d.sah === 0;
-
-        return (
-          <g key={d.label} opacity={futuro ? 0.45 : 1}>
-            {!sinDato && (
-              <>
-                <rect
-                  x={x}
-                  y={y}
-                  width={ancho}
-                  height={Math.max(alto, 1)}
-                  rx={3}
-                  fill={cumple ? 'var(--P)' : '#D7A6F5'}
-                />
-                <text
-                  x={x + ancho / 2}
-                  y={y - 6}
-                  textAnchor="middle"
-                  fontSize={11}
-                  fontWeight={700}
-                  fill="var(--G1)"
-                >
-                  {d.pct.toFixed(1)}
-                </text>
-              </>
-            )}
-            {i === indicePeriodoActual && !sinDato && (
-              <rect
-                x={x - 2}
-                y={y - 2}
-                width={ancho + 4}
-                height={alto + 2}
-                rx={4}
-                fill="none"
-                stroke="var(--PD, #7B00C4)"
-                strokeWidth={2}
-              />
-            )}
-            <text
-              x={x + ancho / 2}
-              y={MT + IH + 16}
-              textAnchor="middle"
-              fontSize={10.5}
-              fill="var(--G3)"
-            >
-              {d.label}
-            </text>
-          </g>
-        );
-      })}
-
-      <TargetLine
-        valor={targetPct}
-        escala={escala}
-        left={ML}
-        top={MT}
-        ancho={IW}
-        alto={IH}
-        etiqueta={`Target ${targetPct}%`}
-      />
-
-      {indicePeriodoActual >= 0 && indicePeriodoActual < datos.length - 1 && (
-        <g>
-          <line
-            x1={ML + (indicePeriodoActual + 1) * bw}
-            y1={MT - 6}
-            x2={ML + (indicePeriodoActual + 1) * bw}
-            y2={MT + IH}
-            stroke="var(--G3)"
-            strokeWidth={1}
-            strokeDasharray="3 4"
+    <>
+      <ResponsiveContainer width="100%" height={280}>
+        <ComposedChart data={datos} margin={{ top: 28, right: 16, bottom: 4, left: 0 }}>
+          <ReferenceArea y1={0} y2={targetPct} fill={COLORS.primary} fillOpacity={0.04} />
+          <CartesianGrid vertical={false} stroke={COLORS.grid} />
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={{ stroke: COLORS.grid }}
+            tick={{ fontSize: 11, fill: COLORS.axis }}
           />
-          <text
-            x={ML + (indicePeriodoActual + 1) * bw + 6}
-            y={MT - 10}
-            fontSize={10}
-            fill="var(--G3)"
+          <YAxis
+            domain={[0, tope]}
+            tickFormatter={(v: number) => `${Math.round(v)}%`}
+            tickLine={false}
+            axisLine={false}
+            width={44}
+            tick={{ fontSize: 11, fill: COLORS.axis }}
+          />
+          <Tooltip
+            cursor={{ fill: COLORS.primary, fillOpacity: 0.06 }}
+            content={({ active, payload }) => {
+              const d = payload?.[0]?.payload as Punto | undefined;
+              if (!d) return null;
+              return (
+                <ChartTooltip
+                  activo={active}
+                  titulo={`${d.label}${d.futuro ? ' · proyectado' : ''}`}
+                  filas={[
+                    { etiqueta: 'Cargabilidad', valor: `${d.pct.toFixed(1)}%`, destacado: true },
+                    {
+                      etiqueta: 'Contra target',
+                      valor: `${d.gap >= 0 ? '+' : ''}${d.gap.toFixed(1)} pts`,
+                      color: d.gap >= 0 ? COLORS.ok : COLORS.bad,
+                    },
+                    { etiqueta: 'Horas cargables', valor: fmtHorasFull(d.chg) },
+                    { etiqueta: 'Horas disponibles', valor: fmtHorasFull(d.sah) },
+                  ]}
+                  pie={
+                    d.faltan > 0
+                      ? `Faltan ${fmtHorasFull(d.faltan)} horas para alcanzar el target`
+                      : 'Por encima del target'
+                  }
+                />
+              );
+            }}
+          />
+
+          <Bar
+            dataKey="pct"
+            radius={[3, 3, 0, 0]}
+            maxBarSize={56}
+            cursor="pointer"
+            animationDuration={650}
+            onClick={(d) => {
+              const p = d as unknown as Punto;
+              drill(p.pct < targetPct ? { chg_bucket: '<100' } : {});
+            }}
           >
-            proyectado
-          </text>
-        </g>
-      )}
-    </ChartFrame>
+            {datos.map((d) => (
+              <Cell
+                key={d.label}
+                fill={
+                  d.pct >= targetPct
+                    ? COLORS.primary
+                    : d.pct >= targetPct * 0.8
+                      ? COLORS.primaryMid
+                      : COLORS.primarySoft
+                }
+                fillOpacity={d.futuro ? 0.5 : 1}
+                stroke={d.actual ? COLORS.primaryDark : undefined}
+                strokeWidth={d.actual ? 2 : 0}
+              />
+            ))}
+          </Bar>
+
+          <Line
+            type="monotone"
+            dataKey="pct"
+            stroke={COLORS.primaryDark}
+            strokeWidth={1.6}
+            strokeDasharray="4 4"
+            dot={false}
+            activeDot={false}
+            isAnimationActive={false}
+          />
+
+          <ReferenceLine
+            y={targetPct}
+            stroke={COLORS.ink}
+            strokeDasharray="7 5"
+            strokeWidth={1.5}
+            label={{
+              value: `Target ${targetPct}%`,
+              position: 'right',
+              fontSize: 11,
+              fontWeight: 700,
+              fill: COLORS.ink,
+            }}
+          />
+
+          {indicePeriodoActual >= 0 && indicePeriodoActual < datos.length - 1 && (
+            <ReferenceLine
+              x={datos[indicePeriodoActual].label}
+              stroke={COLORS.axis}
+              strokeDasharray="3 4"
+              label={{
+                value: 'proyectado →',
+                position: 'insideTopRight',
+                fontSize: 10.5,
+                fill: COLORS.axis,
+              }}
+            />
+          )}
+        </ComposedChart>
+      </ResponsiveContainer>
+      <DrillHint texto="Click en una barra bajo target para ver a esas personas en la Vista Global" />
+    </>
   );
 }
