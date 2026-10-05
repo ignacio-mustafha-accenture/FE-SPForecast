@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { APP_VERSION } from '@/src/lib/constants';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
@@ -94,6 +95,10 @@ export function UserMenu({ name, role, onLogout }: UserMenuProps) {
             <span>⎋</span>
             <span>{t('logout')}</span>
           </button>
+
+          <p className="px-3 pt-1 pb-1.5 text-[10px] text-white/30 text-right select-none">
+            v{APP_VERSION}
+          </p>
         </div>
       )}
     </div>

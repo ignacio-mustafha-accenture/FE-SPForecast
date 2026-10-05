@@ -71,6 +71,7 @@ export function CountryView({ country }: CountryViewProps) {
 
   const status = searchParams.get('status') ?? '';
   const filterOffering = searchParams.get('offering') ?? '';
+  const filterLevel = searchParams.get('level') ?? '';
   const scenario = (searchParams.get('scenario') ?? '') as '' | 'assumption' | 'effective';
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const pageSize = Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10));
@@ -111,6 +112,13 @@ export function CountryView({ country }: CountryViewProps) {
     return Array.from(types).sort().map((v) => ({ value: v, label: v }));
   }, [countryEmployees]);
 
+  const levelOptions = useMemo(() => {
+    const levels = new Set(countryEmployees.map((e) => e.level).filter(Boolean) as string[]);
+    return Array.from(levels)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((v) => ({ value: v, label: `CL ${v}` }));
+  }, [countryEmployees]);
+
   const filtered = useMemo(() => {
     let result = countryEmployees;
     if (debouncedQ) {
@@ -121,8 +129,9 @@ export function CountryView({ country }: CountryViewProps) {
     }
     if (status) result = result.filter((e) => e.chargeabilityStatus === status);
     if (filterOffering) result = result.filter((e) => e.projectType === filterOffering);
+    if (filterLevel) result = result.filter((e) => e.level === filterLevel);
     return result;
-  }, [countryEmployees, debouncedQ, status, filterOffering]);
+  }, [countryEmployees, debouncedQ, status, filterOffering, filterLevel]);
 
   const totalFiltered = filtered.length;
   const pageCount = Math.ceil(totalFiltered / pageSize) || 1;
@@ -362,6 +371,14 @@ export function CountryView({ country }: CountryViewProps) {
                 options: offeringOptions,
                 active: filterOffering ? [filterOffering] : [],
                 onToggle: (v: string) => setParam('offering', filterOffering === v ? '' : v),
+              }]
+            : []),
+          ...(levelOptions.length > 0
+            ? [{
+                label: 'Level',
+                options: levelOptions,
+                active: filterLevel ? [filterLevel] : [],
+                onToggle: (v: string) => setParam('level', filterLevel === v ? '' : v),
               }]
             : []),
         ]}

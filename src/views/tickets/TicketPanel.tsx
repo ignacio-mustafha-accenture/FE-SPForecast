@@ -91,7 +91,7 @@ function useDropdownNav(
 
 const NO_PERIODS: Period[] = [];
 
-const CL_OPTIONS = ['8', '9', '10', '11', '12', '13'].map((v) => ({ value: v, label: v }));
+const CL_OPTIONS = ['13', '12', '11', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1'].map((v) => ({ value: v, label: v }));
 
 const LOCATION_OPTIONS = [
   { value: 'Argentina', label: 'Argentina' },
@@ -225,9 +225,8 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
   const [showLocationDrop, setShowLocationDrop] = useState(false);
   const [plSearch, setPlSearch] = useState('');
   const [showPlDrop, setShowPlDrop] = useState(false);
-  const [teApprovers, setTeApprovers] = useState<string[]>([]);
-  const [teApproverSearch, setTeApproverSearch] = useState('');
-  const [showTeApproverDrop, setShowTeApproverDrop] = useState(false);
+  const [taSearch, setTaSearch] = useState('');
+  const [showTaDrop, setShowTaDrop] = useState(false);
 
   const eidListRef = useRef<HTMLUListElement>(null);
   const typeListRef = useRef<HTMLUListElement>(null);
@@ -236,7 +235,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
   const clListRef = useRef<HTMLUListElement>(null);
   const locationListRef = useRef<HTMLUListElement>(null);
   const plListRef = useRef<HTMLUListElement>(null);
-  const teApproverListRef = useRef<HTMLUListElement>(null);
+  const taListRef = useRef<HTMLUListElement>(null);
   const prevAutoEidRef = useRef('');
 
   const employees = useForecastStore((s) => s.appState?.employees ?? null);
@@ -249,12 +248,6 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    fetch('/api/te-approvers', { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((d) => setTeApprovers(d.items ?? []))
-      .catch(() => {});
-  }, []);
 
   const schema = z
     .object({
@@ -382,8 +375,8 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
       setShowLocationDrop(false);
       setPlSearch('');
       setShowPlDrop(false);
-      setTeApproverSearch('');
-      setShowTeApproverDrop(false);
+      setTaSearch('');
+      setShowTaDrop(false);
       prevAutoEidRef.current = '';
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -479,23 +472,28 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
   const clNav = useDropdownNav(clListRef, CL_OPTIONS.length, showClDrop);
   const locationNav = useDropdownNav(locationListRef, LOCATION_OPTIONS.length, showLocationDrop);
 
+  const njCl = watch('cl') ? Number(watch('cl')) : null;
   const selectedPl = watch('people_lead') ?? '';
   const selectedPlEmployee = (employees ?? []).find((e) => e.id === selectedPl);
-  const filteredPl = (employees ?? []).filter(
+  const filteredPl = plSearch.length < 2 ? [] : (employees ?? []).filter(
     (e) =>
       (e.id.toLowerCase().includes(plSearch.toLowerCase()) ||
         e.name.toLowerCase().includes(plSearch.toLowerCase())) &&
-      e.id !== selectedPl,
+      e.id !== selectedPl &&
+      (njCl === null || (e.level != null && Number(e.level) < njCl)),
   );
   const plNav = useDropdownNav(plListRef, filteredPl.length, showPlDrop);
 
   const selectedTeApprover = watch('te_approver') ?? '';
-  const filteredTeApprovers = teApprovers.filter(
-    (name) => name.toLowerCase().includes(teApproverSearch.toLowerCase()),
+  const selectedTaEmployee = (employees ?? []).find((e) => e.id === selectedTeApprover);
+  const filteredTa = taSearch.length < 2 ? [] : (employees ?? []).filter(
+    (e) =>
+      (e.id.toLowerCase().includes(taSearch.toLowerCase()) ||
+        e.name.toLowerCase().includes(taSearch.toLowerCase())) &&
+      e.id !== selectedTeApprover &&
+      e.level != null && Number(e.level) <= 7,
   );
-  const hasCustomTeApprover = teApproverSearch.length > 0 && !teApprovers.includes(teApproverSearch);
-  const teApproverNavItems = [...filteredTeApprovers, ...(hasCustomTeApprover ? [teApproverSearch] : [])];
-  const teApproverNav = useDropdownNav(teApproverListRef, teApproverNavItems.length, showTeApproverDrop);
+  const taNav = useDropdownNav(taListRef, filteredTa.length, showTaDrop);
 
   async function onSubmit(data: FormData) {
     setSaving(true);
@@ -830,12 +828,79 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                       )}
                     </div>
                   </div>
-                  <Input
-                    label={t('peopleleadLabel')}
-                    placeholder={t('peopleleadPlaceholder')}
-                    error={errors.people_lead?.message}
-                    {...register('people_lead')}
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-[var(--G2)]">{t('peopleleadLabel')}</label>
+                    <div className="relative">
+                      <div
+                        className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text"
+                        onClick={() => !selectedPlEmployee && setShowPlDrop(true)}
+                      >
+                        {selectedPlEmployee ? (
+                          <>
+                            <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-sm shrink-0">
+                              {selectedPlEmployee.name}
+                              <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setValue('people_lead', '');
+                                  setPlSearch('');
+                                }}
+                                className="hover:opacity-70 transition-opacity"
+                              >
+                                <X size={12} />
+                              </button>
+                            </span>
+                            <span className="flex-1" />
+                          </>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder={t('peopleleadPlaceholder')}
+                            value={plSearch}
+                            onChange={(e) => { setPlSearch(e.target.value); setShowPlDrop(true); }}
+                            onFocus={() => setShowPlDrop(true)}
+                            onBlur={() => setTimeout(() => setShowPlDrop(false), 150)}
+                            onKeyDown={(e) =>
+                              plNav.onKey(
+                                e,
+                                (i) => {
+                                  setValue('people_lead', filteredPl[i].id);
+                                  setPlSearch('');
+                                  setShowPlDrop(false);
+                                },
+                                () => setShowPlDrop(false),
+                              )
+                            }
+                            className="flex-1 text-sm text-[var(--G1)] outline-none bg-transparent placeholder:text-[var(--G4)]"
+                          />
+                        )}
+                        <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
+                      </div>
+                      {errors.people_lead && <p className="text-xs text-[var(--RD)] mt-1">{errors.people_lead.message}</p>}
+                      {showPlDrop && filteredPl.length > 0 && (
+                        <ul
+                          ref={plListRef}
+                          className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+                        >
+                          {filteredPl.map((e, i) => (
+                            <li
+                              key={e.id}
+                              onMouseDown={() => {
+                                setValue('people_lead', e.id);
+                                setPlSearch('');
+                                setShowPlDrop(false);
+                              }}
+                              className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${i === plNav.idx ? 'bg-[var(--G6)]' : 'hover:bg-[var(--G6)]'}`}
+                            >
+                              <span className="text-sm text-[var(--G1)] font-medium">{e.name}</span>
+                              <span className="text-xs text-[var(--G3)]">{e.id}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <Input
                   label={t('eidAccentureLabel')}
@@ -847,18 +912,18 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                   <div className="relative">
                     <div
                       className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text"
-                      onClick={() => !selectedTeApprover && setShowTeApproverDrop(true)}
+                      onClick={() => !selectedTaEmployee && setShowTaDrop(true)}
                     >
-                      {selectedTeApprover ? (
+                      {selectedTaEmployee ? (
                         <>
                           <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-sm shrink-0">
-                            {selectedTeApprover}
+                            {selectedTaEmployee.name}
                             <button
                               type="button"
                               onMouseDown={(e) => {
                                 e.preventDefault();
                                 setValue('te_approver', '');
-                                setTeApproverSearch('');
+                                setTaSearch('');
                               }}
                               className="hover:opacity-70 transition-opacity"
                             >
@@ -871,19 +936,19 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                         <input
                           type="text"
                           placeholder="Nombre del approver"
-                          value={teApproverSearch}
-                          onChange={(e) => { setTeApproverSearch(e.target.value); setShowTeApproverDrop(true); }}
-                          onFocus={() => setShowTeApproverDrop(true)}
-                          onBlur={() => setTimeout(() => setShowTeApproverDrop(false), 150)}
+                          value={taSearch}
+                          onChange={(e) => { setTaSearch(e.target.value); setShowTaDrop(true); }}
+                          onFocus={() => setShowTaDrop(true)}
+                          onBlur={() => setTimeout(() => setShowTaDrop(false), 150)}
                           onKeyDown={(e) =>
-                            teApproverNav.onKey(
+                            taNav.onKey(
                               e,
                               (i) => {
-                                setValue('te_approver', teApproverNavItems[i]);
-                                setTeApproverSearch('');
-                                setShowTeApproverDrop(false);
+                                setValue('te_approver', filteredTa[i].id);
+                                setTaSearch('');
+                                setShowTaDrop(false);
                               },
-                              () => setShowTeApproverDrop(false),
+                              () => setShowTaDrop(false),
                             )
                           }
                           className="flex-1 text-sm text-[var(--G1)] outline-none bg-transparent placeholder:text-[var(--G4)]"
@@ -892,36 +957,25 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                       <ChevronDown size={14} className="text-[var(--G3)] shrink-0" />
                     </div>
                     {errors.te_approver && <p className="text-xs text-[var(--RD)] mt-1">{errors.te_approver.message}</p>}
-                    {showTeApproverDrop && (filteredTeApprovers.length > 0 || teApproverSearch) && (
+                    {showTaDrop && filteredTa.length > 0 && (
                       <ul
-                        ref={teApproverListRef}
+                        ref={taListRef}
                         className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
                       >
-                        {filteredTeApprovers.map((name, i) => (
+                        {filteredTa.map((e, i) => (
                           <li
-                            key={name}
+                            key={e.id}
                             onMouseDown={() => {
-                              setValue('te_approver', name);
-                              setTeApproverSearch('');
-                              setShowTeApproverDrop(false);
+                              setValue('te_approver', e.id);
+                              setTaSearch('');
+                              setShowTaDrop(false);
                             }}
-                            className={`px-3 py-2 text-sm cursor-pointer transition-colors ${i === teApproverNav.idx ? 'bg-[var(--G6)]' : 'text-[var(--G1)] hover:bg-[var(--G6)]'}`}
+                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${i === taNav.idx ? 'bg-[var(--G6)]' : 'hover:bg-[var(--G6)]'}`}
                           >
-                            {name}
+                            <span className="text-sm text-[var(--G1)] font-medium">{e.name}</span>
+                            <span className="text-xs text-[var(--G3)]">{e.id}</span>
                           </li>
                         ))}
-                        {hasCustomTeApprover && (
-                          <li
-                            onMouseDown={() => {
-                              setValue('te_approver', teApproverSearch);
-                              setTeApproverSearch('');
-                              setShowTeApproverDrop(false);
-                            }}
-                            className={`px-3 py-2 text-sm cursor-pointer border-t border-[var(--G6)] transition-colors ${filteredTeApprovers.length === teApproverNav.idx ? 'bg-[var(--G6)]' : 'text-[var(--P)] hover:bg-[var(--PB)]'}`}
-                          >
-                            + Usar &quot;{teApproverSearch}&quot;
-                          </li>
-                        )}
                       </ul>
                     )}
                   </div>

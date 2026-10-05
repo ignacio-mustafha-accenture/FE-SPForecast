@@ -29,7 +29,7 @@ export function OfferingDistributionChart({ employees }: { employees: Employee[]
   const datos = useMemo<Fila[]>(() => {
     const m = new Map<string, { n: number; bajo: number }>();
     for (const e of employees) {
-      const k = e.offering ?? 'Sin offering';
+      const k = e.projectType ?? 'Sin offering';
       const cur = m.get(k) ?? { n: 0, bajo: 0 };
       cur.n += 1;
       if (e.chargeabilityStatus === 'red') cur.bajo += 1;

@@ -11,9 +11,12 @@ import type { RawAppState, RawEmployee, RawForecastTotals, RawPeriod, RawPPALog,
 
 const COUNTRY_MAP: Record<string, Country> = {
   argentina: 'AR',
+  ar: 'AR',
   'costa rica': 'CR',
+  cr: 'CR',
   méxico: 'MX',
   mexico: 'MX',
+  mx: 'MX',
 };
 
 function mapCountry(raw: string): Country {

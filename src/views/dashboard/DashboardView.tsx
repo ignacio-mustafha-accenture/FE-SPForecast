@@ -3,15 +3,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useForecastStore } from '@/src/store/StoreProvider';
 import { getClientContainer } from '@/src/application/container';
 import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
 import { Badge } from '@/src/components/ui/Badge';
 import { Skeleton } from '@/src/components/ui/Skeleton';
+import { FilterBar } from '@/src/components/ui/FilterBar';
 import { parseDDMMYY } from '@/src/lib/formatters';
+import { getTargetForCountry } from '@/src/lib/status';
+import { OFFERING_OPTIONS } from '@/src/core/domain/offerings';
 import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
-import type { Employee } from '@/src/core/domain/employee';
+import type { Country, Employee } from '@/src/core/domain/employee';
 
 import { ChargeabilityByPeriodChart } from '@/src/views/dashboard/charts/ChargeabilityByPeriodChart';
 import { GapVsTargetChart } from '@/src/views/dashboard/charts/GapVsTargetChart';
@@ -39,6 +44,33 @@ export function DashboardView() {
   const t = useTranslations('dashboard');
   const appState = useForecastStore((s) => s.appState);
   const isLoading = useForecastStore((s) => s.isLoading);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const country = searchParams.get('country') ?? '';
+  const offering = searchParams.get('offering') ?? '';
+  const filterLevel = searchParams.get('level') ?? '';
+
+  const activeCountries = useMemo(() => (country ? country.split(',') : []), [country]);
+  const activeLevels = useMemo(() => (filterLevel ? filterLevel.split(',') : []), [filterLevel]);
+
+  function setParam(key: string, value: string) {
+    const p = new URLSearchParams(searchParams.toString());
+    value ? p.set(key, value) : p.delete(key);
+    router.replace(`?${p.toString()}`, { scroll: false });
+  }
+
+  function toggleCountry(v: string) {
+    const current = country ? country.split(',') : [];
+    const next = current.includes(v) ? current.filter((c) => c !== v) : [...current, v];
+    setParam('country', next.join(','));
+  }
+
+  const activeFilterCount = useMemo(() => {
+    let n = activeCountries.length + activeLevels.length;
+    if (offering) n += 1;
+    return n;
+  }, [activeCountries, activeLevels, offering]);
 
   const [totals, setTotals] = useState<ForecastTotals | null>(null);
 
@@ -63,43 +95,87 @@ export function DashboardView() {
     [appState],
   );
 
+  const [iSelected, setISelected] = useState(0);
+  useEffect(() => { setISelected(iActual); }, [iActual]);
+
   const target = useMemo(() => {
     if (!appState?.targets) return TARGET_POR_DEFECTO;
     const v = Object.values(appState.targets).filter((x) => typeof x === 'number' && x > 0);
     return v.length ? Math.max(...v) : TARGET_POR_DEFECTO;
   }, [appState]);
 
+  const LEVEL_OPTIONS = [
+    { value: '6',  label: '6' },
+    { value: '7',  label: '7' },
+    { value: '8',  label: '8' },
+    { value: '9',  label: '9' },
+    { value: '10', label: '10' },
+    { value: '11', label: '11' },
+    { value: '12', label: '12' },
+    { value: '13', label: '13' },
+  ];
+
+  function toggleLevel(v: string) {
+    const current = filterLevel ? filterLevel.split(',') : [];
+    const next = current.includes(v) ? current.filter((l) => l !== v) : [...current, v];
+    setParam('level', next.join(','));
+  }
+
+  const filteredEmployees = useMemo(() => {
+    if (!appState) return [];
+    return appState.employees.filter((e) => {
+      if (activeCountries.length > 0 && !activeCountries.includes(e.country)) return false;
+      if (offering && e.projectType !== offering) return false;
+      if (activeLevels.length > 0 && !activeLevels.includes(e.level)) return false;
+      return true;
+    });
+  }, [appState, activeCountries, offering, activeLevels]);
 
   const metricas = useMemo(() => {
     if (!appState) return null;
-    const agg = (i: number) => {
+    const agg = (emps: typeof filteredEmployees, i: number) => {
       let chg = 0;
       let sah = 0;
-      for (const e of appState.employees) {
+      for (const e of emps) {
         chg += e.chg[i] ?? 0;
         sah += e.sah[i] ?? 0;
       }
       return { chg, sah, pct: sah > 0 ? (chg / sah) * 100 : 0 };
     };
-    const actual = agg(iActual);
-    const previo = iActual > 0 ? agg(iActual - 1) : null;
+    const actual = agg(filteredEmployees, iSelected);
+    const previo = iSelected > 0 ? agg(filteredEmployees, iSelected - 1) : null;
     return {
       ...actual,
       delta: previo ? actual.pct - previo.pct : null,
       faltan: Math.max((target / 100) * actual.sah - actual.chg, 0),
     };
-  }, [appState, iActual, target]);
+  }, [filteredEmployees, iSelected, target, appState]);
+
+  const countryMetrics = useMemo(() => {
+    if (!appState) return [];
+    const countries: Country[] = ['AR', 'MX', 'CR'];
+    return countries
+      .map((c) => {
+        const emps = filteredEmployees.filter((e) => e.country === c);
+        if (emps.length === 0) return null;
+        let chg = 0, sah = 0;
+        for (const e of emps) { chg += e.chg[iSelected] ?? 0; sah += e.sah[iSelected] ?? 0; }
+        const pct = sah > 0 ? (chg / sah) * 100 : null;
+        const targetPct = getTargetForCountry(c, appState.targets);
+        return { country: c, pct, targetPct, overTarget: pct != null && pct >= targetPct };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [appState, filteredEmployees, iSelected]);
 
   const ptosData = useMemo(() => {
-    if (!appState) return [];
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    return appState.employees
+    return filteredEmployees
       .filter((e) => e.isOnPTO || e.nextPTO !== null)
       .map((e) => ({ ...e, _ptoStart: parseDDMMYY(e.nextPTO) }))
       .filter((e) => e.isOnPTO || (e._ptoStart !== null && e._ptoStart >= hoy))
       .sort((a, b) => (a._ptoStart?.getTime() ?? 0) - (b._ptoStart?.getTime() ?? 0));
-  }, [appState]);
+  }, [filteredEmployees]);
 
   const showSkeleton = isLoading && !appState;
 
@@ -128,9 +204,72 @@ export function DashboardView() {
                 <p className="mt-0.5 text-sm text-[var(--G3)]">{appState.period.label}</p>
               )}
             </div>
-            <div className="rounded-md bg-[var(--P)] px-4 py-2 text-sm font-bold text-white">
-              Target {target}%
-            </div>
+            {countryMetrics.length > 0 && (
+              <div className="flex items-center gap-4">
+                {countryMetrics.map(({ country, pct, targetPct, overTarget }) => (
+                  <div key={country} className="flex flex-col items-end">
+                    <span className="text-[10px] font-semibold text-[var(--G4)]">{country}</span>
+                    <span className={`text-sm font-bold ${overTarget ? 'text-[var(--GR)]' : 'text-[var(--RD)]'}`}>
+                      {pct != null ? `${overTarget ? '▲' : '▼'} ${pct.toFixed(1)}%` : '—'}
+                    </span>
+                    <span className="text-[9px] text-[var(--G4)]">target {targetPct}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+
+          <motion.div variants={section}>
+            <FilterBar
+              toggleGroups={[
+                {
+                  label: 'País',
+                  options: [
+                    { value: 'AR', label: 'AR' },
+                    { value: 'MX', label: 'MX' },
+                    { value: 'CR', label: 'CR' },
+                  ],
+                  active: activeCountries,
+                  onToggle: toggleCountry,
+                  multi: true,
+                },
+              ]}
+              selectGroups={[
+                {
+                  label: 'Offering',
+                  options: OFFERING_OPTIONS,
+                  value: offering,
+                  onChange: (v) => setParam('offering', v),
+                },
+                {
+                  label: 'Level',
+                  options: LEVEL_OPTIONS,
+                  value: filterLevel,
+                  onChange: (v) => setParam('level', v),
+                  multi: true,
+                  values: activeLevels,
+                  onToggle: toggleLevel,
+                },
+              ]}
+              trailing={
+                activeFilterCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const p = new URLSearchParams(searchParams.toString());
+                      p.delete('country');
+                      p.delete('offering');
+                      p.delete('level');
+                      router.replace(`?${p.toString()}`, { scroll: false });
+                    }}
+                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-[var(--P)] bg-[var(--PBG)] text-[var(--PD)] hover:bg-white cursor-pointer transition-colors"
+                  >
+                    <X size={11} />
+                    Limpiar ({activeFilterCount})
+                  </button>
+                ) : undefined
+              }
+            />
           </motion.div>
 
           <motion.div variants={section}>
@@ -141,7 +280,39 @@ export function DashboardView() {
                     <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--P)]">
                       Cargabilidad del período
                     </p>
-                    <div className="mt-1 flex items-baseline gap-3">
+                    <div className="mt-1.5 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setISelected((i) => Math.max(0, i - 1))}
+                        disabled={iSelected === 0}
+                        aria-label="Período anterior"
+                        className="flex items-center justify-center rounded-md border border-[var(--G5)] bg-[var(--G6)] p-1 text-[var(--G2)] hover:border-[var(--G4)] hover:bg-[var(--G5)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft size={13} />
+                      </button>
+                      <span className="min-w-[5.5rem] text-center text-[12px] font-semibold text-[var(--G2)]">
+                        {appState.periods[iSelected]?.label ?? ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setISelected((i) => Math.min(appState.periods.length - 1, i + 1))}
+                        disabled={iSelected === appState.periods.length - 1}
+                        aria-label="Período siguiente"
+                        className="flex items-center justify-center rounded-md border border-[var(--G5)] bg-[var(--G6)] p-1 text-[var(--G2)] hover:border-[var(--G4)] hover:bg-[var(--G5)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight size={13} />
+                      </button>
+                      {iSelected !== iActual && (
+                        <button
+                          type="button"
+                          onClick={() => setISelected(iActual)}
+                          className="ml-1 text-[10px] text-[var(--P)] hover:underline"
+                        >
+                          ↩ actual
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-3">
                       <span className="text-[44px] font-extrabold leading-none text-[var(--G1)]">
                         {metricas.pct.toFixed(1)}%
                       </span>
@@ -156,29 +327,39 @@ export function DashboardView() {
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 text-xs text-[var(--G3)]">
-                      {metricas.faltan > 0
-                        ? `Faltan ${fmtHorasFull(metricas.faltan)} horas para el target`
-                        : 'Por encima del target'}
-                      {metricas.delta !== null && ' · variación contra el período anterior'}
-                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <p className="text-xs text-[var(--G3)]">
+                        {iSelected === iActual
+                          ? (metricas.delta !== null ? 'Variación vs período anterior' : 'Período vigente')
+                          : (metricas.delta !== null ? 'Variación vs período anterior' : 'Sin período previo')}
+                      </p>
+                      {iSelected !== iActual && (
+                        <button
+                          type="button"
+                          onClick={() => setISelected(iActual)}
+                          className="text-[10px] text-[var(--P)] hover:underline"
+                        >
+                          ↩ volver al vigente
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-x-8 gap-y-3">
-                    <Mini label="Equipo" valor={String(appState.employees.length)} />
+                    <Mini label="Equipo" valor={String(filteredEmployees.length)} />
                     <Mini
                       label="En objetivo"
-                      valor={String(contar(appState.employees, 'green'))}
+                      valor={String(contar(filteredEmployees, 'green'))}
                       color="var(--GR)"
                     />
                     <Mini
                       label="En riesgo"
-                      valor={String(contar(appState.employees, 'yellow'))}
+                      valor={String(contar(filteredEmployees, 'yellow'))}
                       color="var(--YL)"
                     />
                     <Mini
                       label="Bajo objetivo"
-                      valor={String(contar(appState.employees, 'red'))}
+                      valor={String(contar(filteredEmployees, 'red'))}
                       color="var(--RD)"
                     />
                     <Mini label="Horas cargables" valor={fmtHorasFull(metricas.chg)} />
@@ -203,10 +384,13 @@ export function DashboardView() {
               </CardHeader>
               <CardBody>
                 <ChargeabilityByPeriodChart
-                  employees={appState.employees}
+                  employees={filteredEmployees}
                   periods={appState.periods}
                   indicePeriodoActual={iActual}
                   targetPct={target}
+                  targets={appState.targets}
+                  indiceSeleccionado={iSelected}
+                  onSelectPeriodo={setISelected}
                 />
               </CardBody>
             </Card>
@@ -220,7 +404,7 @@ export function DashboardView() {
               </CardHeader>
               <CardBody>
                 <AttentionList
-                  employees={appState.employees}
+                  employees={filteredEmployees}
                   periods={appState.periods}
                   indicePeriodoActual={iActual}
                   targetPct={target}
@@ -254,7 +438,7 @@ export function DashboardView() {
                 </div>
               </CardHeader>
               <CardBody>
-                <OfferingDistributionChart employees={appState.employees} />
+                <OfferingDistributionChart employees={filteredEmployees} />
               </CardBody>
             </Card>
           </motion.div>
@@ -271,7 +455,7 @@ export function DashboardView() {
               </CardHeader>
               <CardBody>
                 <CapacityChart
-                  employees={appState.employees}
+                  employees={filteredEmployees}
                   periods={appState.periods}
                   indicePeriodoActual={iActual}
                 />
