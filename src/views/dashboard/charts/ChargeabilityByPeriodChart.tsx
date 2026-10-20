@@ -22,6 +22,7 @@ import {
   ChartTooltip,
   EmptyChart,
   fmtHorasFull,
+  fmtTarget,
 } from './chart-kit';
 
 interface Props {
@@ -52,8 +53,8 @@ interface Punto {
 
 const SEG = {
   real: { sel: '#A100FF', unsel: '#DDBBF4' },
-  hl:   { sel: '#F59E0B', unsel: '#FDE68A' },
-  sl:   { sel: '#3B82F6', unsel: '#BFDBFE' },
+  hl:   { sel: COLORS.primaryDark, unsel: '#C9A3E0' },
+  sl:   { sel: COLORS.primaryMid, unsel: '#EBD3FA' },
 } as const;
 
 const PAIS_COLOR: Record<Country, string> = {
@@ -104,12 +105,12 @@ export function ChargeabilityByPeriodChart({
   );
 
   const lineasTarget = useMemo(() => {
-    if (!targets) return [{ pct: targetPct, label: `${targetPct}%`, color: COLORS.ink, dash: '7 4' }];
+    if (!targets) return [{ pct: targetPct, label: fmtTarget(targetPct), color: COLORS.ink, dash: '7 4' }];
     const paises = [...new Set(employees.map((e) => e.country as Country))];
     return paises
       .map((c) => {
         const pct = getTargetForCountry(c, targets);
-        return { pct, label: `${c} ${pct}%`, color: PAIS_COLOR[c] ?? COLORS.ink, dash: PAIS_DASH[c] ?? '7 4' };
+        return { pct, label: `${c} ${fmtTarget(pct)}`, color: PAIS_COLOR[c] ?? COLORS.ink, dash: PAIS_DASH[c] ?? '7 4' };
       })
       .sort((a, b) => b.pct - a.pct);
   }, [employees, targets, targetPct]);
@@ -139,6 +140,7 @@ export function ChargeabilityByPeriodChart({
             tick={{ fontSize: 11, fill: COLORS.axis }}
           />
           <Tooltip
+            trigger="click"
             cursor={{ fill: COLORS.primary, fillOpacity: 0.06 }}
             content={({ active, payload }) => {
               const d = payload?.[0]?.payload as Punto | undefined;

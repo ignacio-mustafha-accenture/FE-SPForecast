@@ -338,6 +338,7 @@ export function AllView() {
   // de periodos, para que las columnas coincidan con las de la tabla.
   useEffect(() => {
     let cancelled = false;
+    setTotals(null);
     getClientContainer()
       .getForecastTotals.execute(
         {

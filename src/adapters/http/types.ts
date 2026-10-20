@@ -122,6 +122,24 @@ export interface RawPPALog {
   reversed_at?: string | null;
 }
 
+export interface RawUnassignedRow {
+  EID: string;
+  Name: string;
+  Country: string | null;
+  CL: string | null;
+  Client: string | null;
+  Manager: string | null;
+  RollOff: string | null;
+  FAD: string | null;
+  DaysToAvailable: number | null;
+  Days: number | null;
+  Group: 'unassigned' | 'mes_actual' | 'mes1' | 'mes2';
+}
+
+export interface RawUnassignedPage extends RawPage<RawUnassignedRow> {
+  counts: Record<'unassigned' | 'mes_actual' | 'mes1' | 'mes2', number>;
+}
+
 export interface RawPage<T> {
   items: T[];
   total: number;

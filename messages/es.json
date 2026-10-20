@@ -227,7 +227,8 @@
     "colEmployee": "Empleado",
     "colCountry": "País",
     "colRisk": "Riesgo",
-    "colDetail": "Detalle"
+    "colDetail": "Detalle",
+    "unassignedButton": "Desasignados"
   },
   "ppa": {
     "title": "PPA",
@@ -422,6 +423,28 @@
   },
   "errors": {
     "unexpected": "Error inesperado"
+  },
+  "unassigned": {
+    "title": "Desasignados",
+    "subtitle": "Personas sin asignación hoy y próximas a liberarse",
+    "noData": "Sin datos",
+    "exportCsv": "Exportar",
+    "searchPlaceholder": "Buscar empleado, cliente o manager…",
+    "empty": "No hay personas para mostrar",
+    "colEmployee": "Empleado",
+    "colCountry": "País",
+    "colLevel": "Nivel",
+    "colClient": "Cliente / Estado",
+    "colRollOff": "Roll off",
+    "colDays": "Días",
+    "noClient": "Sin asignar",
+    "group": {
+      "unassigned": "Desasignados",
+      "mes_actual": "Este mes",
+      "mes1": "Próximo mes",
+      "mes2": "En 2 meses"
+    },
+    "groupFilter": "Grupo",
+    "colGroup": "Grupo"
   }
 }
-

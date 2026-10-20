@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, UserX } from 'lucide-react';
 
 import { useForecastStore } from '@/src/store/StoreProvider';
 import { getClientContainer } from '@/src/application/container';
 import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
 import { Badge } from '@/src/components/ui/Badge';
 import { Skeleton } from '@/src/components/ui/Skeleton';
+import { Button } from '@/src/components/ui/Button';
+import type { UnassignedCounts } from '@/src/core/domain/unassigned';
 import { FilterBar } from '@/src/components/ui/FilterBar';
 import { parseDDMMYY } from '@/src/lib/formatters';
 import { getTargetForCountry } from '@/src/lib/status';
@@ -22,8 +24,7 @@ import { ChargeabilityByPeriodChart } from '@/src/views/dashboard/charts/Chargea
 import { GapVsTargetChart } from '@/src/views/dashboard/charts/GapVsTargetChart';
 import { CapacityChart } from '@/src/views/dashboard/charts/CapacityChart';
 import { OfferingDistributionChart } from '@/src/views/dashboard/charts/OfferingDistributionChart';
-import { AttentionList } from '@/src/views/dashboard/charts/AttentionList';
-import { fmtHorasFull } from '@/src/views/dashboard/charts/chart-kit';
+import { fmtHorasFull, fmtTarget } from '@/src/views/dashboard/charts/chart-kit';
 
 
 const page = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.03 } } };
@@ -44,6 +45,7 @@ export function DashboardView() {
   const t = useTranslations('dashboard');
   const appState = useForecastStore((s) => s.appState);
   const isLoading = useForecastStore((s) => s.isLoading);
+  const fetchState = useForecastStore((s) => s.fetchState);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -90,13 +92,75 @@ export function DashboardView() {
     };
   }, []);
 
+  // El backend arma la ventana de 6 períodos desde el vigente + window_offset. Para poder ir
+  // hacia atrás/adelante pedimos otra ventana; el vigente se recuerda cuando offset = 0.
+  const [vigente, setVigente] = useState<{ label: string; startDate: string } | null>(null);
+  const offsetActual = appState?.period?.windowOffset ?? 0;
+
+  useEffect(() => {
+    if (appState?.period && offsetActual === 0) {
+      setVigente({ label: appState.period.label, startDate: appState.period.startDate });
+    }
+  }, [appState, offsetActual]);
+
+  // Si se llega al dashboard con la ventana corrida (ej. desde otra vista), volver al vigente.
+  const resetInicial = useRef(false);
+  useEffect(() => {
+    if (!appState || resetInicial.current) return;
+    resetInicial.current = true;
+    if (offsetActual !== 0) void fetchState(0);
+  }, [appState, offsetActual, fetchState]);
+
   const iActual = useMemo(
-    () => (appState ? indiceDelPeriodoVigente(appState.periods, appState.period?.label) : 0),
-    [appState],
+    () => (appState ? indiceDelPeriodoVigente(appState.periods, appState.period, offsetActual, vigente) : 0),
+    [appState, offsetActual, vigente],
   );
 
   const [iSelected, setISelected] = useState(0);
-  useEffect(() => { setISelected(iActual); }, [iActual]);
+  const [limite, setLimite] = useState({ inicio: false, fin: false });
+  const pendiente = useRef<{ borde: 'inicio' | 'fin'; antes: string | null; restaurando: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!appState) return;
+    const ps = appState.periods;
+    const pend = pendiente.current;
+    if (!pend) {
+      setISelected(Math.min(Math.max(iActual, 0), Math.max(ps.length - 1, 0)));
+      return;
+    }
+    pendiente.current = null;
+    const labelBorde = pend.borde === 'inicio' ? ps[0]?.label : ps[ps.length - 1]?.label;
+    if (!pend.restaurando && labelBorde === pend.antes) {
+      // No hay más períodos en esa dirección: deshacer el corrimiento y bloquear el botón.
+      setLimite({ inicio: pend.borde === 'inicio', fin: pend.borde === 'fin' });
+      pendiente.current = { borde: pend.borde, antes: null, restaurando: true };
+      void fetchState(offsetActual + (pend.borde === 'inicio' ? 1 : -1));
+      return;
+    }
+    if (!pend.restaurando) setLimite({ inicio: false, fin: false });
+    setISelected(pend.borde === 'inicio' ? 0 : Math.max(ps.length - 1, 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appState]);
+
+  function irAnterior() {
+    if (!appState) return;
+    if (iSelected > 0) return setISelected((i) => i - 1);
+    pendiente.current = { borde: 'inicio', antes: appState.periods[0]?.label ?? null, restaurando: false };
+    void fetchState(offsetActual - 1);
+  }
+
+  function volverAlVigente() {
+    if (appState && iActual >= 0 && iActual < appState.periods.length) return setISelected(iActual);
+    void fetchState(0);
+  }
+
+  function irSiguiente() {
+    if (!appState) return;
+    const ultimo = appState.periods.length - 1;
+    if (iSelected < ultimo) return setISelected((i) => i + 1);
+    pendiente.current = { borde: 'fin', antes: appState.periods[ultimo]?.label ?? null, restaurando: false };
+    void fetchState(offsetActual + 1);
+  }
 
   const target = useMemo(() => {
     if (!appState?.targets) return TARGET_POR_DEFECTO;
@@ -130,6 +194,34 @@ export function DashboardView() {
       return true;
     });
   }, [appState, activeCountries, offering, activeLevels]);
+
+  // El conteo sale del mismo endpoint que la tabla de Desasignados, con los mismos filtros
+  const [unassignedCounts, setUnassignedCounts] = useState<UnassignedCounts | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getClientContainer()
+      .listUnassigned.execute({
+        country: country || undefined,
+        offering: offering || undefined,
+        level: filterLevel || undefined,
+        page: 1,
+        pageSize: 1,
+      })
+      .then((data) => { if (!cancelled) setUnassignedCounts(data.counts); })
+      .catch((err) => {
+        console.warn('[DashboardView] no se pudo obtener el conteo de desasignados:', err);
+        if (!cancelled) setUnassignedCounts(null);
+      });
+    return () => { cancelled = true; };
+  }, [country, offering, filterLevel]);
+
+  const conteoDesasignados = useMemo(() => {
+    const c = unassignedCounts;
+    return {
+      hoy: c?.unassigned ?? 0,
+      total: c ? c.unassigned + c.mes_actual + c.mes1 + c.mes2 : 0,
+    };
+  }, [unassignedCounts]);
 
   const metricas = useMemo(() => {
     if (!appState) return null;
@@ -204,6 +296,17 @@ export function DashboardView() {
                 <p className="mt-0.5 text-sm text-[var(--G3)]">{appState.period.label}</p>
               )}
             </div>
+            <Button
+              variant={conteoDesasignados.hoy > 0 ? 'reject-outline' : 'ghost'}
+              size="sm"
+              onClick={() => router.push('/dashboard/unassigned')}
+            >
+              <UserX className="mr-1.5 h-3.5 w-3.5" />
+              {t('unassignedButton')}
+              <span className="ml-1.5 rounded-full bg-current/10 px-1.5 text-[10px] font-bold">
+                {conteoDesasignados.total}
+              </span>
+            </Button>
             {countryMetrics.length > 0 && (
               <div className="flex items-center gap-4">
                 {countryMetrics.map(({ country, pct, targetPct, overTarget }) => (
@@ -212,7 +315,7 @@ export function DashboardView() {
                     <span className={`text-sm font-bold ${overTarget ? 'text-[var(--GR)]' : 'text-[var(--RD)]'}`}>
                       {pct != null ? `${overTarget ? '▲' : '▼'} ${pct.toFixed(1)}%` : '—'}
                     </span>
-                    <span className="text-[9px] text-[var(--G4)]">target {targetPct}%</span>
+                    <span className="text-[9px] text-[var(--G4)]">target {fmtTarget(targetPct)}</span>
                   </div>
                 ))}
               </div>
@@ -283,8 +386,8 @@ export function DashboardView() {
                     <div className="mt-1.5 flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => setISelected((i) => Math.max(0, i - 1))}
-                        disabled={iSelected === 0}
+                        onClick={irAnterior}
+                        disabled={(iSelected === 0 && limite.inicio) || isLoading}
                         aria-label="Período anterior"
                         className="flex items-center justify-center rounded-md border border-[var(--G5)] bg-[var(--G6)] p-1 text-[var(--G2)] hover:border-[var(--G4)] hover:bg-[var(--G5)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                       >
@@ -295,8 +398,8 @@ export function DashboardView() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => setISelected((i) => Math.min(appState.periods.length - 1, i + 1))}
-                        disabled={iSelected === appState.periods.length - 1}
+                        onClick={irSiguiente}
+                        disabled={(iSelected === appState.periods.length - 1 && limite.fin) || isLoading}
                         aria-label="Período siguiente"
                         className="flex items-center justify-center rounded-md border border-[var(--G5)] bg-[var(--G6)] p-1 text-[var(--G2)] hover:border-[var(--G4)] hover:bg-[var(--G5)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                       >
@@ -305,7 +408,7 @@ export function DashboardView() {
                       {iSelected !== iActual && (
                         <button
                           type="button"
-                          onClick={() => setISelected(iActual)}
+                          onClick={volverAlVigente}
                           className="ml-1 text-[10px] text-[var(--P)] hover:underline"
                         >
                           ↩ actual
@@ -336,7 +439,7 @@ export function DashboardView() {
                       {iSelected !== iActual && (
                         <button
                           type="button"
-                          onClick={() => setISelected(iActual)}
+                          onClick={volverAlVigente}
                           className="text-[10px] text-[var(--P)] hover:underline"
                         >
                           ↩ volver al vigente
@@ -363,13 +466,14 @@ export function DashboardView() {
                       color="var(--RD)"
                     />
                     <Mini label="Horas cargables" valor={fmtHorasFull(metricas.chg)} />
+                    <Mini label="SAH totales" valor={fmtHorasFull(metricas.sah)} />
                   </div>
                 </div>
               </CardBody>
             </Card>
           </motion.div>
 
-          <motion.div variants={section} className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+          <motion.div variants={section}>
             <Card>
               <CardHeader>
                 <div>
@@ -391,23 +495,6 @@ export function DashboardView() {
                   targets={appState.targets}
                   indiceSeleccionado={iSelected}
                   onSelectPeriodo={setISelected}
-                />
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <h2 className="text-sm font-semibold text-[var(--G1)]">Requieren atención</h2>
-                <p className="mt-0.5 text-xs text-[var(--G3)]">
-                  Ordenado por urgencia · click para ver a la persona
-                </p>
-              </CardHeader>
-              <CardBody>
-                <AttentionList
-                  employees={filteredEmployees}
-                  periods={appState.periods}
-                  indicePeriodoActual={iActual}
-                  targetPct={target}
                 />
               </CardBody>
             </Card>
@@ -539,12 +626,17 @@ function contar(employees: Employee[], estado: Employee['chargeabilityStatus']):
 }
 
 function indiceDelPeriodoVigente(
-  periods: Array<{ label: string }>,
-  labelActual: string | undefined,
+  periods: Array<{ label: string; startDate: string }>,
+  periodo: { label: string; startDate: string } | undefined,
+  windowOffset: number,
+  vigente: { label: string; startDate: string } | null,
 ): number {
-  if (!labelActual) return 0;
-  const i = periods.findIndex((p) => p.label === labelActual);
-  return i >= 0 ? i : 0;
+  const ref = windowOffset === 0 ? periodo : (vigente ?? undefined);
+  if (!ref || periods.length === 0) return 0;
+  const i = periods.findIndex((p) => p.label === ref.label);
+  if (i >= 0) return i;
+  // Vigente fuera de la ventana: -1 si la ventana es posterior, length si es anterior.
+  return periods[0].startDate > ref.startDate ? -1 : periods.length;
 }
 
 

@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 
 import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
-import { COLORS, ChartTooltip, DrillHint, EmptyChart, fmtHorasFull, useDrillDown } from './chart-kit';
+import { COLORS, ChartTooltip, DrillHint, EmptyChart, fmtHorasFull, fmtTarget, useDrillDown } from './chart-kit';
 
 interface Props {
   totals: ForecastTotals | null;
@@ -93,7 +93,7 @@ export function GapVsTargetChart({ totals, indicePeriodo }: Props) {
                   titulo={d.label}
                   filas={[
                     { etiqueta: 'Cargabilidad', valor: `${d.pct.toFixed(1)}%`, destacado: true },
-                    { etiqueta: 'Target del grupo', valor: `${d.target}%` },
+                    { etiqueta: 'Target del grupo', valor: fmtTarget(d.target) },
                     {
                       etiqueta: 'Brecha',
                       valor: `${d.gap >= 0 ? '+' : ''}${d.gap.toFixed(1)} pts`,

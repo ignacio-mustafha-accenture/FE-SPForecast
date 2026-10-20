@@ -113,6 +113,7 @@ export function EmptyChart({ mensaje, alto = 160 }: { mensaje: string; alto?: nu
 }
 
 export const fmtPct = (v: number) => `${v.toFixed(1)}%`;
+export const fmtTarget = (v: number) => `${v.toFixed(1).replace(".", ",")}%`;
 export const fmtHoras = (v: number) =>
   v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v));
 export const fmtHorasFull = (v: number) =>

@@ -25,6 +25,7 @@ import { ListAllEmployeesUseCase } from './use-cases/ListAllEmployeesUseCase';
 import { ListEmployeesUseCase } from './use-cases/ListEmployeesUseCase';
 import { ListPeriodsUseCase } from './use-cases/ListPeriodsUseCase';
 import { ListPPAUseCase } from './use-cases/ListPPAUseCase';
+import { ListUnassignedUseCase } from './use-cases/ListUnassignedUseCase';
 import { ListTicketsUseCase } from './use-cases/ListTicketsUseCase';
 import { LoginUseCase } from './use-cases/LoginUseCase';
 import { LogoutUseCase } from './use-cases/LogoutUseCase';
@@ -44,6 +45,7 @@ export interface AppContainer {
   resetPassword: ResetPasswordUseCase;
   listEmployees: ListEmployeesUseCase;
   listAllEmployees: ListAllEmployeesUseCase;
+  listUnassigned: ListUnassignedUseCase;
   getForecastTotals: GetForecastTotalsUseCase;
   listTickets: ListTicketsUseCase;
   listPPA: ListPPAUseCase;
@@ -77,6 +79,7 @@ function buildContainer(ctx: FetcherCtx): AppContainer {
     resetPassword: new ResetPasswordUseCase(new HttpAuthRepository(ctx)),
     listEmployees: new ListEmployeesUseCase(employeeRepo),
     listAllEmployees: new ListAllEmployeesUseCase(employeeRepo),
+    listUnassigned: new ListUnassignedUseCase(employeeRepo),
     getForecastTotals: new GetForecastTotalsUseCase(employeeRepo),
     listTickets: new ListTicketsUseCase(ticketRepo),
     listPPA: new ListPPAUseCase(ppaRepo),

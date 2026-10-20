@@ -1,6 +1,7 @@
 import type { Employee } from '../domain/employee';
 import type { ForecastTotals } from '../domain/forecast-totals';
 import type { EmployeeFilter, Page } from '../domain/pagination';
+import type { UnassignedFilter, UnassignedPage } from '../domain/unassigned';
 
 export interface EmployeeUpdatePayload {
   newEid?: string;
@@ -18,6 +19,8 @@ export interface EmployeeUpdatePayload {
 
 export interface IEmployeeRepository {
   list(filter: EmployeeFilter): Promise<Page<Employee>>;
+  // Desasignados y proximos a liberarse: filtra, ordena y pagina el backend
+  listUnassigned(filter: UnassignedFilter): Promise<UnassignedPage>;
   // Todo el set filtrado en una sola pagina, para vistas que no paginan
   listAll(filter: EmployeeFilter): Promise<Page<Employee>>;
   // Totales agregados sobre todo el set filtrado, sin paginar

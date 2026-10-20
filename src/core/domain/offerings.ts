@@ -5,6 +5,7 @@ export const OFFERING_OPTIONS = [
   { value: 'S4', label: 'S4' },
   { value: 'Ariba', label: 'Ariba' },
   { value: 'Oracle', label: 'Oracle' },
+  { value: 'SAP', label: 'SAP' },
 ];
 
 export type Offering = typeof OFFERING_OPTIONS[number]['value'];

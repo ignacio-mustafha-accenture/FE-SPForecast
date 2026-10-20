@@ -1,11 +1,12 @@
 import type { Employee } from '@/src/core/domain/employee';
 import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
 import type { EmployeeFilter, Page } from '@/src/core/domain/pagination';
+import type { UnassignedFilter, UnassignedPage } from '@/src/core/domain/unassigned';
 import type { IEmployeeRepository, EmployeeUpdatePayload } from '@/src/core/ports/IEmployeeRepository';
 
 import { createFetcher, type FetcherCtx } from './fetcher';
 import { mapRawEmployee, mapRawForecastTotals } from './mappers';
-import type { RawEmployee, RawForecastTotals, RawPage } from './types';
+import type { RawEmployee, RawForecastTotals, RawPage, RawUnassignedPage } from './types';
 
 // Tope que acepta el backend en /api/employees (page_size: Query(25, ge=1, le=200))
 const MAX_PAGE_SIZE = 200;
@@ -49,6 +50,42 @@ export class HttpEmployeeRepository implements IEmployeeRepository {
       page: raw.page,
       pageSize: raw.page_size,
       pages: raw.pages,
+    };
+  }
+
+  async listUnassigned(filter: UnassignedFilter): Promise<UnassignedPage> {
+    const params = new URLSearchParams();
+    if (filter.country) params.set('country', filter.country);
+    if (filter.offering) params.set('offering', filter.offering);
+    if (filter.level) params.set('cl', filter.level);
+    if (filter.q) params.set('q', filter.q);
+    if (filter.group) params.set('group', filter.group);
+    if (filter.sort) {
+      params.set('sort', filter.sort);
+      params.set('dir', filter.dir ?? 'asc');
+    }
+    params.set('page', String(filter.page ?? 1));
+    params.set('page_size', String(filter.pageSize ?? 25));
+    const raw = await this.fetch<RawUnassignedPage>(`/api/employees/unassigned?${params}`);
+    return {
+      items: raw.items.map((r) => ({
+        id: r.EID,
+        name: r.Name,
+        country: r.Country ?? '',
+        level: r.CL ?? '',
+        client: r.Client?.trim() ? r.Client : null,
+        manager: r.Manager,
+        rollOff: r.RollOff,
+        fad: r.FAD,
+        daysToAvailable: r.DaysToAvailable,
+        days: r.Days,
+        group: r.Group,
+      })),
+      total: raw.total,
+      page: raw.page,
+      pageSize: raw.page_size,
+      pages: raw.pages,
+      counts: raw.counts,
     };
   }
 

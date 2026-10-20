@@ -227,7 +227,8 @@
     "colEmployee": "Employee",
     "colCountry": "Country",
     "colRisk": "Risk",
-    "colDetail": "Detail"
+    "colDetail": "Detail",
+    "unassignedButton": "Unassigned"
   },
   "ppa": {
     "title": "PPA",
@@ -444,6 +445,28 @@
   },
   "errors": {
     "unexpected": "Unexpected error"
+  },
+  "unassigned": {
+    "title": "Unassigned",
+    "subtitle": "People without an assignment today and soon to be released",
+    "noData": "No data",
+    "exportCsv": "Export",
+    "searchPlaceholder": "Search employee, client or manager…",
+    "empty": "No people to show",
+    "colEmployee": "Employee",
+    "colCountry": "Country",
+    "colLevel": "Level",
+    "colClient": "Client / Status",
+    "colRollOff": "Roll off",
+    "colDays": "Days",
+    "noClient": "Unassigned",
+    "group": {
+      "unassigned": "Unassigned",
+      "mes_actual": "This month",
+      "mes1": "Next month",
+      "mes2": "In 2 months"
+    },
+    "groupFilter": "Group",
+    "colGroup": "Group"
   }
 }
-

@@ -51,6 +51,10 @@ interface DataTableProps<TData> {
   pagination?: PaginationProps;
   onRowClick?: (row: TData) => void;
   getRowClassName?: (row: TData) => string;
+  // Modo servidor: el orden lo resuelve el backend, la tabla solo reporta el cambio
+  manualSorting?: boolean;
+  sorting?: SortingState;
+  onSortingChange?: (sorting: SortingState) => void;
 }
 
 const rowVariants = {
@@ -93,10 +97,14 @@ function DraggableHeader<TData extends RowData>({ header }: { header: Header<TDa
   );
 }
 
-export function DataTable<TData>({ data, columns, className, pagination, onRowClick, getRowClassName }: DataTableProps<TData>) {
+export function DataTable<TData>({
+  data, columns, className, pagination, onRowClick, getRowClassName,
+  manualSorting, sorting: controlledSorting, onSortingChange,
+}: DataTableProps<TData>) {
   const t = useTranslations('common');
   const dndId = useId();
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [localSorting, setLocalSorting] = useState<SortingState>([]);
+  const sorting = manualSorting ? (controlledSorting ?? []) : localSorting;
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
     columns.map((c) => c.id as string),
@@ -108,7 +116,12 @@ export function DataTable<TData>({ data, columns, className, pagination, onRowCl
     data,
     columns,
     state: { sorting, columnFilters, columnOrder },
-    onSortingChange: setSorting,
+    manualSorting,
+    onSortingChange: (updater) => {
+      const next = typeof updater === 'function' ? updater(sorting) : updater;
+      if (manualSorting) onSortingChange?.(next);
+      else setLocalSorting(next);
+    },
     onColumnFiltersChange: setColumnFilters,
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
