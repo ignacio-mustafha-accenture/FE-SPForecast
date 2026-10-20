@@ -11,9 +11,9 @@ export function Skeleton({ className, variant = 'rect', width, height }: Skeleto
   return (
     <span
       className={cn(
-        'block animate-pulse bg-[var(--G5)] rounded',
+        'skeleton block rounded-lg',
         variant === 'circle' && 'rounded-full',
-        variant === 'text' && 'h-4 rounded',
+        variant === 'text' && 'h-4 rounded-md',
         className,
       )}
       style={{ width, height }}

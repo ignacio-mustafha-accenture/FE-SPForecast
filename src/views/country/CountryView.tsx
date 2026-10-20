@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -427,7 +427,7 @@ export function CountryView({ country }: CountryViewProps) {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-[var(--G5)]">
-                    <th className="text-left py-2 pr-4 text-[var(--G3)] font-semibold sticky left-0 bg-white min-w-[160px]">
+                    <th className="text-left py-2 pr-4 text-[var(--G3)] font-semibold sticky left-0 bg-[var(--surface)] min-w-[160px]">
                       Empleado
                     </th>
                     {periods.map((p, i) => (
@@ -452,7 +452,7 @@ export function CountryView({ country }: CountryViewProps) {
                         exit="exit"
                         className="group border-b border-[var(--G6)] hover:bg-[var(--G6)]"
                       >
-                        <td className="py-2 pr-4 sticky left-0 bg-white">
+                        <td className="py-2 pr-4 sticky left-0 bg-[var(--surface)]">
                           <div className="flex items-center gap-1.5">
                             <button
                               className="text-[var(--P)] hover:underline text-left font-medium"
@@ -527,7 +527,7 @@ export function CountryView({ country }: CountryViewProps) {
                         ? 'bg-[var(--P)] text-white border-[var(--P)] opacity-70'
                         : inRange
                           ? 'bg-[var(--P)] text-white border-[var(--P)]'
-                          : 'bg-white text-[var(--G3)] border-[var(--G5)] hover:text-[var(--G1)] hover:bg-[var(--G6)]',
+                          : 'bg-[var(--surface)] text-[var(--G3)] border-[var(--G5)] hover:text-[var(--G1)] hover:bg-[var(--G6)]',
                     ].join(' ')}
                   >
                     {p.label}
@@ -547,7 +547,7 @@ export function CountryView({ country }: CountryViewProps) {
                 min={0}
                 max={100}
                 step={1}
-                className="w-full text-sm border border-[var(--G5)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--P)]"
+                className="w-full text-sm neu-pressed border border-transparent rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--P)]"
                 value={effectivizePct}
                 onChange={(ev) => setEffectivizePct(ev.target.value)}
                 disabled={isEffectivizing}

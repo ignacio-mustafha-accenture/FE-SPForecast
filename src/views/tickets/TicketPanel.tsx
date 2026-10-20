@@ -195,7 +195,7 @@ function PeriodPreviewPanel({ info }: { info: PeriodPreviewInfo }) {
             return (
               <div
                 key={label}
-                className="flex-1 flex flex-col items-center gap-0.5 rounded-md bg-white border border-[var(--G5)] py-1.5 px-1"
+                className="flex-1 flex flex-col items-center gap-0.5 rounded-lg neu-pressed py-1.5 px-1"
               >
                 <span className="text-[9px] text-[var(--G3)] font-medium">{label}</span>
                 <span className={`text-xs font-bold ${color}`}>{pct}%</span>
@@ -606,7 +606,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                   () => setShowTypeDrop(false),
                 )
               }
-              className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showTypeDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
+              className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-[var(--surface)] text-sm text-left focus:outline-none transition-colors ${showTypeDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
             >
               <span className={`flex-1 ${watch('type') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
                 {TYPE_OPTIONS.find((o) => o.value === watch('type'))?.label ?? t('typeLabel')}
@@ -617,7 +617,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
             {showTypeDrop && (
               <ul
                 ref={typeListRef}
-                className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden"
+                className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden"
               >
                 {TYPE_OPTIONS.map((o, i) => (
                   <li
@@ -662,7 +662,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-[var(--G2)]">{t('eidLabel')}</label>
                 <div className="relative">
-                  <div className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text">
+                  <div className="flex items-center gap-2 px-3 py-2 neu-pressed border border-transparent rounded-lg focus-within:border-[var(--P)] transition-colors cursor-text">
                     {selectedEid && !ticket ? (
                       <>
                         <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-sm min-w-0 max-w-[160px]">
@@ -714,7 +714,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                   {showEidDrop && filteredEmployees.length > 0 && (
                     <ul
                       ref={eidListRef}
-                      className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+                      className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
                     >
                       {filteredEmployees.map((e, i) => (
                         <li
@@ -766,7 +766,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                             () => setShowClDrop(false),
                           )
                         }
-                        className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showClDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
+                        className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-[var(--surface)] text-sm text-left focus:outline-none transition-colors ${showClDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
                       >
                         <span className={`flex-1 ${watch('cl') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
                           {CL_OPTIONS.find((o) => o.value === watch('cl'))?.label ?? '—'}
@@ -775,7 +775,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                       </button>
                       {errors.cl && <p className="text-xs text-[var(--RD)] mt-1">{errors.cl.message}</p>}
                       {showClDrop && (
-                        <ul ref={clListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden">
+                        <ul ref={clListRef} className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden">
                           {CL_OPTIONS.map((o, i) => (
                             <li
                               key={o.value}
@@ -805,7 +805,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                             () => setShowLocationDrop(false),
                           )
                         }
-                        className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showLocationDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
+                        className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-[var(--surface)] text-sm text-left focus:outline-none transition-colors ${showLocationDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
                       >
                         <span className={`flex-1 ${watch('location') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
                           {LOCATION_OPTIONS.find((o) => o.value === watch('location'))?.label ?? '—'}
@@ -814,7 +814,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                       </button>
                       {errors.location && <p className="text-xs text-[var(--RD)] mt-1">{errors.location.message}</p>}
                       {showLocationDrop && (
-                        <ul ref={locationListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden">
+                        <ul ref={locationListRef} className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden">
                           {LOCATION_OPTIONS.map((o, i) => (
                             <li
                               key={o.value}
@@ -832,7 +832,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                     <label className="text-xs font-medium text-[var(--G2)]">{t('peopleleadLabel')}</label>
                     <div className="relative">
                       <div
-                        className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text"
+                        className="flex items-center gap-2 px-3 py-2 neu-pressed border border-transparent rounded-lg focus-within:border-[var(--P)] transition-colors cursor-text"
                         onClick={() => !selectedPlEmployee && setShowPlDrop(true)}
                       >
                         {selectedPlEmployee ? (
@@ -881,7 +881,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                       {showPlDrop && filteredPl.length > 0 && (
                         <ul
                           ref={plListRef}
-                          className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+                          className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
                         >
                           {filteredPl.map((e, i) => (
                             <li
@@ -911,7 +911,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                   <label className="text-xs font-medium text-[var(--G2)]">T&amp;E Approver</label>
                   <div className="relative">
                     <div
-                      className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text"
+                      className="flex items-center gap-2 px-3 py-2 neu-pressed border border-transparent rounded-lg focus-within:border-[var(--P)] transition-colors cursor-text"
                       onClick={() => !selectedTaEmployee && setShowTaDrop(true)}
                     >
                       {selectedTaEmployee ? (
@@ -960,7 +960,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                     {showTaDrop && filteredTa.length > 0 && (
                       <ul
                         ref={taListRef}
-                        className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+                        className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
                       >
                         {filteredTa.map((e, i) => (
                           <li
@@ -990,7 +990,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                   <label className="text-xs font-medium text-[var(--G2)]">{t('clientLabel')}</label>
                   <div className="relative">
                     <div
-                      className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text"
+                      className="flex items-center gap-2 px-3 py-2 neu-pressed border border-transparent rounded-lg focus-within:border-[var(--P)] transition-colors cursor-text"
                       onClick={() => !selectedClient && setShowClientDrop(true)}
                     >
                       {selectedClient ? (
@@ -1044,7 +1044,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                     {showClientDrop && (filteredClients.length > 0 || clientSearch) && (
                       <ul
                         ref={clientListRef}
-                        className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+                        className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
                       >
                         {filteredClients.map((c, i) => (
                           <li
@@ -1093,7 +1093,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                           () => setShowOfferingDrop(false),
                         )
                       }
-                      className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors ${showOfferingDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
+                      className={`flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-[var(--surface)] text-sm text-left focus:outline-none transition-colors ${showOfferingDrop ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]'}`}
                     >
                       <span className={`flex-1 ${watch('offering_type') ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
                         {OFFERING_OPTIONS.find((o) => o.value === watch('offering_type'))?.label ?? '—'}
@@ -1104,7 +1104,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                     {showOfferingDrop && (
                       <ul
                         ref={offeringListRef}
-                        className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden"
+                        className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden"
                       >
                         {OFFERING_OPTIONS.map((o, i) => (
                           <li
@@ -1137,7 +1137,7 @@ export function TicketPanel({ open, ticket, onClose, onSuccess, onSelectPPA }: T
                 {!(selectedType === 'newproj' && scenarioTypeValue === 'assumption') && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-[var(--G2)]">{t('chargeabilityLabel')}</label>
-                    <div className="flex items-center h-9 rounded-lg border border-[var(--G5)] bg-white focus-within:border-[var(--P)] focus-within:ring-1 focus-within:ring-[var(--P)] transition-colors overflow-hidden">
+                    <div className="flex items-center h-9 rounded-lg neu-pressed border border-transparent focus-within:border-[var(--P)] focus-within:ring-1 focus-within:ring-[var(--P)] transition-colors overflow-hidden">
                       <input
                         type="number"
                         min={0}

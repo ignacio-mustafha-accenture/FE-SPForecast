@@ -49,7 +49,7 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="rounded-xl border border-[var(--G5)] bg-white p-8 shadow-sm text-center">
+      <div className="glass rounded-2xl p-8 text-center">
         <p className="text-[var(--RD)] text-sm">{t('invalidLink')}</p>
         <Link href="/forgot-password" className="mt-4 inline-block text-xs text-[var(--P)] hover:underline">
           {t('requestNewLink')}
@@ -59,7 +59,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="rounded-xl border border-[var(--G5)] bg-white p-8 shadow-sm">
+    <div className="glass rounded-2xl p-8">
       <h2 className="text-lg font-semibold text-[var(--G1)] mb-6">{t('title')}</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <Input

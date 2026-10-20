@@ -171,7 +171,7 @@ function assumptionKind(emp: Employee): AssumptionKind {
 }
 
 const ROW_TONE: Record<AssumptionKind, string> = {
-  effective:     'bg-white',
+  effective:     'bg-[var(--surface)]',
   isgAssessment: 'bg-[#fefce8]',
   newJoiner:     'bg-[#f8fafc]',
   isgRingfenced: 'bg-[#e0f2fe]',
@@ -808,20 +808,20 @@ export function AllView() {
         <button
           onClick={() => navigate(-1)}
           disabled={isFetching}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--G5)] bg-white text-[var(--G3)] hover:bg-[var(--G6)] hover:text-[var(--G1)] disabled:opacity-40 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg neu-interactive text-[var(--G3)] hover:text-[var(--G1)] disabled:opacity-40 transition-colors"
         >
           <ChevronLeft size={15} />
         </button>
         <button
           onClick={() => navigate(1)}
           disabled={isFetching}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--G5)] bg-white text-[var(--G3)] hover:bg-[var(--G6)] hover:text-[var(--G1)] disabled:opacity-40 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg neu-interactive text-[var(--G3)] hover:text-[var(--G1)] disabled:opacity-40 transition-colors"
         >
           <ChevronRight size={15} />
         </button>
         <button
           onClick={() => { setWindowAnchor(startOfDay(new Date())); }}
-          className="px-2.5 h-8 text-xs font-medium rounded-lg border border-[var(--G5)] bg-white text-[var(--G3)] hover:bg-[var(--G6)] hover:text-[var(--G1)] transition-colors"
+          className="px-2.5 h-8 text-xs font-medium rounded-lg neu-interactive text-[var(--G3)] hover:text-[var(--G1)] transition-colors"
         >
           Hoy
         </button>
@@ -893,10 +893,10 @@ export function AllView() {
                     onChange={(e) => { setTeApproverSearch(e.target.value); setShowTeApproverDrop(true); }}
                     onFocus={() => setShowTeApproverDrop(true)}
                     onBlur={() => setTimeout(() => setShowTeApproverDrop(false), 150)}
-                    className="px-2.5 py-0.5 text-xs border border-[var(--G5)] rounded-md bg-white text-[var(--G1)] placeholder-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] w-32"
+                    className="px-2.5 py-0.5 text-xs neu-pressed border border-transparent rounded-md text-[var(--G1)] placeholder-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] w-32"
                   />
                   {showTeApproverDrop && (teApproversFiltered.length > 0 || teApproverSearch.length > 0) && (
-                    <ul className="absolute z-50 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto min-w-[180px] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)]">
+                    <ul className="absolute z-50 left-0 top-full mt-1 glass rounded-xl overflow-hidden max-h-48 overflow-y-auto min-w-[180px] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)]">
                       {teApproversFiltered.map((name) => (
                         <li
                           key={name}
@@ -936,7 +936,7 @@ export function AllView() {
               title={activeFilterCount > 0 ? 'Limpiar todos los filtros' : 'No hay filtros aplicados'}
               className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
                 activeFilterCount > 0
-                  ? 'border-[var(--P)] bg-[var(--PBG)] text-[var(--PD)] hover:bg-white cursor-pointer'
+                  ? 'border-[var(--P)] bg-[var(--PBG)] text-[var(--PD)] hover:bg-[var(--surface)] cursor-pointer'
                   : 'border-[var(--G5)] text-[var(--G3)] cursor-default'
               }`}
             >
@@ -1001,7 +1001,7 @@ export function AllView() {
           {totalRows.length > 0 && (
             <div
               ref={totalsBlockRef}
-              className="border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] flex flex-col"
+              className="neu-raised rounded-xl flex flex-col"
             >
               <button
                 type="button"
@@ -1093,7 +1093,7 @@ export function AllView() {
                     const bottom = isLast ? '' : 'border-b';
                     const isOffering = row.kind === 'offering';
                     // Las filas de offering se subordinan a su pais: indentadas y en blanco
-                    const rowBg = isOffering ? 'bg-white' : 'bg-[#f2f6fc]';
+                    const rowBg = isOffering ? 'bg-[var(--surface)]' : 'bg-[#f2f6fc]';
                     const curBg = isOffering ? 'bg-[#f8fbff]' : 'bg-[#e7eefa]';
                     return (
                       <tr key={row.key}>
@@ -1166,7 +1166,7 @@ export function AllView() {
 
           <div
             ref={tableCardRef}
-            className="border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] overflow-auto [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar]:h-[6px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+            className="neu-raised rounded-xl overflow-auto [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar]:h-[6px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
             style={{ height: tableHeight }}
           >
           <table
@@ -1348,12 +1348,12 @@ export function AllView() {
                         <Fragment key={i}>
                           <td
                             title={cellTitle}
-                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[32px] ${aStyle || hasPpaCascade ? '' : 'bg-white'}`}
+                            className={`border-b border-r border-l-2 border-[var(--G5)] text-center h-[32px] ${aStyle || hasPpaCascade ? '' : 'bg-[var(--surface)]'}`}
                             style={{ padding: 0, ...cellBg }}
                           >
                             <span className="text-[10px] font-semibold" style={aStyle ? { color: aStyle.fg } : undefined}>{chgLabel}</span>
                           </td>
-                          <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] ${hasPpaCascade ? '' : 'bg-white'}`} style={{ padding: 0, ...(hasPpaCascade ? { background: '#EDE9FE' } : {}) }}>
+                          <td className={`border-b border-r border-[var(--G5)] text-center h-[32px] ${hasPpaCascade ? '' : 'bg-[var(--surface)]'}`} style={{ padding: 0, ...(hasPpaCascade ? { background: '#EDE9FE' } : {}) }}>
                             {/* Sin SAH cargado se muestra un guion. Antes caia en una constante
                                 por pais y pintaba un numero inventado, que hacia parecer que el
                                 periodo tenia horas disponibles cuando en realidad no hay dato. */}
@@ -1366,7 +1366,7 @@ export function AllView() {
                             return (
                               <td
                                 title={cellTitle}
-                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[32px] ${aStyle || hasPpaCascade ? '' : 'bg-white'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center h-[32px] ${aStyle || hasPpaCascade ? '' : 'bg-[var(--surface)]'} ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}`}
                                 style={{ padding: 0, ...cellBg }}
                                 onClick={isClickable ? () => {
                                   const empTickets = allTickets.filter((t) => t.employeeId === emp.id);
@@ -1393,7 +1393,7 @@ export function AllView() {
 
       ) : (
 
-        <div className={`overflow-x-auto border border-[var(--G5)] rounded-xl bg-white shadow-[0_1px_3px_rgba(20,25,40,.04)] transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className={`overflow-x-auto neu-raised transition-opacity duration-200 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}>
           <table
             style={{
               borderCollapse: 'separate',
@@ -1569,7 +1569,7 @@ export function AllView() {
                           <td
                             key={d.idx}
                             className={`border-b border-r border-[var(--G5)] last:border-r-0 text-center align-middle h-[34px] ${
-                              d.weekend ? 'bg-white' : holidayName ? 'bg-[#efefef]' : isOutOfRange ? 'bg-[#f7f7f7]' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : 'bg-[#fafbfc]'
+                              d.weekend ? 'bg-[var(--surface)]' : holidayName ? 'bg-[#efefef]' : isOutOfRange ? 'bg-[#f7f7f7]' : effectivePto ? 'bg-amber-50' : isSickDay ? 'bg-blue-50' : 'bg-[#fafbfc]'
                             }`}
                             style={{ padding: 0 }}
                           >
@@ -1610,7 +1610,7 @@ export function AllView() {
                           exit={{ opacity: 0, y: -4, transition: { duration: 0.14, ease: 'easeIn' } }}
                         >
                           <td
-                            className="sticky left-0 z-10 bg-white border-b border-r border-[var(--G5)] text-xs text-[var(--G3)] font-medium"
+                            className="sticky left-0 z-10 bg-[var(--surface)] border-b border-r border-[var(--G5)] text-xs text-[var(--G3)] font-medium"
                             style={{ paddingLeft: 26, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}
                           >
                             {!isRefetching && (
@@ -1624,7 +1624,7 @@ export function AllView() {
                           </td>
                           <td
                             colSpan={nDays}
-                            className="border-b border-[var(--G5)] bg-white"
+                            className="border-b border-[var(--G5)] bg-[var(--surface)]"
                             style={{ position: 'relative', height: 32, padding: isRefetching ? '6px 8px' : 0 }}
                           >
                             {isRefetching ? (
@@ -1706,9 +1706,9 @@ export function AllView() {
                               })()
                             )}
                           </td>
-                          <td className="border-b border-l border-[var(--G5)] bg-white" />
-                          <td className="border-b border-l border-[var(--G5)] bg-white" />
-                          <td className="border-b border-l border-[var(--G5)] bg-white" />
+                          <td className="border-b border-l border-[var(--G5)] bg-[var(--surface)]" />
+                          <td className="border-b border-l border-[var(--G5)] bg-[var(--surface)]" />
+                          <td className="border-b border-l border-[var(--G5)] bg-[var(--surface)]" />
                         </motion.tr>
                       )}
                     </AnimatePresence>,
@@ -1722,7 +1722,7 @@ export function AllView() {
                           exit={{ opacity: 0, y: -4, transition: { duration: 0.14, ease: 'easeIn' } }}
                         >
                           <td
-                            className="sticky left-0 z-10 bg-white border-b border-r border-[var(--G5)]"
+                            className="sticky left-0 z-10 bg-[var(--surface)] border-b border-r border-[var(--G5)]"
                             style={{ paddingLeft: 26, paddingRight: 12, paddingTop: 6, paddingBottom: 10, verticalAlign: 'top' }}
                           >
                             <span style={{ fontSize: 10, color: 'var(--G4)', fontWeight: 500 }}>Forecast</span>
@@ -1736,7 +1736,7 @@ export function AllView() {
                           </td>
                           <td
                             colSpan={nDays}
-                            className="border-b border-[var(--G5)] bg-white"
+                            className="border-b border-[var(--G5)] bg-[var(--surface)]"
                             style={{ padding: '6px 16px 10px' }}
                           >
                             <div className="flex items-end gap-1.5" style={{ height: 72 }}>
@@ -1794,9 +1794,9 @@ export function AllView() {
                               })}
                             </div>
                           </td>
-                          <td className="border-b border-l border-[var(--G5)] bg-white" />
-                          <td className="border-b border-l border-[var(--G5)] bg-white" />
-                          <td className="border-b border-l border-[var(--G5)] bg-white" />
+                          <td className="border-b border-l border-[var(--G5)] bg-[var(--surface)]" />
+                          <td className="border-b border-l border-[var(--G5)] bg-[var(--surface)]" />
+                          <td className="border-b border-l border-[var(--G5)] bg-[var(--surface)]" />
                         </motion.tr>
                       )}
                     </AnimatePresence>,
@@ -1819,7 +1819,7 @@ export function AllView() {
             </div>
           ))}
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
-            <div className="w-6 h-[13px] rounded-[3px] border border-[var(--G5)] bg-white" />
+            <div className="w-6 h-[13px] rounded-[3px] border border-[var(--G5)] bg-[var(--surface)]" />
             Hard Lock
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--G3)] font-medium">
@@ -1894,7 +1894,7 @@ export function AllView() {
                           ? 'bg-[var(--P)] text-white border-[var(--P)] opacity-70'
                           : inRange
                             ? 'bg-[var(--P)] text-white border-[var(--P)]'
-                            : 'bg-white text-[var(--G3)] border-[var(--G5)] hover:text-[var(--G1)] hover:bg-[var(--G6)]',
+                            : 'bg-[var(--surface)] text-[var(--G3)] border-[var(--G5)] hover:text-[var(--G1)] hover:bg-[var(--G6)]',
                       ].join(' ')}
                     >
                       {p.label}
@@ -1916,7 +1916,7 @@ export function AllView() {
                   min={0}
                   max={100}
                   step={1}
-                  className="w-full text-sm border border-[var(--G5)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--P)]"
+                  className="w-full text-sm neu-pressed border border-transparent rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--P)]"
                   value={effectivizePct}
                   onChange={(ev) => setEffectivizePct(ev.target.value)}
                 />
@@ -1954,7 +1954,7 @@ export function AllView() {
               {chgModal.tickets.length} ticket{chgModal.tickets.length !== 1 ? 's' : ''} asociado{chgModal.tickets.length !== 1 ? 's' : ''}
             </p>
             {chgModal.tickets.map((ticket) => (
-              <div key={ticket.id} className="border border-[var(--G5)] rounded-lg p-3 space-y-2">
+              <div key={ticket.id} className="neu-raised-sm rounded-lg p-3 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={typeVariant[ticket.type] ?? 'neutral'}>
                     {TYPE_LABELS[ticket.type] ?? ticket.type}

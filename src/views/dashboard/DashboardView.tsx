@@ -365,7 +365,7 @@ export function DashboardView() {
                       p.delete('level');
                       router.replace(`?${p.toString()}`, { scroll: false });
                     }}
-                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-[var(--P)] bg-[var(--PBG)] text-[var(--PD)] hover:bg-white cursor-pointer transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-[var(--P)] bg-[var(--PBG)] text-[var(--PD)] hover:bg-[var(--surface)] cursor-pointer transition-colors"
                   >
                     <X size={11} />
                     Limpiar ({activeFilterCount})
@@ -389,7 +389,7 @@ export function DashboardView() {
                         onClick={irAnterior}
                         disabled={(iSelected === 0 && limite.inicio) || isLoading}
                         aria-label="Período anterior"
-                        className="flex items-center justify-center rounded-md border border-[var(--G5)] bg-[var(--G6)] p-1 text-[var(--G2)] hover:border-[var(--G4)] hover:bg-[var(--G5)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center justify-center neu-interactive rounded-md p-1 text-[var(--G2)] disabled:opacity-25 disabled:cursor-not-allowed"
                       >
                         <ChevronLeft size={13} />
                       </button>
@@ -401,7 +401,7 @@ export function DashboardView() {
                         onClick={irSiguiente}
                         disabled={(iSelected === appState.periods.length - 1 && limite.fin) || isLoading}
                         aria-label="Período siguiente"
-                        className="flex items-center justify-center rounded-md border border-[var(--G5)] bg-[var(--G6)] p-1 text-[var(--G2)] hover:border-[var(--G4)] hover:bg-[var(--G5)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center justify-center neu-interactive rounded-md p-1 text-[var(--G2)] disabled:opacity-25 disabled:cursor-not-allowed"
                       >
                         <ChevronRight size={13} />
                       </button>

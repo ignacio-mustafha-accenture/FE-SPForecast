@@ -91,7 +91,7 @@ const blockRepo = new HttpChargeabilityBlockRepository();
 
 function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-[var(--G5)] px-4 py-3">
+    <div className="neu-raised px-4 py-3">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--G3)] mb-0.5">{label}</p>
       <p className="text-sm font-semibold text-[var(--G1)] truncate">{value ?? <span className="font-normal text-[var(--G4)]">—</span>}</p>
     </div>
@@ -372,7 +372,7 @@ export function EmployeeDetailView({ eid }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Información */}
-        <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
+        <div className="neu-raised overflow-hidden">
           <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)]">
             <h2 className="text-sm font-semibold text-[var(--G1)]">{t('sectionInfo')}</h2>
           </div>
@@ -418,7 +418,7 @@ export function EmployeeDetailView({ eid }: Props) {
         </div>
 
         {/* Editar */}
-        <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
+        <div className="neu-raised overflow-hidden">
           <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)]">
             <h2 className="text-sm font-semibold text-[var(--G1)]">{t('sectionEdit')}</h2>
           </div>
@@ -441,7 +441,7 @@ export function EmployeeDetailView({ eid }: Props) {
       </div>
 
       {/* Cargabilidad por período */}
-      <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
+      <div className="neu-raised overflow-hidden">
         <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)] flex items-center justify-between">
           <h2 className="text-sm font-semibold text-[var(--G1)]">Cargabilidad por período</h2>
           <button
@@ -493,8 +493,8 @@ export function EmployeeDetailView({ eid }: Props) {
                       onClick={() => setBlockValue('scenario_type', opt.value)}
                       className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${
                         (watchBlock('scenario_type') ?? 'assumption') === opt.value
-                          ? 'border-[var(--P)] bg-white text-[var(--P)] font-medium'
-                          : 'border-[var(--G5)] bg-white text-[var(--G2)] hover:bg-[var(--G6)]'
+                          ? 'border-[var(--P)] bg-[var(--surface)] text-[var(--P)] font-medium'
+                          : 'border-[var(--G5)] bg-[var(--surface)] text-[var(--G2)] hover:bg-[var(--G6)]'
                       }`}
                     >
                       {opt.label}
@@ -549,7 +549,7 @@ export function EmployeeDetailView({ eid }: Props) {
 
       {/* Forecast histórico */}
       {(periods ?? []).length > 0 && (
-        <div className="bg-white rounded-xl border border-[var(--G5)] overflow-hidden">
+        <div className="neu-raised overflow-hidden">
           <div className="px-5 py-3 border-b border-[var(--G5)] bg-[var(--G6)]">
             <h2 className="text-sm font-semibold text-[var(--G1)]">{t('sectionForecast')}</h2>
           </div>

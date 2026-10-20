@@ -32,7 +32,7 @@ export function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="rounded-xl border border-[var(--G5)] bg-white p-8 shadow-sm text-center">
+      <div className="glass rounded-2xl p-8 text-center">
         <p className="text-[var(--GR)] font-medium mb-2">{t('successTitle')}</p>
         <p className="text-sm text-[var(--G2)]">{t('successBody')}</p>
         <Link href="/login" className="mt-4 inline-block text-xs text-[var(--P)] hover:underline">
@@ -43,7 +43,7 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="rounded-xl border border-[var(--G5)] bg-white p-8 shadow-sm">
+    <div className="glass rounded-2xl p-8">
       <h2 className="text-lg font-semibold text-[var(--G1)] mb-2">{t('title')}</h2>
       <p className="text-sm text-[var(--G2)] mb-6">{t('subtitle')}</p>
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">

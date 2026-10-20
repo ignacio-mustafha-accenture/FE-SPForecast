@@ -416,7 +416,7 @@ export function TicketDetailView({ id }: Props) {
       </motion.div>
 
       {/* Unified ticket card */}
-      <motion.div variants={item} className="rounded-lg border border-[var(--G5)] overflow-hidden shadow-sm">
+      <motion.div variants={item} className="neu-raised overflow-hidden">
 
         {/* Colored header */}
         <div className={`border-l-4 ${style.bg} ${style.border} px-6 py-5`}>
@@ -435,7 +435,7 @@ export function TicketDetailView({ id }: Props) {
 
         {/* Body */}
         {hasBody && (
-          <div className="bg-white px-6 py-4 space-y-4">
+          <div className="bg-[var(--surface)] px-6 py-4 space-y-4">
             {fields.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-10">
                 {fields.map(({ label, value }) => (
@@ -492,7 +492,7 @@ export function TicketDetailView({ id }: Props) {
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder={t('rejectModalReasonPlaceholder')}
               rows={4}
-              className="w-full rounded border border-[var(--G5)] bg-white px-3 py-2 text-sm text-[var(--G1)] placeholder:text-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] transition-colors resize-none"
+              className="w-full rounded neu-pressed border border-transparent px-3 py-2 text-sm text-[var(--G1)] placeholder:text-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] transition-colors resize-none"
             />
           </div>
           <div className="flex gap-2">

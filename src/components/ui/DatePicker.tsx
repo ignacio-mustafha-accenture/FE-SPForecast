@@ -110,7 +110,7 @@ export function DatePicker({
           disabled={disabled}
           onClick={handleOpen}
           className={cn(
-            'h-9 w-full rounded border border-[var(--G5)] bg-white px-3 text-sm text-left flex items-center gap-2',
+            'neu-pressed h-9 w-full rounded-lg border border-transparent px-3 text-sm text-left flex items-center gap-2',
             'transition-colors focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)]',
             'disabled:bg-[var(--G6)] disabled:cursor-not-allowed',
             error && 'border-[var(--RD)] focus:border-[var(--RD)] focus:ring-[var(--RD)]',
@@ -124,7 +124,7 @@ export function DatePicker({
         </button>
 
         {open && (
-          <div className="absolute z-20 top-full mt-1 left-0 bg-white border border-[var(--G5)] rounded-lg shadow-lg p-3 select-none">
+          <div className="absolute z-20 top-full mt-1 left-0 glass rounded-xl p-3 select-none">
             <DayPicker
               mode="single"
               selected={selected ?? new Date()}

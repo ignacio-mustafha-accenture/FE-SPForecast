@@ -237,7 +237,7 @@ export function HolidaysView() {
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="flex items-center gap-3 p-4 bg-[var(--G6)] rounded-lg border border-[var(--G5)]">
+                      <div className="flex items-center gap-3 p-4 neu-pressed rounded-lg">
                         <span className="text-sm text-[var(--G3)] shrink-0 w-28">
                           {format(selectedDate, 'd MMM yyyy', { locale: es })}
                         </span>
@@ -246,7 +246,7 @@ export function HolidaysView() {
                           onChange={(e) => setNewName(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
                           placeholder={t('holidayNamePlaceholder')}
-                          className="flex-1 px-3 py-1.5 text-sm border border-[var(--G5)] rounded bg-white text-[var(--G1)] outline-none focus:border-[var(--P)] placeholder:text-[var(--G4)]"
+                          className="flex-1 px-3 py-1.5 text-sm neu-pressed border border-transparent rounded text-[var(--G1)] outline-none focus:border-[var(--P)] placeholder:text-[var(--G4)]"
                         />
                         <Button loading={adding} onClick={handleAdd} className="shrink-0 flex items-center gap-1.5">
                           <Plus size={14} />

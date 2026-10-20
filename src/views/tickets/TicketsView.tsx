@@ -367,7 +367,7 @@ export function TicketsView() {
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder={t('rejectModalReasonPlaceholder')}
               rows={4}
-              className="w-full rounded border border-[var(--G5)] bg-white px-3 py-2 text-sm text-[var(--G1)] placeholder:text-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] transition-colors resize-none"
+              className="w-full rounded neu-pressed border border-transparent px-3 py-2 text-sm text-[var(--G1)] placeholder:text-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)] transition-colors resize-none"
             />
           </div>
           <div className="flex gap-2">

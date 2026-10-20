@@ -64,7 +64,7 @@ export function ChartTooltip({
 }) {
   if (!activo) return null;
   return (
-    <div className="rounded-md border border-[var(--G5)] bg-white px-3 py-2 shadow-lg">
+    <div className="glass rounded-lg px-3 py-2">
       {titulo && (
         <p className="mb-1.5 text-xs font-bold text-[var(--G1)]">{titulo}</p>
       )}

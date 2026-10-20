@@ -48,7 +48,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="rounded-xl border border-[var(--G5)] bg-white p-8 shadow-sm">
+    <div className="glass rounded-2xl p-8">
       <h2 className="text-lg font-semibold text-[var(--G1)] mb-6">{t('title')}</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <Input

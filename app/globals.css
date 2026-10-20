@@ -221,6 +221,25 @@ body {
   animation: reveal-up var(--dur-reveal) var(--ease-out-soft) both;
 }
 
+/* Skeleton: base hundida con brillo lila que recorre la superficie */
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+@utility skeleton {
+  background-color: var(--surface);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--brand-1) 14%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  box-shadow: var(--shadow-neu-pressed);
+  animation: skeleton-shimmer 1.8s linear infinite;
+}
+
 /* ── Fondo decorativo: bubbles difuminados (estatico, sin animacion) ─ */
 .app-bubbles {
   position: fixed;

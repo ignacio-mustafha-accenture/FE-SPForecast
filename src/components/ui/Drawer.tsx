@@ -30,7 +30,7 @@ export function Drawer({ open, onClose, title, children, width = '420px' }: Draw
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ duration: 0.2, ease: 'easeInOut' as const }}
-            className="fixed right-0 top-0 h-full z-50 bg-white shadow-xl flex flex-col"
+            className="fixed right-0 top-0 h-full z-50 glass rounded-none border-y-0 border-r-0 flex flex-col"
             style={{ width }}
           >
             <div className="flex items-center justify-between border-b border-[var(--G5)] px-5 py-3">

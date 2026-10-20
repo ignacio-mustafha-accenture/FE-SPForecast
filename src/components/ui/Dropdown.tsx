@@ -54,11 +54,10 @@ export function MultiDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        data-active={open || isActive}
         className={cn(
-          'flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium border rounded-full bg-white transition-colors focus:outline-none cursor-pointer',
-          open || isActive
-            ? 'border-[var(--P)] text-[var(--PD)] bg-[var(--PBG)]'
-            : 'border-[var(--G5)] text-[var(--G2)] hover:border-[var(--G3)]',
+          'neu-interactive flex items-center gap-1.5 px-3 py-0.5 text-xs font-medium rounded-full focus:outline-none cursor-pointer',
+          open || isActive ? 'text-[var(--PD)] font-semibold' : 'text-[var(--G2)]',
           className,
         )}
       >
@@ -161,15 +160,13 @@ export function Dropdown({
 
   const triggerClass = compact
     ? cn(
-        'flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium border rounded-full bg-white transition-colors focus:outline-none cursor-pointer',
-        open || value
-          ? 'border-[var(--P)] text-[var(--PD)] bg-[var(--PBG)]'
-          : 'border-[var(--G5)] text-[var(--G2)] hover:border-[var(--G3)]',
+        'neu-interactive flex items-center gap-1.5 px-3 py-0.5 text-xs font-medium rounded-full focus:outline-none cursor-pointer',
+        open || value ? 'text-[var(--PD)] font-semibold' : 'text-[var(--G2)]',
         className,
       )
     : cn(
-        'flex items-center gap-2 w-full px-3 py-2 border rounded-lg bg-white text-sm text-left focus:outline-none transition-colors cursor-pointer',
-        open ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-[var(--G5)]',
+        'neu-pressed flex items-center gap-2 w-full px-3 py-2 border rounded-lg text-sm text-left focus:outline-none cursor-pointer',
+        open ? 'border-[var(--P)] ring-1 ring-[var(--P)]' : 'border-transparent',
         className,
       );
 
@@ -180,6 +177,7 @@ export function Dropdown({
         onClick={toggleOpen}
         onBlur={() => setTimeout(() => { setOpen(false); setActiveIdx(-1); }, 150)}
         onKeyDown={onKeyDown}
+        data-active={compact ? Boolean(open || value) : undefined}
         className={triggerClass}
       >
         <span className={compact ? undefined : `flex-1 ${value ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>

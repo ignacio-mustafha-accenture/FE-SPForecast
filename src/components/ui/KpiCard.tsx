@@ -20,7 +20,7 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        'rounded-lg border border-[var(--G5)] bg-white shadow-sm overflow-hidden',
+        'neu-raised overflow-hidden',
         className,
       )}
     >

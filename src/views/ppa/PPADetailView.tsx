@@ -250,7 +250,7 @@ export function PPADetailView({ id }: Props) {
       </motion.div>
 
       {/* PPA card */}
-      <motion.div variants={itemVariants} className="rounded-lg border border-[var(--G5)] overflow-hidden shadow-sm">
+      <motion.div variants={itemVariants} className="neu-raised overflow-hidden">
 
         {/* Colored header */}
         <div className={`border-l-4 ${style.bg} ${style.border} px-6 py-5`}>
@@ -272,7 +272,7 @@ export function PPADetailView({ id }: Props) {
 
         {/* Fields */}
         {fields.length > 0 && (
-          <div className="bg-white px-6 py-4">
+          <div className="bg-[var(--surface)] px-6 py-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-10">
               {fields.map(({ label, value }) => (
                 <Field key={label} label={label} value={value} />

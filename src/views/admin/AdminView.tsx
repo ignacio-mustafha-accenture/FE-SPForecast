@@ -221,7 +221,7 @@ export function AdminView() {
             {/* Filter + Add */}
             <div className="flex gap-2">
               {/* Filter */}
-              <div className="flex items-center gap-2 flex-1 px-3 py-2 border border-[var(--G5)] rounded-lg bg-[var(--G6)]">
+              <div className="flex items-center gap-2 flex-1 px-3 py-2 neu-pressed rounded-lg">
                 <Search size={14} className="text-[var(--G3)] shrink-0" />
                 <input
                   placeholder={t('clientFilterPlaceholder')}
@@ -248,10 +248,10 @@ export function AdminView() {
                   }}
                   onFocus={() => setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                  className="w-full px-3 py-2 text-sm border border-[var(--G5)] rounded-lg bg-white text-[var(--G1)] outline-none focus:border-[var(--P)] transition-colors placeholder:text-[var(--G4)]"
+                  className="w-full px-3 py-2 text-sm neu-pressed border border-transparent rounded-lg text-[var(--G1)] outline-none focus:border-[var(--P)] transition-colors placeholder:text-[var(--G4)]"
                 />
                 {showSuggestions && suggestions.length > 0 && (
-                  <ul className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-md overflow-hidden">
+                  <ul className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden">
                     {suggestions.slice(0, 6).map((s) => (
                       <li
                         key={s}

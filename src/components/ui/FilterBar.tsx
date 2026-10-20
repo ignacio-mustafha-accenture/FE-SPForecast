@@ -78,7 +78,7 @@ export function FilterBar({ search, toggleGroups, selectGroups, className, trail
             value={search.value}
             onChange={(e) => search.onChange(e.target.value)}
             placeholder={search.placeholder ?? t('search')}
-            className="w-full pl-9 pr-3 py-1.5 text-sm border border-[var(--G5)] rounded-md bg-white text-[var(--G1)] placeholder-[var(--G4)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)]"
+            className="w-full pl-9 pr-3 py-1.5 text-sm neu-pressed border border-transparent rounded-lg text-[var(--G1)] placeholder-[var(--G3)] focus:outline-none focus:border-[var(--P)] focus:ring-1 focus:ring-[var(--P)]"
           />
         </div>
       )}
@@ -143,11 +143,10 @@ function Chip({ label, active, index, onClick }: { label: string; active: boolea
       initial="hidden"
       animate="show"
       onClick={onClick}
+      data-active={active}
       className={cn(
-        'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors duration-120 cursor-pointer',
-        active
-          ? 'bg-[var(--PBG)] text-[var(--PD)] border-[var(--P)]'
-          : 'bg-white text-[var(--G2)] border-[var(--G5)] hover:border-[var(--G3)]',
+        'neu-interactive px-3 py-0.5 rounded-full text-xs font-medium cursor-pointer',
+        active ? 'text-[var(--PD)] font-semibold' : 'text-[var(--G2)]',
       )}
     >
       {label}

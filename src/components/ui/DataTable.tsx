@@ -81,7 +81,7 @@ function DraggableHeader<TData extends RowData>({ header }: { header: Header<TDa
         transition,
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="bg-[var(--G6)] px-3 py-2 text-left text-xs font-semibold text-[var(--G2)] uppercase tracking-wide whitespace-nowrap select-none"
+      className="bg-[var(--brand-soft)] px-3 py-2 text-left text-xs font-semibold text-[var(--G2)] uppercase tracking-wide whitespace-nowrap select-none"
       {...attributes}
       {...listeners}
     >
@@ -144,9 +144,9 @@ export function DataTable<TData>({
 
   return (
     <div className="space-y-2">
-      <div className={cn('overflow-x-auto rounded-lg border border-[var(--G5)]', className)}>
+      <div className={cn('neu-raised overflow-x-auto', className)}>
         <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <table className="min-w-full divide-y divide-[var(--G5)] text-sm">
+          <table className="min-w-full divide-y divide-[var(--G5)]/60 text-sm">
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
@@ -158,7 +158,7 @@ export function DataTable<TData>({
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-[var(--G5)] bg-white">
+            <tbody className="divide-y divide-[var(--G5)]/60 bg-[var(--surface)]">
               <AnimatePresence mode="sync">
                 {table.getRowModel().rows.map((row, index) => (
                   <motion.tr
@@ -172,7 +172,7 @@ export function DataTable<TData>({
                     className={cn(
                       'transition-colors duration-120',
                       onRowClick && 'cursor-pointer',
-                      getRowClassName ? getRowClassName(row.original) : 'hover:bg-[var(--G6)]',
+                      getRowClassName ? getRowClassName(row.original) : 'hover:bg-[var(--PB)]',
                     )}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -202,7 +202,7 @@ export function DataTable<TData>({
               <button
                 onClick={() => pagination.onPageChange(pagination.page - 1)}
                 disabled={pagination.page <= 1}
-                className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
+                className="neu-interactive px-3 py-1 rounded-lg disabled:opacity-40 disabled:shadow-none"
               >
                 {t('previous')}
               </button>
@@ -213,7 +213,7 @@ export function DataTable<TData>({
               <button
                 onClick={() => pagination.onPageChange(pagination.page + 1)}
                 disabled={pagination.page >= pagination.pages}
-                className="px-2.5 py-1 rounded border border-[var(--G5)] disabled:opacity-40 hover:enabled:bg-[var(--G6)] transition-colors"
+                className="neu-interactive px-3 py-1 rounded-lg disabled:opacity-40 disabled:shadow-none"
               >
                 {t('next')}
               </button>
@@ -223,7 +223,7 @@ export function DataTable<TData>({
             <select
               value={pagination.pageSize}
               onChange={(e) => pagination.onPageSizeChange!(Number(e.target.value))}
-              className="border border-[var(--G5)] rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-[var(--P)]"
+              className="neu-pressed border border-transparent rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[var(--P)]"
             >
               {PAGE_SIZES.map((s) => (
                 <option key={s} value={s}>{s} {t('perPage')}</option>

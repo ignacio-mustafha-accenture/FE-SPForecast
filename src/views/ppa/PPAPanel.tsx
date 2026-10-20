@@ -171,7 +171,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-[var(--G2)]">{t('fieldEmployee')}</label>
           <div className="relative">
-            <div className="flex items-center gap-2 px-3 py-2 border border-[var(--G5)] rounded-lg bg-white focus-within:border-[var(--P)] transition-colors cursor-text">
+            <div className="flex items-center gap-2 px-3 py-2 neu-pressed border border-transparent rounded-lg focus-within:border-[var(--P)] transition-colors cursor-text">
               {selectedEid ? (
                 <>
                   <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--P)] text-white rounded-full text-sm shrink-0 max-w-[200px] truncate">
@@ -206,7 +206,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
             {errors.eid && <p className="text-xs text-red-500 mt-1">{errors.eid.message}</p>}
 
             {showEidDrop && filteredEmployees.length > 0 && (
-              <ul ref={eidListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full">
+              <ul ref={eidListRef} className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full">
                 {filteredEmployees.map((e, i) => (
                   <li
                     key={e.id}
@@ -236,7 +236,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
                   (i) => { setValue('fromPeriod', periodNames[i]); setShowFromDrop(false); },
                   () => setShowFromDrop(false),
                 )}
-                className="flex items-center gap-2 w-full px-3 py-2 border border-[var(--G5)] rounded-lg bg-white text-sm text-left focus:outline-none focus:border-[var(--P)] transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-2 neu-pressed border border-transparent rounded-lg text-sm text-left focus:outline-none focus:border-[var(--P)] transition-colors"
               >
                 <span className={`flex-1 ${selectedFrom ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
                   {selectedFrom || t('fieldFrom')}
@@ -245,7 +245,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
               </button>
               {errors.fromPeriod && <p className="text-xs text-red-500 mt-1">{errors.fromPeriod.message}</p>}
               {showFromDrop && (
-                <ul ref={fromListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full">
+                <ul ref={fromListRef} className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full">
                   {periodNames.map((p, i) => (
                     <li
                       key={p}
@@ -278,7 +278,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
                   (i) => { setValue('toPeriod', periodNames[i]); setShowToDrop(false); },
                   () => setShowToDrop(false),
                 )}
-                className="flex items-center gap-2 w-full px-3 py-2 border border-[var(--G5)] rounded-lg bg-white text-sm text-left focus:outline-none focus:border-[var(--P)] transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-2 neu-pressed border border-transparent rounded-lg text-sm text-left focus:outline-none focus:border-[var(--P)] transition-colors"
               >
                 <span className={`flex-1 ${selectedTo ? 'text-[var(--G1)]' : 'text-[var(--G4)]'}`}>
                   {selectedTo || t('fieldTo')}
@@ -287,7 +287,7 @@ export function PPAPanel({ open, onClose, onCreated }: PPAPanelProps) {
               </button>
               {errors.toPeriod && <p className="text-xs text-red-500 mt-1">{errors.toPeriod.message}</p>}
               {showToDrop && (
-                <ul ref={toListRef} className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full">
+                <ul ref={toListRef} className="absolute z-10 left-0 right-0 top-full mt-1 glass rounded-xl overflow-hidden max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full">
                   {periodNames.map((p, i) => (
                     <li
                       key={p}
