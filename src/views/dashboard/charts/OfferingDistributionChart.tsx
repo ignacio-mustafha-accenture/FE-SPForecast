@@ -88,7 +88,7 @@ export function OfferingDistributionChart({ employees }: { employees: Employee[]
           />
           <Bar
             dataKey="n"
-            radius={[3, 3, 3, 3]}
+            radius={[6, 6, 6, 6]}
             cursor="pointer"
             animationDuration={600}
             onClick={(d) => {

@@ -176,7 +176,7 @@ export function ChargeabilityByPeriodChart({
               key={seg}
               dataKey={seg === 'real' ? 'pctReal' : seg === 'hl' ? 'pctHl' : 'pctSl'}
               stackId="a"
-              radius={segIdx === 2 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+              radius={segIdx === 2 ? [7, 7, 0, 0] : [0, 0, 0, 0]}
               maxBarSize={56}
               cursor="pointer"
               animationDuration={650}

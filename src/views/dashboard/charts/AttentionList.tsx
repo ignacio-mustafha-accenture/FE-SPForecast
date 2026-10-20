@@ -112,7 +112,7 @@ export function AttentionList({
           key={c.id}
           type="button"
           onClick={() => router.push(`/all?q=${encodeURIComponent(c.nombre)}`)}
-          className="flex w-full items-center gap-3 rounded-md border border-[var(--G6)] px-3 py-2 text-left transition-colors hover:border-[var(--P)] hover:bg-[var(--G6)]"
+          className="flex w-full items-center gap-3 neu-interactive rounded-xl px-3 py-2.5 text-left"
         >
           <span
             className="h-8 w-1 shrink-0 rounded-full"

@@ -9,7 +9,7 @@ export const COLORS = {
   primaryDark: '#6B00AD',
   primaryMid: '#BE6BF0',
   primarySoft: '#DDBBF4',
-  grid: '#E8E8E8',
+  grid: 'rgba(120, 80, 170, 0.16)',
   axis: '#767676',
   ink: '#1A1A1A',
   ok: '#0E7A4C',
@@ -88,7 +88,7 @@ export function ChartTooltip({
           </div>
         ))}
       </div>
-      {pie && <div className="mt-1.5 border-t border-[var(--G6)] pt-1.5 text-[11px] text-[var(--G3)]">{pie}</div>}
+      {pie && <div className="mt-1.5 border-t border-[var(--G5)]/60 pt-1.5 text-[11px] text-[var(--G3)]">{pie}</div>}
     </div>
   );
 }

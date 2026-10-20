@@ -113,7 +113,7 @@ export function GapVsTargetChart({ totals, indicePeriodo }: Props) {
           <ReferenceLine x={0} stroke={COLORS.axis} strokeWidth={1.4} />
           <Bar
             dataKey="gap"
-            radius={[2, 2, 2, 2]}
+            radius={[6, 6, 6, 6]}
             cursor="pointer"
             animationDuration={600}
             onClick={(d) => {

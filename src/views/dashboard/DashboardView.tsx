@@ -578,7 +578,7 @@ export function DashboardView() {
                       </thead>
                       <tbody>
                         {ptosData.map((e) => (
-                          <tr key={e.id} className="border-b border-[var(--G6)] hover:bg-[var(--G6)]">
+                          <tr key={e.id} className="border-b border-[var(--G5)]/50 transition-colors hover:bg-[var(--PB)]">
                             <td className="py-2 pr-4 font-medium text-[var(--G1)]">{e.name}</td>
                             <td className="py-2 pr-4 text-[var(--G3)]">{e.country}</td>
                             <td className="py-2 pr-4 text-[var(--G3)]">
