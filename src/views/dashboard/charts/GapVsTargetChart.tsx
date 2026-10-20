@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 
 import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
-import { COLORS, ChartTooltip, DrillHint, EmptyChart, fmtHorasFull, fmtTarget, useDrillDown } from './chart-kit';
+import { COLORS, TRACK, ChartTooltip, DrillHint, EmptyChart, fmtHorasFull, fmtTarget, useDrillDown } from './chart-kit';
 
 interface Props {
   totals: ForecastTotals | null;
@@ -113,7 +113,9 @@ export function GapVsTargetChart({ totals, indicePeriodo }: Props) {
           <ReferenceLine x={0} stroke={COLORS.axis} strokeWidth={1.4} />
           <Bar
             dataKey="gap"
-            radius={[6, 6, 6, 6]}
+            radius={[7, 7, 7, 7]}
+            maxBarSize={14}
+            background={TRACK}
             cursor="pointer"
             animationDuration={600}
             onClick={(d) => {

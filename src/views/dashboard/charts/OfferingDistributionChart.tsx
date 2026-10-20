@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 
 import type { Employee } from '@/src/core/domain/employee';
-import { COLORS, SERIES, ChartTooltip, DrillHint, EmptyChart, useDrillDown } from './chart-kit';
+import { COLORS, SERIES, TRACK, ChartTooltip, DrillHint, EmptyChart, useDrillDown } from './chart-kit';
 
 interface Fila {
   label: string;
@@ -88,7 +88,9 @@ export function OfferingDistributionChart({ employees }: { employees: Employee[]
           />
           <Bar
             dataKey="n"
-            radius={[6, 6, 6, 6]}
+            radius={[7, 7, 7, 7]}
+            maxBarSize={14}
+            background={TRACK}
             cursor="pointer"
             animationDuration={600}
             onClick={(d) => {

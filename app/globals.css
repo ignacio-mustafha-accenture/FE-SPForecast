@@ -221,14 +221,6 @@ body {
   animation: reveal-up var(--dur-reveal) var(--ease-out-soft) both;
 }
 
-/* Graficos (recharts): barras con brillo de marca suave, tooltip sin caja propia */
-.recharts-bar-rectangle path,
-.recharts-bar-rectangle rect {
-  filter: drop-shadow(0 3px 5px rgba(161, 0, 255, 0.22));
-}
-
-.recharts-tooltip-wrapper { outline: none; }
-
 /* Skeleton: base hundida con brillo lila que recorre la superficie */
 @keyframes skeleton-shimmer {
   from { background-position: 200% 0; }
