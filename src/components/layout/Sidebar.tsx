@@ -17,7 +17,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 flex flex-col border-r border-[var(--G5)] bg-white"
+      className="glass fixed left-0 flex flex-col rounded-none border-y-0 border-l-0"
       style={{ top: 'var(--topbar-h)', width: 'var(--sidebar-w)', bottom: 0 }}
     >
       <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5">

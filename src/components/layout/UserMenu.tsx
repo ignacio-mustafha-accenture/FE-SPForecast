@@ -63,8 +63,7 @@ export function UserMenu({ name, role, onLogout }: UserMenuProps) {
 
       {open && (
         <div
-          className="absolute right-0 mt-2 min-w-[160px] rounded-md border border-white/10 z-50 py-1"
-          style={{ backgroundColor: 'var(--PD)' }}
+          className="glass-brand absolute right-0 mt-2 min-w-[160px] rounded-xl z-50 py-1"
         >
           <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--PL)]">
             {t('language')}

@@ -40,7 +40,7 @@ export function Modal({ open, onClose, title, children, width = '600px' }: Modal
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.18, ease: 'easeOut' as const }}
             style={{ width, maxWidth: '95vw' }}
-            className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl flex flex-col max-h-[90vh]"
+            className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 glass rounded-2xl flex flex-col max-h-[90vh]"
           >
             <div className="flex items-center justify-between border-b border-[var(--G5)] px-6 py-4 shrink-0">
               {title && <h2 className="text-base font-semibold text-[var(--G1)]">{title}</h2>}

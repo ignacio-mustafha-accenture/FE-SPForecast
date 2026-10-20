@@ -78,7 +78,7 @@ export function MultiDropdown({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute z-50 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden min-w-[120px] max-h-56 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+            className="absolute z-50 left-0 top-full mt-1 glass rounded-xl overflow-hidden min-w-[120px] max-h-56 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
           >
             {values.length > 0 && (
               <li
@@ -201,7 +201,7 @@ export function Dropdown({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute z-50 left-0 top-full mt-1 bg-white border border-[var(--G5)] rounded-lg shadow-lg overflow-hidden min-w-[120px] max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
+            className="absolute z-50 left-0 top-full mt-1 glass rounded-xl overflow-hidden min-w-[120px] max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-thumb]:bg-[var(--G5)] [&::-webkit-scrollbar-thumb]:rounded-full"
           >
             {allOptions.map((o, i) => (
               <li

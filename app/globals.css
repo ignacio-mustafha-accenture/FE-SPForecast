@@ -28,6 +28,40 @@
   --BL:  #0050A0;
   --BLB: #E3EEFF;
 
+  /* Brand gradient (Accenture Reinvention Console reference) */
+  --brand-1: #A100FF;
+  --brand-2: #9500ED;
+  --brand-3: #7600BD;
+  --brand-4: #460073;
+  --brand-accent: #9d04ec;
+  --brand-soft: #ECE6F9;
+  --brand-gradient: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 35%, var(--brand-3) 70%, var(--brand-4) 100%);
+  --brand-glow: 0 6px 20px rgba(161, 0, 255, 0.35);
+
+  /* Neumorphism surfaces (light) */
+  --surface:        #F1ECFA;
+  --surface-text:   #2B2340;
+  --neu-light:      rgba(255, 255, 255, 0.95);
+  --neu-dark:       rgba(110, 80, 165, 0.24);
+  --shadow-neu-raised:  7px 7px 16px var(--neu-dark), -7px -7px 16px var(--neu-light);
+  --shadow-neu-raised-sm: 4px 4px 9px var(--neu-dark), -4px -4px 9px var(--neu-light);
+  --shadow-neu-pressed: inset 4px 4px 9px var(--neu-dark), inset -4px -4px 9px var(--neu-light);
+
+  /* Glassmorphism (light) */
+  --glass-bg:     rgba(255, 255, 255, 0.72);
+  --glass-bg-brand: rgba(105, 0, 170, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-shine:  inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  --glass-shadow: 0 10px 32px rgba(70, 0, 115, 0.18);
+  --glass-blur:   blur(18px) saturate(140%);
+
+  /* Shape & motion */
+  --radius-neu: 14px;
+  --radius-pill: 999px;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 200ms;
+  --dur-reveal: 600ms;
+
   /* Layout */
   --topbar-h:  48px;
   --sidebar-w: 228px;
@@ -77,12 +111,146 @@ body {
   padding: 0;
 }
 
+/* Dark theme: tokens listos; se activa con class="dark" o data-theme="dark" en <html> */
+.dark,
+[data-theme='dark'] {
+  --surface:      #17101F;
+  --surface-text: #EDE7F8;
+  --neu-light:    rgba(255, 255, 255, 0.05);
+  --neu-dark:     rgba(0, 0, 0, 0.55);
+  --glass-bg:     rgba(34, 22, 48, 0.62);
+  --glass-bg-brand: rgba(70, 0, 115, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-shine:  inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+}
+
 body {
-  background: var(--WH);
+  background: var(--surface);
   color: var(--G1);
   font-family: var(--font-base);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Utilidades: neumorfismo ───────────────────────────────────────── */
+@utility neu-raised {
+  background: var(--surface);
+  border-radius: var(--radius-neu);
+  box-shadow: var(--shadow-neu-raised);
+  transition: box-shadow var(--dur-fast) ease-out, transform var(--dur-fast) ease-out;
+}
+
+@utility neu-raised-sm {
+  background: var(--surface);
+  box-shadow: var(--shadow-neu-raised-sm);
+  transition: box-shadow var(--dur-fast) ease-out, transform var(--dur-fast) ease-out;
+}
+
+@utility neu-pressed {
+  background: var(--surface);
+  box-shadow: var(--shadow-neu-pressed);
+  transition: box-shadow var(--dur-fast) ease-out, transform var(--dur-fast) ease-out;
+}
+
+/* Elevado en reposo, hundido al presionar */
+@utility neu-interactive {
+  background: var(--surface);
+  box-shadow: var(--shadow-neu-raised-sm);
+  transition: box-shadow var(--dur-fast) ease-out, transform var(--dur-fast) ease-out;
+  &:hover { transform: translateY(-1px); }
+  &:active,
+  &[aria-pressed='true'],
+  &[data-active='true'] {
+    box-shadow: var(--shadow-neu-pressed);
+    transform: translateY(0);
+  }
+}
+
+/* ── Utilidades: glass ─────────────────────────────────────────────── */
+@utility glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shine), var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+  }
+}
+
+@utility glass-brand {
+  background: var(--glass-bg-brand);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shine), var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background: var(--brand-4);
+  }
+}
+
+/* ── Utilidades: marca ─────────────────────────────────────────────── */
+@utility brand-gradient {
+  background-image: var(--brand-gradient);
+  color: #fff;
+}
+
+@utility brand-glow {
+  box-shadow: var(--brand-glow);
+}
+
+/* ── Utilidades: movimiento ────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@utility fade-in {
+  animation: fade-in var(--dur-reveal) var(--ease-out-soft) both;
+}
+
+@utility reveal {
+  animation: reveal-up var(--dur-reveal) var(--ease-out-soft) both;
+}
+
+/* ── Fondo decorativo: bubbles difuminados (estatico, sin animacion) ─ */
+.app-bubbles {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.app-bubbles > span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  background: radial-gradient(circle at 30% 30%, var(--brand-1), var(--brand-3) 70%, transparent 100%);
+}
+
+.app-bubbles > span:nth-child(1) { width: 480px; height: 480px; top: -140px; right: -120px; }
+.app-bubbles > span:nth-child(2) { width: 380px; height: 380px; bottom: -120px; left: 18%; opacity: 0.25; }
+.app-bubbles > span:nth-child(3) { width: 300px; height: 300px; top: 42%; right: 22%; opacity: 0.18; }
+
+.dark .app-bubbles > span,
+[data-theme='dark'] .app-bubbles > span { opacity: 0.28; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

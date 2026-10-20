@@ -12,8 +12,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary: 'bg-[var(--P)] text-white hover:bg-[var(--PD)] focus-visible:ring-[var(--P)]',
-  ghost: 'bg-transparent text-[var(--G1)] border border-[var(--G5)] hover:bg-[var(--G6)] focus-visible:ring-[var(--G4)]',
+  primary: 'brand-gradient brand-glow hover:brightness-110 active:brightness-95 focus-visible:ring-[var(--P)]',
+  ghost: 'neu-interactive text-[var(--G1)] focus-visible:ring-[var(--G4)]',
   approve: 'bg-[var(--GR)] text-white hover:opacity-90 focus-visible:ring-[var(--GR)]',
   'approve-outline': 'bg-transparent border border-[var(--GR)] text-[var(--GR)] hover:bg-[var(--GRB)] focus-visible:ring-[var(--GR)]',
   reject: 'bg-[var(--RD)] text-white hover:opacity-90 focus-visible:ring-[var(--RD)]',
@@ -41,7 +41,7 @@ export function Button({
       {...props}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded font-medium transition-colors duration-120',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[filter,box-shadow,transform,background-color] duration-200 ease-out',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         variantStyles[variant],

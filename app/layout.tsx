@@ -42,6 +42,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       className={`${barlow.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable} h-full`}
     >
       <body className="h-full">
+        <div className="app-bubbles" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
         <LocaleProvider locale={locale}>
           <NextIntlClientProvider messages={messages}>
             {children}
