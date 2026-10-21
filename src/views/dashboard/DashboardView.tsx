@@ -364,6 +364,9 @@ export function DashboardView() {
 
           <motion.div variants={section}>
             <Card>
+              <CardHeader>
+                <h2 className="text-sm font-semibold text-[var(--G1)]">Cargabilidad del período</h2>
+              </CardHeader>
               <CardBody>
                 <div>
                   {/* Estadisticas del periodo */}
@@ -419,78 +422,55 @@ export function DashboardView() {
           <motion.div variants={section}>
             <Card>
               <CardHeader>
-                <div>
-                  <h2 className="text-sm font-semibold text-[var(--G1)]">
-                    Evolución de la cargabilidad
-                  </h2>
-                  <p className="mt-0.5 text-xs text-[var(--G3)]">
-                    Horas cargables sobre disponibles · los períodos posteriores al vigente son
-                    proyección
-                  </p>
+                <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-[var(--G1)]">
+                      Evolución de la cargabilidad
+                    </h2>
+                    <p className="mt-0.5 text-xs text-[var(--G3)]">
+                      Horas cargables sobre disponibles · los períodos posteriores al vigente son
+                      proyección
+                    </p>
+                  </div>
+
+                  <div className="flex items-center">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={irAnterior}
+                        disabled={(iSelected === 0 && limite.inicio) || isLoading}
+                        aria-label="Período anterior"
+                        className="flex cursor-pointer items-center justify-center neu-interactive rounded-lg p-1 text-[var(--G2)] disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <ChevronLeft size={13} />
+                      </button>
+                      <span className="min-w-[4.5rem] text-center text-xs font-semibold text-[var(--G1)]">
+                        {appState.periods[iSelected]?.label ?? ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={irSiguiente}
+                        disabled={(iSelected === appState.periods.length - 1 && limite.fin) || isLoading}
+                        aria-label="Período siguiente"
+                        className="flex cursor-pointer items-center justify-center neu-interactive rounded-lg p-1 text-[var(--G2)] disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <ChevronRight size={13} />
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={volverAlVigente}
+                        disabled={iSelected === iActual || isLoading}
+                        data-active={iSelected === iActual}
+                        className="ml-1.5 disabled:opacity-100"
+                      >
+                        Hoy
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardHeader>
               <CardBody>
-                <div className="mb-5 flex flex-col items-center gap-3 text-center">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--P)]">
-                    Cargabilidad del período
-                  </p>
-
-                  <div className="flex items-center justify-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={irAnterior}
-                      disabled={(iSelected === 0 && limite.inicio) || isLoading}
-                      aria-label="Período anterior"
-                      className="flex cursor-pointer items-center justify-center neu-interactive rounded-lg p-1.5 text-[var(--G2)] disabled:cursor-not-allowed disabled:opacity-30"
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    <span className="min-w-[5.5rem] text-center text-sm font-semibold text-[var(--G1)]">
-                      {appState.periods[iSelected]?.label ?? ''}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={irSiguiente}
-                      disabled={(iSelected === appState.periods.length - 1 && limite.fin) || isLoading}
-                      aria-label="Período siguiente"
-                      className="flex cursor-pointer items-center justify-center neu-interactive rounded-lg p-1.5 text-[var(--G2)] disabled:cursor-not-allowed disabled:opacity-30"
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={volverAlVigente}
-                      disabled={iSelected === iActual || isLoading}
-                      data-active={iSelected === iActual}
-                      className="ml-2 disabled:opacity-100"
-                    >
-                      Hoy
-                    </Button>
-                  </div>
-
-                  <div>
-                    <div className="flex items-baseline justify-center gap-3">
-                      <span className="text-[52px] font-extrabold leading-none tracking-tight text-[var(--G1)]">
-                        {metricas.pct.toFixed(1)}%
-                      </span>
-                      {metricas.delta !== null && (
-                        <span
-                          className="text-sm font-bold"
-                          style={{ color: metricas.delta >= 0 ? 'var(--GR)' : 'var(--RD)' }}
-                        >
-                          {metricas.delta >= 0 ? '▲' : '▼'} {Math.abs(metricas.delta).toFixed(1)} pts
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1.5 text-xs text-[var(--G3)]">
-                      {metricas.delta !== null
-                        ? 'Variación vs período anterior'
-                        : iSelected === iActual ? 'Período vigente' : 'Sin período previo'}
-                    </p>
-                  </div>
-                </div>
-
                 <ChargeabilityByPeriodChart
                   employees={filteredEmployees}
                   periods={appState.periods}
