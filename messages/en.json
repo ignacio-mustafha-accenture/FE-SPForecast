@@ -228,7 +228,8 @@
     "colCountry": "Country",
     "colRisk": "Risk",
     "colDetail": "Detail",
-    "unassignedButton": "Unassigned"
+    "unassignedButton": "Unassigned",
+    "ptosButton": "PTOs"
   },
   "ppa": {
     "title": "PPA",
@@ -468,5 +469,27 @@
     },
     "groupFilter": "Group",
     "colGroup": "Group"
+  },
+  "ptos": {
+    "title": "PTOs",
+    "subtitle": "Approved time off in progress and upcoming",
+    "noData": "No data",
+    "exportCsv": "Export",
+    "searchPlaceholder": "Search employee…",
+    "empty": "No PTOs to show",
+    "colEmployee": "Employee",
+    "colCountry": "Country",
+    "colLevel": "Level",
+    "colClient": "Client",
+    "colStart": "Start",
+    "colEnd": "End",
+    "colHours": "Hours",
+    "colStatus": "Status",
+    "noClient": "Unassigned",
+    "status": {
+      "current": "In progress",
+      "upcoming": "Upcoming"
+    },
+    "statusFilter": "Status"
   }
 }

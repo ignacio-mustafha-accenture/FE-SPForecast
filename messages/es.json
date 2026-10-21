@@ -228,7 +228,8 @@
     "colCountry": "País",
     "colRisk": "Riesgo",
     "colDetail": "Detalle",
-    "unassignedButton": "Desasignados"
+    "unassignedButton": "Desasignados",
+    "ptosButton": "PTOs"
   },
   "ppa": {
     "title": "PPA",
@@ -446,5 +447,27 @@
     },
     "groupFilter": "Grupo",
     "colGroup": "Grupo"
+  },
+  "ptos": {
+    "title": "PTOs",
+    "subtitle": "Vacaciones aprobadas en curso y próximas",
+    "noData": "Sin datos",
+    "exportCsv": "Exportar",
+    "searchPlaceholder": "Buscar empleado…",
+    "empty": "No hay PTOs para mostrar",
+    "colEmployee": "Empleado",
+    "colCountry": "País",
+    "colLevel": "Nivel",
+    "colClient": "Cliente",
+    "colStart": "Inicio",
+    "colEnd": "Fin",
+    "colHours": "Horas",
+    "colStatus": "Estado",
+    "noClient": "Sin asignar",
+    "status": {
+      "current": "En curso",
+      "upcoming": "Próximo"
+    },
+    "statusFilter": "Estado"
   }
 }

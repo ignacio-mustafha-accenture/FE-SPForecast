@@ -187,3 +187,20 @@ export interface RawUser {
   role: string;
   eid: string | null;
 }
+
+export interface RawPtoRow {
+  ID: number;
+  EID: string;
+  Name: string;
+  Country: string | null;
+  CL: string | null;
+  Client: string | null;
+  Start: string;
+  End: string;
+  Hours: number | string | null;
+  Status: 'current' | 'upcoming';
+}
+
+export interface RawPtoPage extends RawPage<RawPtoRow> {
+  counts: Record<'current' | 'upcoming', number>;
+}

@@ -4,18 +4,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { X, ChevronLeft, ChevronRight, UserX } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, UserX, CalendarDays } from 'lucide-react';
 
 import { useForecastStore } from '@/src/store/StoreProvider';
 import { getClientContainer } from '@/src/application/container';
 import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
-import { Badge } from '@/src/components/ui/Badge';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { Button } from '@/src/components/ui/Button';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
+import type { PtoCounts } from '@/src/core/domain/pto';
 import type { UnassignedCounts } from '@/src/core/domain/unassigned';
 import { FilterBar } from '@/src/components/ui/FilterBar';
-import { parseDDMMYY } from '@/src/lib/formatters';
 import { getTargetForCountry } from '@/src/lib/status';
 import { OFFERING_OPTIONS } from '@/src/core/domain/offerings';
 import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
@@ -224,6 +223,28 @@ export function DashboardView() {
     };
   }, [unassignedCounts]);
 
+  // Mismo patron para PTOs: el total (en curso + proximos) sale del endpoint de la vista
+  const [ptoCounts, setPtoCounts] = useState<PtoCounts | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getClientContainer()
+      .listPtos.execute({
+        country: country || undefined,
+        offering: offering || undefined,
+        level: filterLevel || undefined,
+        page: 1,
+        pageSize: 1,
+      })
+      .then((data) => { if (!cancelled) setPtoCounts(data.counts); })
+      .catch((err) => {
+        console.warn('[DashboardView] no se pudo obtener el conteo de PTOs:', err);
+        if (!cancelled) setPtoCounts(null);
+      });
+    return () => { cancelled = true; };
+  }, [country, offering, filterLevel]);
+
+  const conteoPtos = ptoCounts ? ptoCounts.current + ptoCounts.upcoming : 0;
+
   const metricas = useMemo(() => {
     if (!appState) return null;
     const agg = (emps: typeof filteredEmployees, i: number) => {
@@ -260,16 +281,6 @@ export function DashboardView() {
       .filter((x): x is NonNullable<typeof x> => x !== null);
   }, [appState, filteredEmployees, iSelected]);
 
-  const ptosData = useMemo(() => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    return filteredEmployees
-      .filter((e) => e.isOnPTO || e.nextPTO !== null)
-      .map((e) => ({ ...e, _ptoStart: parseDDMMYY(e.nextPTO) }))
-      .filter((e) => e.isOnPTO || (e._ptoStart !== null && e._ptoStart >= hoy))
-      .sort((a, b) => (a._ptoStart?.getTime() ?? 0) - (b._ptoStart?.getTime() ?? 0));
-  }, [filteredEmployees]);
-
   const showSkeleton = isLoading && !appState;
 
   return (
@@ -297,17 +308,26 @@ export function DashboardView() {
                 <p className="mt-0.5 text-sm text-[var(--G3)]">{appState.period.label}</p>
               )}
             </div>
-            <Button
-              variant={conteoDesasignados.hoy > 0 ? 'reject-outline' : 'ghost'}
-              size="sm"
-              onClick={() => router.push('/dashboard/unassigned')}
-            >
-              <UserX className="mr-1.5 h-3.5 w-3.5" />
-              {t('unassignedButton')}
-              <span className="ml-1.5 rounded-full bg-current/10 px-1.5 text-[10px] font-bold">
-                {conteoDesasignados.total}
-              </span>
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              <Button
+                variant={conteoDesasignados.hoy > 0 ? 'reject-outline' : 'ghost'}
+                size="sm"
+                onClick={() => router.push('/dashboard/unassigned')}
+              >
+                <UserX className="mr-1.5 h-3.5 w-3.5" />
+                {t('unassignedButton')}
+                <span className="ml-1.5 rounded-full bg-current/10 px-1.5 text-[10px] font-bold">
+                  {conteoDesasignados.total}
+                </span>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/ptos')}>
+                <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                {t('ptosButton')}
+                <span className="ml-1.5 rounded-full bg-current/10 px-1.5 text-[10px] font-bold">
+                  {conteoPtos}
+                </span>
+              </Button>
+            </div>
           </motion.div>
 
           <motion.div variants={section}>
@@ -559,58 +579,6 @@ export function DashboardView() {
               </CardBody>
             </Card>
           </motion.div>
-
-          <motion.div variants={section}>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-[var(--G1)]">Próximas vacaciones</h2>
-                  {ptosData.length > 0 && <Badge variant="neutral">{ptosData.length}</Badge>}
-                </div>
-              </CardHeader>
-              <CardBody>
-                {ptosData.length === 0 ? (
-                  <p className="text-sm text-[var(--G3)]">No hay vacaciones próximas</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[var(--G5)]">
-                          {['Empleado', 'País', 'Período', 'Horas', 'Estado'].map((h) => (
-                            <th
-                              key={h}
-                              className="py-2 pr-4 text-left text-xs font-semibold uppercase text-[var(--G3)]"
-                            >
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ptosData.map((e) => (
-                          <tr key={e.id} className="border-b border-[var(--G5)]/50 transition-colors hover:bg-[var(--PB)]">
-                            <td className="py-2 pr-4 font-medium text-[var(--G1)]">{e.name}</td>
-                            <td className="py-2 pr-4 text-[var(--G3)]">{e.country}</td>
-                            <td className="py-2 pr-4 text-[var(--G3)]">
-                              {e.nextPTO} – {e.nextPTOEnd ?? '—'}
-                            </td>
-                            <td className="py-2 pr-4 text-[var(--G3)]">{e.nextPTOHours ?? '—'}h</td>
-                            <td className="py-2">
-                              {e.isOnPTO ? (
-                                <Badge variant="yellow">En curso</Badge>
-                              ) : (
-                                <Badge variant="neutral">Próximo</Badge>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -678,7 +646,6 @@ function DashboardSkeleton() {
         <Skeleton className="h-64 rounded-lg" />
       </div>
       <Skeleton className="h-64 rounded-lg" />
-      <Skeleton className="h-48 rounded-lg" />
     </div>
   );
 }

@@ -1,12 +1,13 @@
 import type { Employee } from '@/src/core/domain/employee';
 import type { ForecastTotals } from '@/src/core/domain/forecast-totals';
 import type { EmployeeFilter, Page } from '@/src/core/domain/pagination';
+import type { PtoFilter, PtoPage } from '@/src/core/domain/pto';
 import type { UnassignedFilter, UnassignedPage } from '@/src/core/domain/unassigned';
 import type { IEmployeeRepository, EmployeeUpdatePayload } from '@/src/core/ports/IEmployeeRepository';
 
 import { createFetcher, type FetcherCtx } from './fetcher';
 import { mapRawEmployee, mapRawForecastTotals } from './mappers';
-import type { RawEmployee, RawForecastTotals, RawPage, RawUnassignedPage } from './types';
+import type { RawEmployee, RawForecastTotals, RawPage, RawPtoPage, RawUnassignedPage } from './types';
 
 // Tope que acepta el backend en /api/employees (page_size: Query(25, ge=1, le=200))
 const MAX_PAGE_SIZE = 200;
@@ -80,6 +81,41 @@ export class HttpEmployeeRepository implements IEmployeeRepository {
         daysToAvailable: r.DaysToAvailable,
         days: r.Days,
         group: r.Group,
+      })),
+      total: raw.total,
+      page: raw.page,
+      pageSize: raw.page_size,
+      pages: raw.pages,
+      counts: raw.counts,
+    };
+  }
+
+  async listPtos(filter: PtoFilter): Promise<PtoPage> {
+    const params = new URLSearchParams();
+    if (filter.country) params.set('country', filter.country);
+    if (filter.offering) params.set('offering', filter.offering);
+    if (filter.level) params.set('cl', filter.level);
+    if (filter.q) params.set('q', filter.q);
+    if (filter.status) params.set('status', filter.status);
+    if (filter.sort) {
+      params.set('sort', filter.sort);
+      params.set('dir', filter.dir ?? 'asc');
+    }
+    params.set('page', String(filter.page ?? 1));
+    params.set('page_size', String(filter.pageSize ?? 25));
+    const raw = await this.fetch<RawPtoPage>(`/api/employees/pto?${params}`);
+    return {
+      items: raw.items.map((r) => ({
+        id: r.ID,
+        eid: r.EID,
+        name: r.Name,
+        country: r.Country ?? '',
+        level: r.CL ?? '',
+        client: r.Client?.trim() ? r.Client : null,
+        start: r.Start,
+        end: r.End,
+        hours: r.Hours == null ? null : Number(r.Hours),
+        status: r.Status,
       })),
       total: raw.total,
       page: raw.page,
