@@ -12,6 +12,7 @@ import { Card, CardBody, CardHeader } from '@/src/components/ui/Card';
 import { Badge } from '@/src/components/ui/Badge';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { Button } from '@/src/components/ui/Button';
+import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import type { UnassignedCounts } from '@/src/core/domain/unassigned';
 import { FilterBar } from '@/src/components/ui/FilterBar';
 import { parseDDMMYY } from '@/src/lib/formatters';
@@ -368,11 +369,18 @@ export function DashboardView() {
                 <h2 className="text-sm font-semibold text-[var(--G1)]">Cargabilidad del período</h2>
               </CardHeader>
               <CardBody>
-                <div>
-                  {/* Estadisticas del periodo */}
-                  <div className="flex flex-wrap justify-center gap-x-12 gap-y-5">
-                    <MetricGroup titulo="Equipo">
-                      <Mini label="Total" valor={String(filteredEmployees.length)} />
+                {/* Estadisticas del periodo */}
+                <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr]">
+                  <MetricGroup titulo="Equipo">
+                    <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+                      <div>
+                        <p className="text-[10.5px] font-semibold uppercase tracking-wide text-[var(--G3)]">
+                          Total
+                        </p>
+                        <p className="mt-0.5 text-3xl font-extrabold leading-none tabular-nums text-[var(--G1)]">
+                          {filteredEmployees.length}
+                        </p>
+                      </div>
                       <Mini
                         label="En objetivo"
                         valor={String(contar(filteredEmployees, 'green'))}
@@ -388,15 +396,33 @@ export function DashboardView() {
                         valor={String(contar(filteredEmployees, 'red'))}
                         color="var(--RD)"
                       />
-                    </MetricGroup>
+                    </div>
+                    <div className="mt-4 flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--G5)]/60">
+                      {([['green', 'var(--GR)'], ['yellow', 'var(--YL)'], ['red', 'var(--RD)']] as const).map(
+                        ([estado, color]) => (
+                          <div
+                            key={estado}
+                            style={{
+                              width: `${filteredEmployees.length ? (contar(filteredEmployees, estado) / filteredEmployees.length) * 100 : 0}%`,
+                              backgroundColor: color,
+                            }}
+                          />
+                        ),
+                      )}
+                    </div>
+                  </MetricGroup>
 
-                    <MetricGroup titulo="Horas">
+                  <MetricGroup titulo="Horas">
+                    <div className="flex flex-wrap gap-x-8 gap-y-3">
                       <Mini label="Cargables" valor={fmtHorasFull(metricas.chg)} />
                       <Mini label="SAH totales" valor={fmtHorasFull(metricas.sah)} />
-                    </MetricGroup>
+                    </div>
+                    <ProgressBar className="mt-4" value={metricas.chg} max={metricas.sah || 1} />
+                  </MetricGroup>
 
-                    {countryMetrics.length > 0 && (
-                      <MetricGroup titulo="Por país">
+                  {countryMetrics.length > 0 && (
+                    <MetricGroup>
+                      <div className="flex flex-wrap gap-x-8 gap-y-3">
                         {countryMetrics.map(({ country, pct, targetPct, overTarget }) => (
                           <div key={country}>
                             <p className="text-[10.5px] font-semibold uppercase tracking-wide text-[var(--G3)]">
@@ -411,9 +437,9 @@ export function DashboardView() {
                             <p className="text-[10px] text-[var(--G3)]">target {fmtTarget(targetPct)}</p>
                           </div>
                         ))}
-                      </MetricGroup>
-                    )}
-                  </div>
+                      </div>
+                    </MetricGroup>
+                  )}
                 </div>
               </CardBody>
             </Card>
@@ -592,11 +618,13 @@ export function DashboardView() {
 }
 
 
-function MetricGroup({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function MetricGroup({ titulo, children }: { titulo?: string; children: React.ReactNode }) {
   return (
-    <div className="text-center">
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--P)]">{titulo}</p>
-      <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">{children}</div>
+    <div className="neu-pressed rounded-xl p-4">
+      {titulo && (
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--P)]">{titulo}</p>
+      )}
+      {children}
     </div>
   );
 }
