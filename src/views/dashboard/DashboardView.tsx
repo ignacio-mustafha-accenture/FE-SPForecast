@@ -365,22 +365,24 @@ export function DashboardView() {
           <motion.div variants={section}>
             <Card>
               <CardBody>
-                <div className="flex flex-wrap items-center gap-x-10 gap-y-5">
-                  <div>
+                <div className="flex flex-wrap items-stretch gap-x-10 gap-y-6">
+                  {/* Bloque principal: periodo y cargabilidad */}
+                  <div className="flex min-w-[260px] flex-col gap-3">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--P)]">
                       Cargabilidad del período
                     </p>
-                    <div className="mt-1.5 flex items-center gap-1">
+
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={irAnterior}
                         disabled={(iSelected === 0 && limite.inicio) || isLoading}
                         aria-label="Período anterior"
-                        className="flex items-center justify-center neu-interactive rounded-md p-1 text-[var(--G2)] disabled:opacity-25 disabled:cursor-not-allowed"
+                        className="flex cursor-pointer items-center justify-center neu-interactive rounded-lg p-1.5 text-[var(--G2)] disabled:cursor-not-allowed disabled:opacity-30"
                       >
-                        <ChevronLeft size={13} />
+                        <ChevronLeft size={14} />
                       </button>
-                      <span className="min-w-[5.5rem] text-center text-[12px] font-semibold text-[var(--G2)]">
+                      <span className="min-w-[5.5rem] text-center text-sm font-semibold text-[var(--G1)]">
                         {appState.periods[iSelected]?.label ?? ''}
                       </span>
                       <button
@@ -388,92 +390,89 @@ export function DashboardView() {
                         onClick={irSiguiente}
                         disabled={(iSelected === appState.periods.length - 1 && limite.fin) || isLoading}
                         aria-label="Período siguiente"
-                        className="flex items-center justify-center neu-interactive rounded-md p-1 text-[var(--G2)] disabled:opacity-25 disabled:cursor-not-allowed"
+                        className="flex cursor-pointer items-center justify-center neu-interactive rounded-lg p-1.5 text-[var(--G2)] disabled:cursor-not-allowed disabled:opacity-30"
                       >
-                        <ChevronRight size={13} />
+                        <ChevronRight size={14} />
                       </button>
-                      {iSelected !== iActual && (
-                        <button
-                          type="button"
-                          onClick={volverAlVigente}
-                          className="ml-1 text-[10px] text-[var(--P)] hover:underline"
-                        >
-                          ↩ actual
-                        </button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={volverAlVigente}
+                        disabled={iSelected === iActual || isLoading}
+                        data-active={iSelected === iActual}
+                        className="ml-2 disabled:opacity-100"
+                      >
+                        Hoy
+                      </Button>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-3">
-                      <span className="text-[44px] font-extrabold leading-none text-[var(--G1)]">
-                        {metricas.pct.toFixed(1)}%
-                      </span>
-                      {metricas.delta !== null && (
-                        <span
-                          className="text-sm font-bold"
-                          style={{
-                            color: metricas.delta >= 0 ? 'var(--GR)' : 'var(--RD)',
-                          }}
-                        >
-                          {metricas.delta >= 0 ? '▲' : '▼'} {Math.abs(metricas.delta).toFixed(1)} pts
+
+                    <div>
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-[52px] font-extrabold leading-none tracking-tight text-[var(--G1)]">
+                          {metricas.pct.toFixed(1)}%
                         </span>
-                      )}
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <p className="text-xs text-[var(--G3)]">
-                        {iSelected === iActual
-                          ? (metricas.delta !== null ? 'Variación vs período anterior' : 'Período vigente')
-                          : (metricas.delta !== null ? 'Variación vs período anterior' : 'Sin período previo')}
-                      </p>
-                      {iSelected !== iActual && (
-                        <button
-                          type="button"
-                          onClick={volverAlVigente}
-                          className="text-[10px] text-[var(--P)] hover:underline"
-                        >
-                          ↩ volver al vigente
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-x-8 gap-y-3">
-                    <Mini label="Equipo" valor={String(filteredEmployees.length)} />
-                    <Mini
-                      label="En objetivo"
-                      valor={String(contar(filteredEmployees, 'green'))}
-                      color="var(--GR)"
-                    />
-                    <Mini
-                      label="En riesgo"
-                      valor={String(contar(filteredEmployees, 'yellow'))}
-                      color="var(--YL)"
-                    />
-                    <Mini
-                      label="Bajo objetivo"
-                      valor={String(contar(filteredEmployees, 'red'))}
-                      color="var(--RD)"
-                    />
-                    <Mini label="Horas cargables" valor={fmtHorasFull(metricas.chg)} />
-                    <Mini label="SAH totales" valor={fmtHorasFull(metricas.sah)} />
-                  </div>
-
-                  {countryMetrics.length > 0 && (
-                    <div className="flex flex-wrap gap-x-8 gap-y-3 border-l border-[var(--G5)]/60 pl-8">
-                      {countryMetrics.map(({ country, pct, targetPct, overTarget }) => (
-                        <div key={country}>
-                          <p className="text-[10.5px] font-semibold uppercase tracking-wide text-[var(--G3)]">
-                            {country}
-                          </p>
-                          <p
-                            className="mt-0.5 text-xl font-bold tabular-nums"
-                            style={{ color: overTarget ? 'var(--GR)' : 'var(--RD)' }}
+                        {metricas.delta !== null && (
+                          <span
+                            className="text-sm font-bold"
+                            style={{ color: metricas.delta >= 0 ? 'var(--GR)' : 'var(--RD)' }}
                           >
-                            {pct != null ? `${overTarget ? '▲' : '▼'} ${pct.toFixed(1)}%` : '—'}
-                          </p>
-                          <p className="text-[10px] text-[var(--G3)]">target {fmtTarget(targetPct)}</p>
-                        </div>
-                      ))}
+                            {metricas.delta >= 0 ? '▲' : '▼'} {Math.abs(metricas.delta).toFixed(1)} pts
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1.5 text-xs text-[var(--G3)]">
+                        {metricas.delta !== null
+                          ? 'Variación vs período anterior'
+                          : iSelected === iActual ? 'Período vigente' : 'Sin período previo'}
+                      </p>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Detalle agrupado */}
+                  <div className="flex flex-1 flex-wrap content-center gap-x-10 gap-y-5 border-l border-[var(--G5)]/60 pl-10">
+                    <MetricGroup titulo="Equipo">
+                      <Mini label="Total" valor={String(filteredEmployees.length)} />
+                      <Mini
+                        label="En objetivo"
+                        valor={String(contar(filteredEmployees, 'green'))}
+                        color="var(--GR)"
+                      />
+                      <Mini
+                        label="En riesgo"
+                        valor={String(contar(filteredEmployees, 'yellow'))}
+                        color="var(--YL)"
+                      />
+                      <Mini
+                        label="Bajo objetivo"
+                        valor={String(contar(filteredEmployees, 'red'))}
+                        color="var(--RD)"
+                      />
+                    </MetricGroup>
+
+                    <MetricGroup titulo="Horas">
+                      <Mini label="Cargables" valor={fmtHorasFull(metricas.chg)} />
+                      <Mini label="SAH totales" valor={fmtHorasFull(metricas.sah)} />
+                    </MetricGroup>
+
+                    {countryMetrics.length > 0 && (
+                      <MetricGroup titulo="Por país">
+                        {countryMetrics.map(({ country, pct, targetPct, overTarget }) => (
+                          <div key={country}>
+                            <p className="text-[10.5px] font-semibold uppercase tracking-wide text-[var(--G3)]">
+                              {country}
+                            </p>
+                            <p
+                              className="mt-0.5 text-xl font-bold tabular-nums"
+                              style={{ color: overTarget ? 'var(--GR)' : 'var(--RD)' }}
+                            >
+                              {pct != null ? `${overTarget ? '▲' : '▼'} ${pct.toFixed(1)}%` : '—'}
+                            </p>
+                            <p className="text-[10px] text-[var(--G3)]">target {fmtTarget(targetPct)}</p>
+                          </div>
+                        ))}
+                      </MetricGroup>
+                    )}
+                  </div>
                 </div>
               </CardBody>
             </Card>
@@ -613,6 +612,15 @@ export function DashboardView() {
   );
 }
 
+
+function MetricGroup({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--P)]">{titulo}</p>
+      <div className="flex flex-wrap gap-x-8 gap-y-3">{children}</div>
+    </div>
+  );
+}
 
 function Mini({ label, valor, color }: { label: string; valor: string; color?: string }) {
   return (
