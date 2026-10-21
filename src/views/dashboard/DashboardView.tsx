@@ -365,9 +365,9 @@ export function DashboardView() {
           <motion.div variants={section}>
             <Card>
               <CardBody>
-                <div className="flex flex-wrap items-stretch gap-x-10 gap-y-6">
+                <div className="flex flex-col gap-6">
                   {/* Bloque principal: periodo y cargabilidad */}
-                  <div className="flex min-w-[260px] flex-col gap-3">
+                  <div className="flex flex-col gap-3">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--P)]">
                       Cargabilidad del período
                     </p>
@@ -429,7 +429,7 @@ export function DashboardView() {
                   </div>
 
                   {/* Detalle agrupado */}
-                  <div className="flex flex-1 flex-wrap content-center gap-x-10 gap-y-5 border-l border-[var(--G5)]/60 pl-10">
+                  <div className="flex flex-wrap gap-x-12 gap-y-5 border-t border-[var(--G5)]/60 pt-5">
                     <MetricGroup titulo="Equipo">
                       <Mini label="Total" valor={String(filteredEmployees.length)} />
                       <Mini
