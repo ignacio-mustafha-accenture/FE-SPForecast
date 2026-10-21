@@ -367,12 +367,12 @@ export function DashboardView() {
               <CardBody>
                 <div className="flex flex-col gap-6">
                   {/* Bloque principal: periodo y cargabilidad */}
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col items-center gap-3 text-center">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--P)]">
                       Cargabilidad del período
                     </p>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-center gap-1.5">
                       <button
                         type="button"
                         onClick={irAnterior}
@@ -407,7 +407,7 @@ export function DashboardView() {
                     </div>
 
                     <div>
-                      <div className="flex items-baseline gap-3">
+                      <div className="flex items-baseline justify-center gap-3">
                         <span className="text-[52px] font-extrabold leading-none tracking-tight text-[var(--G1)]">
                           {metricas.pct.toFixed(1)}%
                         </span>
@@ -429,7 +429,7 @@ export function DashboardView() {
                   </div>
 
                   {/* Detalle agrupado */}
-                  <div className="flex flex-wrap gap-x-12 gap-y-5 border-t border-[var(--G5)]/60 pt-5">
+                  <div className="flex flex-wrap justify-center gap-x-12 gap-y-5 border-t border-[var(--G5)]/60 pt-5">
                     <MetricGroup titulo="Equipo">
                       <Mini label="Total" valor={String(filteredEmployees.length)} />
                       <Mini
@@ -615,9 +615,9 @@ export function DashboardView() {
 
 function MetricGroup({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="text-center">
       <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--P)]">{titulo}</p>
-      <div className="flex flex-wrap gap-x-8 gap-y-3">{children}</div>
+      <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">{children}</div>
     </div>
   );
 }
