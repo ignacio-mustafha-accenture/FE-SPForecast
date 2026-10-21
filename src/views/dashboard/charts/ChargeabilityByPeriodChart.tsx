@@ -22,7 +22,6 @@ import {
   COLORS,
   ChartTooltip,
   EmptyChart,
-  TRACK,
   fmtHorasFull,
   fmtTarget,
 } from './chart-kit';
@@ -194,7 +193,6 @@ export function ChargeabilityByPeriodChart({
               stackId="a"
               radius={segIdx === 2 ? [8, 8, 0, 0] : [0, 0, 0, 0]}
               maxBarSize={40}
-              background={segIdx === 0 ? { ...TRACK, radius: 10 } : undefined}
               cursor="pointer"
               animationDuration={650}
               onClick={(_d, index) => { setDetalleAbierto(true); onSelectPeriodo?.(index); }}
