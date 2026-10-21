@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
+  LabelList,
   Line,
   ReferenceLine,
   ResponsiveContainer,
@@ -203,6 +204,33 @@ export function ChargeabilityByPeriodChart({
                 const fill = isSelected ? SEG[seg].sel : SEG[seg].unsel;
                 return <Cell key={i} fill={fill} style={{ fill, transition: 'fill 0.35s ease' }} />;
               })}
+              <LabelList
+                dataKey={seg === 'real' ? 'pctReal' : seg === 'hl' ? 'pctHl' : 'pctSl'}
+                content={(props) => {
+                  const { x, y, width, height, value, index } = props as {
+                    x?: number; y?: number; width?: number; height?: number;
+                    value?: number | string; index?: number;
+                  };
+                  const v = Number(value);
+                  // Segmentos muy bajos no entran: se omite la etiqueta
+                  if (!Number.isFinite(v) || (height ?? 0) < 16 || (width ?? 0) < 30) return null;
+                  const seleccionada = indiceSeleccionado === index;
+                  return (
+                    <text
+                      x={(x ?? 0) + (width ?? 0) / 2}
+                      y={(y ?? 0) + (height ?? 0) / 2}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize={10}
+                      fontWeight={700}
+                      fill={seleccionada ? '#FFFFFF' : COLORS.primaryDark}
+                      style={{ pointerEvents: 'none', transition: 'fill 0.35s ease' }}
+                    >
+                      {v.toFixed(1)}%
+                    </text>
+                  );
+                }}
+              />
             </Bar>
           ))}
 
