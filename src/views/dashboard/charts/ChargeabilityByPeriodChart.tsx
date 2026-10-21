@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Bar,
   CartesianGrid,
@@ -78,6 +78,19 @@ export function ChargeabilityByPeriodChart({
   indiceSeleccionado,
   onSelectPeriodo,
 }: Props) {
+  // El detalle se abre al hacer click en una barra y se cierra al hacer click en cualquier otro lado
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
+  useEffect(() => {
+    if (!detalleAbierto) return;
+    function cerrarSiEsFuera(e: MouseEvent) {
+      const target = e.target as Element | null;
+      if (target?.closest('.recharts-bar-rectangle')) return;
+      setDetalleAbierto(false);
+    }
+    document.addEventListener('mousedown', cerrarSiEsFuera);
+    return () => document.removeEventListener('mousedown', cerrarSiEsFuera);
+  }, [detalleAbierto]);
+
   const datos = useMemo<Punto[]>(
     () =>
       periods.map((p, i) => {
@@ -142,6 +155,7 @@ export function ChargeabilityByPeriodChart({
           />
           <Tooltip
             trigger="click"
+            active={detalleAbierto ? undefined : false}
             cursor={{ fill: COLORS.primary, fillOpacity: 0.06 }}
             content={({ active, payload }) => {
               const d = payload?.[0]?.payload as Punto | undefined;
@@ -182,7 +196,7 @@ export function ChargeabilityByPeriodChart({
               background={segIdx === 0 ? { ...TRACK, radius: 10 } : undefined}
               cursor="pointer"
               animationDuration={650}
-              onClick={(_d, index) => { onSelectPeriodo?.(index); }}
+              onClick={(_d, index) => { setDetalleAbierto(true); onSelectPeriodo?.(index); }}
             >
               {datos.map((_d, i) => {
                 const isSelected = indiceSeleccionado === i;

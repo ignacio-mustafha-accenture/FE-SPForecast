@@ -12,7 +12,7 @@
   --BK:  #111111;
   --G1:  #333333;
   --G2:  #555555;
-  --G3:  #888888;
+  --G3:  #6B6B6B;
   --G4:  #BBBBBB;
   --G5:  #E2E2E2;
   --G6:  #F4F4F4;
@@ -221,6 +221,13 @@ body {
   animation: reveal-up var(--dur-reveal) var(--ease-out-soft) both;
 }
 
+/* Graficos: sin contorno de foco sobre barras/superficie al hacer click */
+.recharts-wrapper :focus,
+.recharts-wrapper :focus-visible,
+.recharts-surface:focus {
+  outline: none !important;
+}
+
 /* Skeleton: base hundida con brillo lila que recorre la superficie */
 @keyframes skeleton-shimmer {
   from { background-position: 200% 0; }
@@ -252,14 +259,14 @@ body {
 .app-bubbles > span {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.35;
+  filter: blur(90px);
+  opacity: 0.16;
   background: radial-gradient(circle at 30% 30%, var(--brand-1), var(--brand-3) 70%, transparent 100%);
 }
 
 .app-bubbles > span:nth-child(1) { width: 480px; height: 480px; top: -140px; right: -120px; }
-.app-bubbles > span:nth-child(2) { width: 380px; height: 380px; bottom: -120px; left: 18%; opacity: 0.25; }
-.app-bubbles > span:nth-child(3) { width: 300px; height: 300px; top: 42%; right: 22%; opacity: 0.18; }
+.app-bubbles > span:nth-child(2) { width: 380px; height: 380px; bottom: -120px; left: 18%; opacity: 0.12; }
+.app-bubbles > span:nth-child(3) { width: 300px; height: 300px; top: 42%; right: 22%; opacity: 0.08; }
 
 .dark .app-bubbles > span,
 [data-theme='dark'] .app-bubbles > span { opacity: 0.28; }

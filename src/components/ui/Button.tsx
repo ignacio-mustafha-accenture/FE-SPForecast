@@ -15,9 +15,9 @@ const variantStyles: Record<Variant, string> = {
   primary: 'brand-gradient brand-glow hover:brightness-110 active:brightness-95 focus-visible:ring-[var(--P)]',
   ghost: 'neu-interactive text-[var(--G1)] focus-visible:ring-[var(--G4)]',
   approve: 'bg-[var(--GR)] text-white hover:opacity-90 focus-visible:ring-[var(--GR)]',
-  'approve-outline': 'bg-transparent border border-[var(--GR)] text-[var(--GR)] hover:bg-[var(--GRB)] focus-visible:ring-[var(--GR)]',
+  'approve-outline': 'neu-interactive text-[var(--GR)] focus-visible:ring-[var(--GR)]',
   reject: 'bg-[var(--RD)] text-white hover:opacity-90 focus-visible:ring-[var(--RD)]',
-  'reject-outline': 'bg-transparent border border-[var(--RD)] text-[var(--RD)] hover:bg-[var(--RDB)] focus-visible:ring-[var(--RD)]',
+  'reject-outline': 'neu-interactive text-[var(--RD)] focus-visible:ring-[var(--RD)]',
   link: 'bg-transparent text-[var(--P)] hover:underline p-0 h-auto',
 };
 

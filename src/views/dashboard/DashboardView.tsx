@@ -307,19 +307,6 @@ export function DashboardView() {
                 {conteoDesasignados.total}
               </span>
             </Button>
-            {countryMetrics.length > 0 && (
-              <div className="flex items-center gap-4">
-                {countryMetrics.map(({ country, pct, targetPct, overTarget }) => (
-                  <div key={country} className="flex flex-col items-end">
-                    <span className="text-[10px] font-semibold text-[var(--G4)]">{country}</span>
-                    <span className={`text-sm font-bold ${overTarget ? 'text-[var(--GR)]' : 'text-[var(--RD)]'}`}>
-                      {pct != null ? `${overTarget ? '▲' : '▼'} ${pct.toFixed(1)}%` : '—'}
-                    </span>
-                    <span className="text-[9px] text-[var(--G4)]">target {fmtTarget(targetPct)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </motion.div>
 
           <motion.div variants={section}>
@@ -468,6 +455,25 @@ export function DashboardView() {
                     <Mini label="Horas cargables" valor={fmtHorasFull(metricas.chg)} />
                     <Mini label="SAH totales" valor={fmtHorasFull(metricas.sah)} />
                   </div>
+
+                  {countryMetrics.length > 0 && (
+                    <div className="flex flex-wrap gap-x-8 gap-y-3 border-l border-[var(--G5)]/60 pl-8">
+                      {countryMetrics.map(({ country, pct, targetPct, overTarget }) => (
+                        <div key={country}>
+                          <p className="text-[10.5px] font-semibold uppercase tracking-wide text-[var(--G3)]">
+                            {country}
+                          </p>
+                          <p
+                            className="mt-0.5 text-xl font-bold tabular-nums"
+                            style={{ color: overTarget ? 'var(--GR)' : 'var(--RD)' }}
+                          >
+                            {pct != null ? `${overTarget ? '▲' : '▼'} ${pct.toFixed(1)}%` : '—'}
+                          </p>
+                          <p className="text-[10px] text-[var(--G3)]">target {fmtTarget(targetPct)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardBody>
             </Card>
