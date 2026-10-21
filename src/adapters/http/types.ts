@@ -198,9 +198,9 @@ export interface RawPtoRow {
   Start: string;
   End: string;
   Hours: number | string | null;
-  Status: 'current' | 'upcoming';
+  Status: 'current' | 'upcoming' | 'past';
 }
 
 export interface RawPtoPage extends RawPage<RawPtoRow> {
-  counts: Record<'current' | 'upcoming', number>;
+  counts: Record<'current' | 'upcoming' | 'past', number>;
 }

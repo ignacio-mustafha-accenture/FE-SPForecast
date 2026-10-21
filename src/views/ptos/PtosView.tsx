@@ -26,6 +26,7 @@ const EXPORT_PAGE_SIZE = 200;
 const ROW_CLASS: Record<PtoStatus, string> = {
   current: 'bg-[var(--YLB)]/40 hover:bg-[var(--YLB)] border-l-4 border-l-[var(--YL)]',
   upcoming: 'hover:bg-[var(--G6)] border-l-4 border-l-transparent',
+  past: 'hover:bg-[var(--G6)] border-l-4 border-l-transparent opacity-70',
 };
 
 export function PtosView() {

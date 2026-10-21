@@ -450,7 +450,7 @@
   },
   "ptos": {
     "title": "PTOs",
-    "subtitle": "Vacaciones aprobadas en curso y próximas",
+    "subtitle": "Vacaciones en curso, próximas e historial",
     "noData": "Sin datos",
     "exportCsv": "Exportar",
     "searchPlaceholder": "Buscar empleado…",
@@ -466,7 +466,8 @@
     "noClient": "Sin asignar",
     "status": {
       "current": "En curso",
-      "upcoming": "Próximo"
+      "upcoming": "Próximo",
+      "past": "Finalizado"
     },
     "statusFilter": "Estado"
   }

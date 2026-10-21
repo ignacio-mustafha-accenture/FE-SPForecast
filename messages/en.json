@@ -472,7 +472,7 @@
   },
   "ptos": {
     "title": "PTOs",
-    "subtitle": "Approved time off in progress and upcoming",
+    "subtitle": "Time off in progress, upcoming and history",
     "noData": "No data",
     "exportCsv": "Export",
     "searchPlaceholder": "Search employee…",
@@ -488,7 +488,8 @@
     "noClient": "Unassigned",
     "status": {
       "current": "In progress",
-      "upcoming": "Upcoming"
+      "upcoming": "Upcoming",
+      "past": "Finished"
     },
     "statusFilter": "Status"
   }

@@ -1,8 +1,8 @@
 import type { Page } from './pagination';
 
-export type PtoStatus = 'current' | 'upcoming';
+export type PtoStatus = 'current' | 'upcoming' | 'past';
 
-export const PTO_STATUSES: PtoStatus[] = ['current', 'upcoming'];
+export const PTO_STATUSES: PtoStatus[] = ['current', 'upcoming', 'past'];
 
 export type PtoSort = 'name' | 'country' | 'level' | 'start' | 'end' | 'hours' | 'status';
 
